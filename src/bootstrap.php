@@ -7,6 +7,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/customer_auth.php';
+require_once __DIR__ . '/institution_auth.php';
 require_once __DIR__ . '/i18n.php';
 
 // Handle language switch

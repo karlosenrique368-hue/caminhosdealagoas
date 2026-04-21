@@ -88,6 +88,38 @@ switch (true) {
         require VIEWS_DIR . '/public/voucher.php';
         break;
 
+    // ============== INSTITUIÇÃO (portal parceiro) ==============
+    case $path === '/instituicao' || $path === '/instituicao/':
+        redirect(isInstitutionUser() ? '/instituicao/dashboard' : '/instituicao/login');
+
+    case $path === '/instituicao/login':
+        require VIEWS_DIR . '/institution/login.php';
+        break;
+
+    case $path === '/instituicao/logout':
+        institutionLogout();
+        redirect('/instituicao/login');
+
+    case $path === '/instituicao/dashboard':
+        require VIEWS_DIR . '/institution/dashboard.php';
+        break;
+
+    case $path === '/instituicao/reservas':
+        require VIEWS_DIR . '/institution/reservas.php';
+        break;
+
+    case $path === '/instituicao/cotacao':
+        require VIEWS_DIR . '/institution/cotacao.php';
+        break;
+
+    case $path === '/instituicao/catalogo':
+        require VIEWS_DIR . '/institution/catalogo.php';
+        break;
+
+    case $path === '/instituicao/perfil':
+        require VIEWS_DIR . '/institution/perfil.php';
+        break;
+
     // ============== ADMIN ==============
     case $path === '/admin' || $path === '/admin/':
         redirect('/admin/dashboard');
@@ -126,6 +158,11 @@ switch (true) {
 
     case $path === '/admin/reservas':
         require VIEWS_DIR . '/admin/reservas.php';
+        break;
+
+    case $path === '/admin/departures':
+    case $path === '/admin/datas':
+        require VIEWS_DIR . '/admin/departures.php';
         break;
 
     case $path === '/admin/clientes':

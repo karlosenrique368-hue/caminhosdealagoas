@@ -58,6 +58,7 @@ body { background: var(--bg-surface); }
                 ['path' => '/admin/depoimentos', 'icon' => 'message-square-quote', 'label' => 'Depoimentos'],
                 ['heading' => 'Vendas'],
                 ['path' => '/admin/reservas', 'icon' => 'calendar-check', 'label' => 'Reservas'],
+                ['path' => '/admin/departures', 'icon' => 'calendar-range', 'label' => 'Datas & vagas'],
                 ['path' => '/admin/clientes', 'icon' => 'users', 'label' => 'Clientes'],
                 ['path' => '/admin/cupons', 'icon' => 'ticket', 'label' => 'Cupons'],
                 ['path' => '/admin/reembolsos', 'icon' => 'refresh-ccw', 'label' => 'Reembolsos'],

@@ -13,20 +13,44 @@ if (isPost()) {
     if (!csrfVerify()) {
         $error = 'Token inválido.';
     } else {
+        // JSON fields — vêm como textarea de 1 item por linha
+        $linesToJson = function($txt) {
+            $lines = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)$txt)), fn($v) => $v !== ''));
+            return $lines ? json_encode($lines, JSON_UNESCAPED_UNICODE) : null;
+        };
+        $itineraryToJson = function($rawTitles, $rawDescs) {
+            $titles = (array)($rawTitles ?? []);
+            $descs = (array)($rawDescs ?? []);
+            $out = [];
+            foreach ($titles as $i => $t) {
+                $t = trim((string)$t);
+                $d = trim((string)($descs[$i] ?? ''));
+                if ($t === '' && $d === '') continue;
+                $out[] = ['title' => $t, 'description' => $d];
+            }
+            return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : null;
+        };
+
+        $availModes = ['fixed','open','on_request'];
         $data = [
-            'category_id'    => (int) ($_POST['category_id'] ?? 0) ?: null,
-            'title'          => trim($_POST['title'] ?? ''),
-            'short_desc'     => trim($_POST['short_desc'] ?? ''),
-            'description'    => trim($_POST['description'] ?? ''),
-            'duration_hours' => (int) ($_POST['duration_hours'] ?? 0) ?: null,
-            'min_people'     => (int) ($_POST['min_people'] ?? 1),
-            'max_people'     => (int) ($_POST['max_people'] ?? 50),
-            'price'          => parseBRL($_POST['price'] ?? '0'),
-            'price_pix'      => parseBRL($_POST['price_pix'] ?? '0') ?: null,
-            'location'       => trim($_POST['location'] ?? ''),
-            'meeting_point'  => trim($_POST['meeting_point'] ?? ''),
-            'status'         => $_POST['status'] ?? 'draft',
-            'featured'       => isset($_POST['featured']) && $_POST['featured'] === '1' ? 1 : 0,
+            'category_id'       => (int) ($_POST['category_id'] ?? 0) ?: null,
+            'title'             => trim($_POST['title'] ?? ''),
+            'short_desc'        => trim($_POST['short_desc'] ?? ''),
+            'description'       => trim($_POST['description'] ?? ''),
+            'highlights'        => $linesToJson($_POST['highlights_text'] ?? ''),
+            'includes'          => $linesToJson($_POST['includes_text'] ?? ''),
+            'excludes'          => $linesToJson($_POST['excludes_text'] ?? ''),
+            'itinerary'         => $itineraryToJson($_POST['itinerary_title'] ?? [], $_POST['itinerary_desc'] ?? []),
+            'duration_hours'    => (int) ($_POST['duration_hours'] ?? 0) ?: null,
+            'min_people'        => (int) ($_POST['min_people'] ?? 1),
+            'max_people'        => (int) ($_POST['max_people'] ?? 50),
+            'price'             => parseBRL($_POST['price'] ?? '0'),
+            'price_pix'         => parseBRL($_POST['price_pix'] ?? '0') ?: null,
+            'location'          => trim($_POST['location'] ?? ''),
+            'meeting_point'     => trim($_POST['meeting_point'] ?? ''),
+            'availability_mode' => in_array($_POST['availability_mode'] ?? 'fixed', $availModes, true) ? $_POST['availability_mode'] : 'fixed',
+            'status'            => $_POST['status'] ?? 'draft',
+            'featured'          => isset($_POST['featured']) && $_POST['featured'] === '1' ? 1 : 0,
         ];
         $data['slug'] = $roteiro['slug'] ?? slugify($data['title']);
 
@@ -153,6 +177,54 @@ $msg = flash('success');
                     <input name="meeting_point" value="<?= e($roteiro['meeting_point'] ?? '') ?>" class="admin-input" placeholder="Ex: Hotel do cliente em Maceió">
                 </div>
             </div>
+
+            <!-- Destaques / Includes / Excludes -->
+            <?php
+                $hLines = '';
+                if (!empty($roteiro['highlights'])) { $d=json_decode($roteiro['highlights'],true); if(is_array($d)) $hLines=implode("\n",$d); }
+                $iLines = '';
+                if (!empty($roteiro['includes'])) { $d=json_decode($roteiro['includes'],true); if(is_array($d)) $iLines=implode("\n",$d); }
+                $eLines = '';
+                if (!empty($roteiro['excludes'])) { $d=json_decode($roteiro['excludes'],true); if(is_array($d)) $eLines=implode("\n",$d); }
+                $itArr = [];
+                if (!empty($roteiro['itinerary'])) { $d=json_decode($roteiro['itinerary'],true); if(is_array($d)) $itArr=$d; }
+            ?>
+            <div class="admin-card p-6 space-y-5">
+                <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Destaques, incluso e não incluso</h3>
+                <p class="text-xs -mt-2" style="color:var(--text-muted)">Digite <b>um item por linha</b>. Aparecem na página do passeio com ícones.</p>
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">✨ Destaques</label>
+                    <textarea name="highlights_text" rows="5" class="admin-input resize-y" placeholder="Ex: Guia bilíngue certificado&#10;Transporte climatizado&#10;Almoço regional incluso"><?= e($hLines) ?></textarea>
+                </div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" style="color:var(--maresia-dark)">✅ Está incluso</label>
+                        <textarea name="includes_text" rows="6" class="admin-input resize-y" placeholder="Um por linha"><?= e($iLines) ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" style="color:var(--terracota-dark)">❌ Não está incluso</label>
+                        <textarea name="excludes_text" rows="6" class="admin-input resize-y" placeholder="Um por linha"><?= e($eLines) ?></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itinerário dia a dia -->
+            <div class="admin-card p-6 space-y-4" x-data="itineraryBuilder(<?= htmlspecialchars(json_encode($itArr ?: [['title'=>'','description'=>'']]), ENT_QUOTES) ?>)">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Itinerário — parada a parada</h3>
+                    <button type="button" @click="add()" class="admin-btn admin-btn-secondary"><i data-lucide="plus" class="w-4 h-4"></i>Adicionar parada</button>
+                </div>
+                <template x-for="(step, idx) in steps" :key="idx">
+                    <div class="flex gap-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--horizonte),var(--horizonte-light))" x-text="idx+1"></div>
+                        <div class="flex-1 space-y-2">
+                            <input type="text" name="itinerary_title[]" :value="step.title" @input="step.title=$event.target.value" class="admin-input" placeholder="Título da parada (ex: Mirante do Pontal)">
+                            <textarea name="itinerary_desc[]" rows="2" class="admin-input resize-y" placeholder="Descrição / horário / dica" :value="step.description" @input="step.description=$event.target.value" x-text="step.description"></textarea>
+                        </div>
+                        <button type="button" @click="remove(idx)" class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="color:#B91C1C;background:rgba(239,68,68,0.08)" title="Remover"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </template>
+            </div>
         </div>
 
         <!-- Sidebar -->
@@ -172,6 +244,18 @@ $msg = flash('success');
                     <input type="checkbox" name="featured" value="1" <?= !empty($roteiro['featured']) ? 'checked' : '' ?> class="w-4 h-4 rounded" style="accent-color:var(--terracota)">
                     <span class="text-sm font-semibold" style="color:var(--sepia)">Destacar na home</span>
                 </label>
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Disponibilidade</label>
+                    <select name="availability_mode" class="admin-input">
+                        <?php $curMode = $roteiro['availability_mode'] ?? 'fixed'; foreach (['fixed'=>'Só datas cadastradas','open'=>'Todas as datas abertas','on_request'=>'Sob consulta (WhatsApp)'] as $k=>$v): ?>
+                            <option value="<?= $k ?>" <?= $curMode===$k?'selected':'' ?>><?= $v ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="text-[11px] mt-1.5" style="color:var(--text-muted)">Controla o calendário da página do passeio.</p>
+                </div>
+                <?php if (!$isNew): ?>
+                <a href="<?= url('/admin/departures?type=roteiro&entity_id='.$id) ?>" class="admin-btn admin-btn-secondary w-full justify-center"><i data-lucide="calendar-plus" class="w-4 h-4"></i>Gerenciar datas</a>
+                <?php endif; ?>
             </div>
 
             <!-- Categoria -->
@@ -246,4 +330,16 @@ $msg = flash('success');
     </div>
 </form>
 
+<script>
+function itineraryBuilder(initial) {
+    return {
+        steps: (Array.isArray(initial) && initial.length ? initial : [{title:'',description:''}]).map(s => ({
+            title: s.title || s.name || '',
+            description: s.description || s.desc || (typeof s === 'string' ? s : '')
+        })),
+        add() { this.steps.push({title:'',description:''}); this.$nextTick(()=>window.lucide && window.lucide.createIcons()); },
+        remove(i) { this.steps.splice(i,1); if(!this.steps.length) this.add(); }
+    }
+}
+</script>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>
