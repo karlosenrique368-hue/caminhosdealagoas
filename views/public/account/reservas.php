@@ -63,7 +63,7 @@ $bookings = dbAll("
                                 </a>
                             <?php endif; ?>
                             <?php if ($b['payment_status'] === 'paid'): ?>
-                                <a href="<?= url('/conta/reembolso?booking=' . $b['id']) ?>" class="btn-secondary" style="padding:8px 14px;font-size:12px">
+                                <a href="<?= url('/conta/reembolso?booking=' . $b['id']) ?>" class="btn-refund">
                                     <i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i> Reembolso
                                 </a>
                             <?php endif; ?>

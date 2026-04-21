@@ -56,48 +56,61 @@ $msg = flash('success');
 
 <div x-data="{open:false, editing:null}">
     <div class="flex justify-between items-center mb-6">
-        <p class="text-sm" style="color:var(--text-secondary)"><?= count($testimonials) ?> depoimentos</p>
+        <p class="text-sm" style="color:var(--text-secondary)"><?= $pag['total'] ?? count($testimonials) ?> depoimentos</p>
         <button @click="editing=null; open=true" class="admin-btn admin-btn-primary"><i data-lucide="plus" class="w-4 h-4"></i>Adicionar</button>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-4">
-        <?php foreach ($testimonials as $t): ?>
-        <div class="admin-card p-5">
-            <div class="flex items-start justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <?php if (!empty($t['avatar'])): ?>
-                        <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="w-10 h-10 rounded-full object-cover" style="border:2px solid var(--border-default)">
-                    <?php else: ?>
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:linear-gradient(135deg,var(--maresia),var(--maresia-dark));color:white"><?= e(mb_strtoupper(mb_substr($t['name'],0,2))) ?></div>
-                    <?php endif; ?>
-                    <div>
-                        <div class="font-semibold text-sm flex items-center gap-1.5">
-                            <?= e($t['name']) ?>
-                            <?php if (!empty($t['author_url'])): ?><a href="<?= e($t['author_url']) ?>" target="_blank" rel="noopener" title="Abrir link" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a><?php endif; ?>
-                        </div>
-                        <?php if ($t['location']): ?><div class="text-xs" style="color:var(--text-muted)"><?= e($t['location']) ?></div><?php endif; ?>
-                    </div>
-                </div>
-                <span class="badge badge-<?= $t['active']?'success':'muted' ?>"><?= $t['active']?'Ativo':'Inativo' ?></span>
-            </div>
-            <div class="flex gap-0.5 mb-2">
-                <?php for ($i=1;$i<=5;$i++): ?><i data-lucide="star" class="w-3.5 h-3.5" style="color:<?= $i<=$t['rating']?'#F59E0B':'#E5E7EB' ?>;fill:<?= $i<=$t['rating']?'#F59E0B':'transparent' ?>"></i><?php endfor; ?>
-                <?php if ($t['featured']): ?><span class="ml-2 text-[10px] font-bold uppercase tracking-wider" style="color:var(--terracota)">Destaque</span><?php endif; ?>
-            </div>
-            <p class="text-sm italic mb-4" style="color:var(--text-secondary)">"<?= e(truncate($t['content'], 200)) ?>"</p>
-            <div class="flex gap-2">
-                <?php if (!$t['active']): ?>
-                <form method="post" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $t['id'] ?>"><button class="text-xs font-semibold hover:underline" style="color:var(--maresia-dark)">Ativar</button></form>
-                <?php endif; ?>
-                <button @click="editing=<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>; open=true" class="text-xs font-semibold hover:underline" style="color:var(--horizonte)">Editar</button>
-                <form method="post" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $t['id'] ?>"><button class="text-xs font-semibold hover:underline text-red-500">Excluir</button></form>
-            </div>
-        </div>
-        <?php endforeach; ?>
+    <div class="admin-card overflow-hidden">
         <?php if (!$testimonials): ?>
-        <div class="md:col-span-2 admin-card p-12 text-center">
-            <i data-lucide="message-square" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
-            <h3 class="font-semibold" style="color:var(--sepia)">Nenhum depoimento</h3>
+            <div class="p-12 text-center">
+                <i data-lucide="message-square" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
+                <h3 class="font-semibold mb-1" style="color:var(--sepia)">Nenhum depoimento cadastrado</h3>
+                <button @click="editing=null; open=true" class="admin-btn admin-btn-primary mt-4"><i data-lucide="plus" class="w-4 h-4"></i>Adicionar</button>
+            </div>
+        <?php else: ?>
+        <div class="overflow-x-auto">
+            <table class="admin-table">
+                <thead><tr><th>Autor</th><th>Nota</th><th>Depoimento</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+                <tbody>
+                <?php foreach ($testimonials as $t): ?>
+                <tr>
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <?php if (!empty($t['avatar'])): ?>
+                                <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="w-10 h-10 rounded-full object-cover flex-shrink-0" style="border:2px solid var(--border-default)">
+                            <?php else: ?>
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style="background:linear-gradient(135deg,var(--maresia),var(--maresia-dark));color:white"><?= e(mb_strtoupper(mb_substr($t['name'],0,2))) ?></div>
+                            <?php endif; ?>
+                            <div>
+                                <div class="font-semibold flex items-center gap-1.5">
+                                    <?= e($t['name']) ?>
+                                    <?php if (!empty($t['author_url'])): ?><a href="<?= e($t['author_url']) ?>" target="_blank" rel="noopener" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3 h-3"></i></a><?php endif; ?>
+                                    <?php if ($t['featured']): ?><i data-lucide="star" class="w-3.5 h-3.5" style="color:#F59E0B;fill:#F59E0B"></i><?php endif; ?>
+                                </div>
+                                <?php if ($t['location']): ?><div class="text-xs" style="color:var(--text-muted)"><?= e($t['location']) ?></div><?php endif; ?>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex gap-0.5">
+                            <?php for ($i=1;$i<=5;$i++): ?><i data-lucide="star" class="w-3.5 h-3.5" style="color:<?= $i<=$t['rating']?'#F59E0B':'#E5E7EB' ?>;fill:<?= $i<=$t['rating']?'#F59E0B':'transparent' ?>"></i><?php endfor; ?>
+                        </div>
+                    </td>
+                    <td style="max-width:340px"><p class="text-sm italic line-clamp-2" style="color:var(--text-secondary)">"<?= e($t['content']) ?>"</p></td>
+                    <td><span class="badge badge-<?= $t['active']?'success':'muted' ?>"><?= $t['active']?'Ativo':'Inativo' ?></span></td>
+                    <td class="actions-cell">
+                        <div class="flex justify-end gap-1">
+                            <?php if (!$t['active']): ?>
+                            <form method="post" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $t['id'] ?>"><button class="action-chip chip-success" title="Ativar"><i data-lucide="check" class="w-3.5 h-3.5"></i>Ativar</button></form>
+                            <?php endif; ?>
+                            <button type="button" @click="editing=<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>; open=true" class="action-chip chip-edit" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i>Editar</button>
+                            <form method="post" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $t['id'] ?>"><button class="action-chip chip-danger" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></form>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
         <?php endif; ?>
     </div>

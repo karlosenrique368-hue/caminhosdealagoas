@@ -38,7 +38,7 @@ $recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.cus
 
     <div class="stat-card-premium" data-reveal style="animation-delay:160ms;
          --accent:var(--maresia-dark); --tint:rgba(122,157,110,0.12); --accent-shadow:rgba(122,157,110,0.4)">
-        <img src="<?= asset('brand/selo-areia.png') ?>" class="stat-seal" alt="">
+        <img src="<?= asset('brand/selo-azul.png') ?>" class="stat-seal" alt="">
         <div class="stat-head">
             <div class="stat-icon-box"><i data-lucide="wallet" class="w-5 h-5"></i></div>
             <span class="stat-label">Investido</span>

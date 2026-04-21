@@ -65,11 +65,14 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <?php endforeach; ?>
                         <?php if (count($slides) > 1): ?>
                             <div class="slider-dots"><?php foreach ($slides as $si => $_): ?><span class="dot<?= $si===0?' active':'' ?>"></span><?php endforeach; ?></div>
+                            <button type="button" class="slider-arrow prev" tabindex="-1" aria-label="Anterior"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <button type="button" class="slider-arrow next" tabindex="-1" aria-label="Próximo"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                         <?php endif; ?>
                     <?php else: ?>
                         <div class="img-placeholder w-full h-full"><span><?= e(mb_substr($r['title'],0,1)) ?></span></div>
                     <?php endif; ?>
                     <?php if ($r['featured']): ?><div class="badge-featured">Destaque</div><?php endif; ?>
+                    <button type="button" class="heart-btn" data-fav-type="roteiro" data-fav-id="<?= (int)$r['id'] ?>" aria-label="Favoritar"><i data-lucide="heart" class="w-4 h-4"></i></button>
                 </div>
                 <div class="p-5">
                     <?php if ($r['location']): ?>

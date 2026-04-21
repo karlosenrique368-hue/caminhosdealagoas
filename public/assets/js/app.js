@@ -38,11 +38,14 @@ window.caminhosApi = async function (url, opts = {}) {
     if (meta) cfg.headers['X-CSRF-Token'] = meta.content;
     cfg.headers['X-Requested-With'] = 'XMLHttpRequest';
 
-    if (cfg.data && !(cfg.data instanceof FormData)) {
+    if (cfg.data && cfg.data instanceof FormData) {
+        cfg.body = cfg.data;
+    } else if (cfg.data && cfg.data instanceof URLSearchParams) {
+        cfg.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+        cfg.body = cfg.data.toString();
+    } else if (cfg.data) {
         cfg.headers['Content-Type'] = 'application/json';
         cfg.body = JSON.stringify(cfg.data);
-    } else if (cfg.data) {
-        cfg.body = cfg.data;
     }
 
     const res = await fetch(url, cfg);
@@ -150,6 +153,59 @@ document.addEventListener('input', (e) => {
         wrap.addEventListener('mouseenter', () => start(1500));
         wrap.addEventListener('mouseleave', () => start(3200));
         dots.forEach((d, i) => d.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go(i); start(); }));
+
+        // Arrows (optional)
+        const prevBtn = wrap.querySelector('.slider-arrow.prev');
+        const nextBtn = wrap.querySelector('.slider-arrow.next');
+        if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go((idx - 1 + slides.length) % slides.length); start(); });
+        if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); next(); start(); });
+
+        // Swipe
+        let sx = 0;
+        wrap.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+        wrap.addEventListener('touchend', (e) => {
+            const dx = (e.changedTouches[0].clientX || 0) - sx;
+            if (Math.abs(dx) > 40) { if (dx < 0) next(); else go((idx - 1 + slides.length) % slides.length); start(); }
+        }, { passive: true });
+    });
+})();
+
+// ============================================================
+// PREMIUM: Wishlist toggle (delegated)
+// ============================================================
+(function initWishlist() {
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.heart-btn[data-fav-type][data-fav-id]');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const type = btn.dataset.favType;
+        const id = btn.dataset.favId;
+        if (!type || !id) return;
+        btn.disabled = true;
+        const wasActive = btn.classList.contains('active');
+        btn.classList.toggle('active'); // optimistic
+        try {
+            const fd = new FormData();
+            fd.append('entity_type', type);
+            fd.append('entity_id', id);
+            const r = await window.caminhosApi((window.BASE_PATH || '') + '/api/wishlist?action=toggle', { method: 'POST', data: fd });
+            if (!r || !r.ok) {
+                btn.classList.toggle('active'); // revert
+                if (r && r.msg === 'Faça login.') {
+                    window.location.href = (window.BASE_PATH || '') + '/login';
+                    return;
+                }
+                if (window.showToast) window.showToast((r && r.msg) || 'Erro ao favoritar', 'error');
+            } else {
+                if (window.showToast) window.showToast(r.added ? 'Adicionado aos favoritos' : 'Removido dos favoritos', r.added ? 'success' : 'info');
+            }
+        } catch (err) {
+            btn.classList.toggle('active');
+            if (window.showToast) window.showToast('Erro de rede', 'error');
+        } finally {
+            btn.disabled = false;
+        }
     });
 })();
 

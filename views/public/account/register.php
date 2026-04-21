@@ -20,13 +20,14 @@ include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
 <section class="min-h-screen flex items-center justify-center py-24 relative overflow-hidden" style="background:linear-gradient(135deg,var(--bg-surface),var(--areia-light))">
-    <img src="<?= asset('brand/selo-terracota.png') ?>" class="seal-watermark xl reverse" style="top:-100px;right:-120px" alt="">
-    <img src="<?= asset('brand/selo-areia.png') ?>" class="seal-watermark lg" style="bottom:-60px;left:-80px" alt="">
+    <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-watermark xl" style="top:-100px;left:-100px" alt="">
+    <img src="<?= asset('brand/selo-terracota.png') ?>" class="seal-watermark lg reverse" style="bottom:-80px;right:-80px" alt="">
+    <img src="<?= asset('brand/selo-areia.png') ?>" class="seal-watermark md" style="top:40%;right:-40px" alt="">
 
     <div class="max-w-md w-full mx-auto px-6 relative z-10">
         <div class="glass-card p-8 md:p-10 rounded-3xl border shadow-2xl" style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-color:var(--border-default)">
             <div class="text-center mb-8">
-                <img src="<?= asset('brand/selo-terracota.png') ?>" class="seal-rotate mx-auto mb-4" style="width:72px;height:72px" alt="">
+                <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-rotate mx-auto mb-4" style="width:72px;height:72px" alt="">
                 <h1 class="font-display text-3xl font-bold mb-2" style="color:var(--sepia)">Criar conta</h1>
                 <p class="text-sm" style="color:var(--text-muted)">Comece sua jornada pelos caminhos de Alagoas</p>
             </div>

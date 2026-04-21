@@ -18,8 +18,10 @@ $currentCurrency = $_SESSION['currency'] ?? 'BRL';
 <meta name="robots" content="index,follow">
 <meta name="author" content="Caminhos de Alagoas">
 <link rel="canonical" href="<?= e($currentUrl) ?>">
-<link rel="icon" type="image/png" href="<?= asset('brand/selo-terracota.png') ?>">
-<link rel="apple-touch-icon" href="<?= asset('brand/selo-terracota.png') ?>">
+<link rel="icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
+<link rel="apple-touch-icon" href="<?= asset('brand/logo-terracota.png') ?>">
+
+<script>window.BASE_PATH = '<?= e(BASE_PATH) ?>';</script>
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">

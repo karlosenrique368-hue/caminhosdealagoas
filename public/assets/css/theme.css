@@ -1200,7 +1200,7 @@ body.has-solid-nav { padding-top: 0; }
     position: absolute;
     top: -12px; right: -12px;
     width: 70px; height: 70px;
-    opacity: 0.12;
+    opacity: 0.22;
     pointer-events: none;
     animation: seal-spin 40s linear infinite;
 }
@@ -1686,10 +1686,119 @@ textarea.input-field { resize: vertical; min-height: 96px; }
    LOGO NO ADMIN — usar imagem em vez de iniciais
    ============================================================ */
 .admin-brand-mark {
-    width: 44px; height: 44px; border-radius: 12px;
-    background: #fff;
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.12);
     display: flex; align-items: center; justify-content: center;
-    padding: 6px; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 4px; flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08);
 }
-.admin-brand-mark img { width: 100%; height: 100%; object-fit: contain; }
+.admin-brand-mark img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25)); }
+
+
+/* ============================================================
+   PHASE 4 PREMIUM: Slider arrows + dividers + responsive
+   ============================================================ */
+
+.slider-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.96);
+    color: var(--sepia);
+    display: flex; align-items: center; justify-content: center;
+    border: none; cursor: pointer; z-index: 4;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    opacity: 0; transition: opacity .22s ease, transform .22s ease, background .22s ease;
+}
+.slider-arrow.prev { left: 10px; }
+.slider-arrow.next { right: 10px; }
+.slider-wrap:hover .slider-arrow { opacity: 1; }
+.slider-arrow:hover { background: var(--terracota); color: #fff; transform: translateY(-50%) scale(1.08); }
+@media (hover: none) {
+    .slider-arrow { opacity: 0.92; }
+}
+
+/* Section divider with rotating seal */
+.section-divider-seal {
+    position: relative;
+    height: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
+.section-divider-seal > img {
+    width: 96px; height: 96px;
+    opacity: 0.9;
+    filter: drop-shadow(0 8px 24px rgba(30,58,82,0.2));
+    animation: seal-spin 55s linear infinite;
+    pointer-events: auto;
+}
+@media (min-width: 768px) {
+    .section-divider-seal > img { width: 128px; height: 128px; }
+}
+
+/* Premium Ver Reembolso button (used in suas viagens) */
+.btn-refund {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 10px;
+    font-size: 12px; font-weight: 700;
+    background: linear-gradient(135deg, #F7E6D9, #F2D8C6);
+    color: var(--terracota-dark);
+    border: 1px solid rgba(201,107,74,0.3);
+    box-shadow: 0 2px 8px rgba(201,107,74,0.12);
+    transition: all .2s ease;
+    text-decoration: none;
+}
+.btn-refund:hover {
+    background: linear-gradient(135deg, var(--terracota), var(--terracota-dark));
+    color: #fff; border-color: transparent;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(201,107,74,0.35);
+}
+
+/* Refund request premium form */
+.refund-form-premium {
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(247,235,221,0.4));
+    border-radius: 20px;
+    border: 1px solid var(--border-default);
+}
+.refund-form-premium .form-input {
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+}
+.refund-form-premium textarea.form-input { min-height: 140px; }
+.refund-submit {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 14px 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--terracota), var(--terracota-dark));
+    color: #fff;
+    font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
+    border: none; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(201,107,74,0.35);
+    transition: all .2s;
+}
+.refund-submit:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(201,107,74,0.45); }
+
+/* Account responsive improvements */
+@media (max-width: 767px) {
+    .account-hero { padding: 20px !important; }
+    .account-hero h1 { font-size: 22px !important; line-height: 1.2; }
+    .account-hero .account-hero-avatar { width: 64px !important; height: 64px !important; font-size: 22px !important; }
+    .account-sidebar { padding: 10px !important; }
+    .account-sidebar nav { flex-direction: row !important; gap: 6px; white-space: nowrap; padding-bottom: 4px; }
+    .account-sidebar .sidebar-link { flex-shrink: 0; padding: 10px 14px !important; font-size: 13px; }
+    .account-sidebar .sidebar-link span { display: inline; }
+    .account-hero .account-hero-actions { flex-wrap: wrap; gap: 8px; }
+    .account-hero .account-hero-actions > * { font-size: 12px !important; padding: 8px 12px !important; }
+    .stat-card-premium { padding: 20px !important; }
+    .stat-card-premium .stat-value { font-size: 22px !important; }
+    .fav-card-image { aspect-ratio: 16/10 !important; }
+}
+
+/* Address autocomplete states */
+.cep-loading { opacity: 0.6; pointer-events: none; }
+.cep-error { border-color: #EF4444 !important; }

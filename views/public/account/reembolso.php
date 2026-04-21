@@ -40,12 +40,12 @@ $preselect = (int)($_GET['booking'] ?? 0);
                 <div class="empty-state-desc">Todas as suas reservas pagas já têm solicitações ou ainda não há reservas elegíveis.</div>
             </div>
         <?php else: ?>
-            <form id="refund-form" data-ajax action="<?= url('/api/refund') ?>" method="POST" class="space-y-4">
+            <form id="refund-form" data-ajax action="<?= url('/api/refund') ?>" method="POST" class="refund-form-premium space-y-5">
                 <?= csrfField() ?>
                 <div class="form-field">
-                    <label class="form-field-label">Reserva</label>
+                    <label class="form-field-label">Reserva a reembolsar</label>
                     <div class="form-input-group">
-                        <i data-lucide="calendar" class="form-input-icon w-4 h-4"></i>
+                        <i data-lucide="calendar-check" class="form-input-icon w-4 h-4"></i>
                         <select name="booking_id" required class="form-input">
                             <option value="">Selecione uma reserva...</option>
                             <?php foreach ($eligibleBookings as $b): ?>
@@ -55,14 +55,16 @@ $preselect = (int)($_GET['booking'] ?? 0);
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <p class="text-[11px] mt-1.5" style="color:var(--text-muted)"><i data-lucide="info" class="inline-block w-3 h-3 align-[-2px]"></i> O valor será estornado na forma de pagamento original.</p>
                 </div>
                 <div class="form-field">
-                    <label class="form-field-label">Motivo</label>
-                    <textarea name="reason" rows="5" required class="form-input auto-grow" minlength="10" placeholder="Descreva o motivo do reembolso com o máximo de detalhes possível..."></textarea>
-                    <p class="text-xs mt-1.5" style="color:var(--text-muted)">Mínimo 10 caracteres.</p>
+                    <label class="form-field-label">Motivo do reembolso</label>
+                    <textarea name="reason" rows="6" required class="form-input auto-grow" minlength="10" placeholder="Descreva com detalhes o motivo do reembolso (alteração de data, imprevisto, problema com a experiência, etc.)..."></textarea>
+                    <p class="text-xs mt-1.5" style="color:var(--text-muted)">Mínimo 10 caracteres. Quanto mais detalhes, mais rápida a análise.</p>
                 </div>
-                <button type="submit" class="btn-primary w-full justify-center">
-                    <span class="btn-content"><i data-lucide="send" class="w-4 h-4"></i> Enviar solicitação</span>
+                <button type="submit" class="refund-submit">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Enviar solicitação</span>
                 </button>
             </form>
         <?php endif; ?>

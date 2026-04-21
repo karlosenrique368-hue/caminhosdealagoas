@@ -32,10 +32,15 @@ try {
     if ($name === '') {
         jsonResponse(['ok' => false, 'msg' => 'Nome é obrigatório.'], 422);
     }
-    dbExec('UPDATE customers SET name=?, phone=?, document=?, city=?, state=?, country=? WHERE id=?', [
+    dbExec('UPDATE customers SET name=?, phone=?, document=?, postal_code=?, address=?, address_number=?, neighborhood=?, address_complement=?, city=?, state=?, country=? WHERE id=?', [
         $name,
         trim($_POST['phone'] ?? ''),
         trim($_POST['document'] ?? ''),
+        trim($_POST['postal_code'] ?? ''),
+        trim($_POST['address'] ?? ''),
+        trim($_POST['address_number'] ?? ''),
+        trim($_POST['neighborhood'] ?? ''),
+        trim($_POST['address_complement'] ?? ''),
         trim($_POST['city'] ?? ''),
         trim($_POST['state'] ?? ''),
         trim($_POST['country'] ?? ''),

@@ -23,8 +23,8 @@ tailwind.config = { theme: { extend: { colors: {
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
-<link rel="icon" type="image/png" href="<?= asset('brand/selo-terracota.png') ?>">
-<link rel="apple-touch-icon" href="<?= asset('brand/selo-terracota.png') ?>">
+<link rel="icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
+<link rel="apple-touch-icon" href="<?= asset('brand/logo-terracota.png') ?>">
 <style>
 body { background: var(--bg-surface); }
 </style>
@@ -38,7 +38,7 @@ body { background: var(--bg-surface); }
            style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
             <div class="admin-brand-mark">
-                <img src="<?= asset('brand/selo-terracota.png') ?>" alt="Caminhos">
+                <img src="<?= asset('brand/selo-areia.png') ?>" alt="Caminhos" class="seal-rotate">
             </div>
             <div class="min-w-0">
                 <div class="font-display text-lg font-bold text-white truncate">Caminhos</div>

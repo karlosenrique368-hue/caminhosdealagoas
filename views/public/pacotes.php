@@ -37,7 +37,10 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <?php endif; ?>
                     <?php if (count($slides) > 1): ?>
                         <div class="slider-dots"><?php foreach ($slides as $si => $_): ?><span class="dot<?= $si===0?' active':'' ?>"></span><?php endforeach; ?></div>
+                        <button type="button" class="slider-arrow prev" tabindex="-1" aria-label="Anterior"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <button type="button" class="slider-arrow next" tabindex="-1" aria-label="Próximo"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     <?php endif; ?>
+                    <button type="button" class="heart-btn" data-fav-type="pacote" data-fav-id="<?= (int)$p['id'] ?>" aria-label="Favoritar"><i data-lucide="heart" class="w-4 h-4"></i></button>
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
                     <div class="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95" style="color:var(--sepia);z-index:2"><?= e($p['duration_days']) ?>D / <?= e($p['duration_nights']) ?>N</div>
                     <div class="absolute bottom-4 left-4 right-4" style="z-index:2">

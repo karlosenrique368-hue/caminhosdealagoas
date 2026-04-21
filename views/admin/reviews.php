@@ -27,39 +27,64 @@ $reviews = $pag['rows'];
 $colors = ['pending'=>'#D97706','approved'=>'#059669','rejected'=>'#DC2626'];
 ?>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex justify-between items-center mb-6">
+    <p class="text-sm" style="color:var(--text-secondary)"><?= $pag['total'] ?? count($reviews) ?> avaliações</p>
+</div>
+
+<div class="admin-card overflow-hidden">
     <?php if (empty($reviews)): ?>
-        <div class="admin-card p-12 text-center col-span-full" style="color:var(--text-muted)">Nenhuma avaliação.</div>
-    <?php else: foreach ($reviews as $rv): ?>
-        <div class="admin-card p-5">
-            <div class="flex items-start justify-between gap-3 mb-3">
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white" style="background:<?= $colors[$rv['status']] ?>"><?= e($rv['status']) ?></span>
-                        <?php if ($rv['verified']): ?><span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background:var(--maresia);color:#fff">Verificado</span><?php endif; ?>
-                    </div>
-                    <h3 class="font-display font-bold truncate" style="color:var(--sepia)"><?= e($rv['entity_title']) ?></h3>
-                    <p class="text-xs" style="color:var(--text-muted)"><?= e($rv['customer_name']) ?> · <?= date('d/m/Y', strtotime($rv['created_at'])) ?></p>
-                </div>
-                <div class="flex gap-0.5">
-                    <?php for ($i=1;$i<=5;$i++): ?>
-                        <i data-lucide="star" class="w-4 h-4" style="<?= $i<=$rv['rating']?'fill:#F59E0B;color:#F59E0B':'color:#D1D5DB' ?>"></i>
-                    <?php endfor; ?>
-                </div>
-            </div>
-            <?php if ($rv['title']): ?><p class="font-semibold mb-1" style="color:var(--text-primary)"><?= e($rv['title']) ?></p><?php endif; ?>
-            <p class="text-sm mb-4" style="color:var(--text-secondary)"><?= e($rv['content']) ?></p>
-            <div class="flex gap-2">
-                <?php if ($rv['status']!=='approved'): ?>
-                <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-success"><i data-lucide="check" class="w-3.5 h-3.5"></i>Aprovar</button></form>
-                <?php endif; ?>
-                <?php if ($rv['status']!=='rejected'): ?>
-                <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-warning"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i>Rejeitar</button></form>
-                <?php endif; ?>
-                <form method="POST" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-danger"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Excluir</button></form>
-            </div>
+        <div class="p-12 text-center">
+            <i data-lucide="star" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
+            <h3 class="font-semibold mb-1" style="color:var(--sepia)">Nenhuma avaliação</h3>
         </div>
-    <?php endforeach; endif; ?>
+    <?php else: ?>
+    <div class="overflow-x-auto">
+        <table class="admin-table">
+            <thead><tr><th>Experiência</th><th>Cliente</th><th>Nota</th><th>Avaliação</th><th>Data</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+            <tbody>
+            <?php foreach ($reviews as $rv):
+                $statusLabel = ['pending'=>'Pendente','approved'=>'Aprovado','rejected'=>'Rejeitado'][$rv['status']] ?? $rv['status'];
+                $statusBadge = ['pending'=>'warning','approved'=>'success','rejected'=>'muted'][$rv['status']] ?? 'muted';
+            ?>
+            <tr>
+                <td>
+                    <div class="font-semibold"><?= e($rv['entity_title']) ?></div>
+                    <div class="text-xs uppercase tracking-wider" style="color:var(--text-muted)"><?= e($rv['entity_type']) ?></div>
+                </td>
+                <td>
+                    <div class="text-sm"><?= e($rv['customer_name']) ?></div>
+                    <?php if ($rv['verified']): ?><span class="badge badge-info text-[10px]">Verificado</span><?php endif; ?>
+                </td>
+                <td>
+                    <div class="flex gap-0.5">
+                        <?php for ($i=1;$i<=5;$i++): ?>
+                            <i data-lucide="star" class="w-3.5 h-3.5" style="<?= $i<=$rv['rating']?'fill:#F59E0B;color:#F59E0B':'color:#D1D5DB' ?>"></i>
+                        <?php endfor; ?>
+                    </div>
+                </td>
+                <td style="max-width:320px">
+                    <?php if ($rv['title']): ?><div class="font-semibold text-sm"><?= e($rv['title']) ?></div><?php endif; ?>
+                    <p class="text-sm line-clamp-2" style="color:var(--text-secondary)"><?= e($rv['content']) ?></p>
+                </td>
+                <td><span class="text-xs" style="color:var(--text-muted)"><?= date('d/m/Y', strtotime($rv['created_at'])) ?></span></td>
+                <td><span class="badge badge-<?= $statusBadge ?>"><?= $statusLabel ?></span></td>
+                <td class="actions-cell">
+                    <div class="flex justify-end gap-1">
+                        <?php if ($rv['status']!=='approved'): ?>
+                        <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-success" title="Aprovar"><i data-lucide="check" class="w-3.5 h-3.5"></i>Aprovar</button></form>
+                        <?php endif; ?>
+                        <?php if ($rv['status']!=='rejected'): ?>
+                        <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-warning" title="Rejeitar"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i>Rejeitar</button></form>
+                        <?php endif; ?>
+                        <form method="POST" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-danger" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></form>
+                    </div>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
 </div>
 
 <?php include VIEWS_DIR . '/partials/pagination.php'; ?>

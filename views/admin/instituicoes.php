@@ -39,57 +39,85 @@ $edit = $editId ? dbOne('SELECT * FROM institutions WHERE id=?', [$editId]) : nu
 $types = ['escola'=>'Escola','empresa'=>'Empresa','ong'=>'ONG','governo'=>'Governo','outro'=>'Outro'];
 ?>
 
-<div class="grid lg:grid-cols-[380px_1fr] gap-6">
-    <div class="admin-card p-5">
-        <h2 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)"><?= $edit ? 'Editar' : 'Nova' ?> instituição</h2>
-        <form method="POST" class="space-y-3">
-            <?= csrfField() ?>
-            <input type="hidden" name="action" value="save">
-            <?php if ($edit): ?><input type="hidden" name="id" value="<?= $edit['id'] ?>"><?php endif; ?>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Nome</span><input type="text" name="name" value="<?= e($edit['name'] ?? '') ?>" required class="input-field w-full"></label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Tipo</span>
-                <select name="type" class="input-field w-full">
-                    <?php foreach ($types as $k=>$v): ?><option value="<?= $k ?>" <?= ($edit['type'] ?? '')===$k?'selected':'' ?>><?= $v ?></option><?php endforeach; ?>
-                </select>
-            </label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">CNPJ</span><input type="text" name="cnpj" value="<?= e($edit['cnpj'] ?? '') ?>" class="input-field w-full"></label>
-            <div class="grid grid-cols-2 gap-2">
-                <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Contato</span><input type="text" name="contact_name" value="<?= e($edit['contact_name'] ?? '') ?>" class="input-field w-full"></label>
-                <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Telefone</span><input type="tel" name="contact_phone" value="<?= e($edit['contact_phone'] ?? '') ?>" class="input-field w-full"></label>
-            </div>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">E-mail</span><input type="email" name="contact_email" value="<?= e($edit['contact_email'] ?? '') ?>" class="input-field w-full"></label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Website</span><input type="url" name="website" value="<?= e($edit['website'] ?? '') ?>" class="input-field w-full" placeholder="https://..."></label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Notas</span><textarea name="notes" rows="3" class="input-field w-full"><?= e($edit['notes'] ?? '') ?></textarea></label>
-            <label class="flex items-center gap-2"><input type="checkbox" name="active" <?= ($edit['active'] ?? 1)?'checked':'' ?>> <span class="text-sm">Ativa</span></label>
-            <div class="flex gap-2">
-                <button class="btn-primary flex-1 justify-center"><?= $edit ? 'Atualizar' : 'Criar' ?></button>
-                <?php if ($edit): ?><a href="<?= url('/admin/instituicoes') ?>" class="btn-secondary">Cancelar</a><?php endif; ?>
-            </div>
-        </form>
+<div x-data="{open:false, editing:null}" x-init="<?= $edit ? 'editing=' . htmlspecialchars(json_encode($edit), ENT_QUOTES) . '; open=true' : '' ?>">
+    <div class="flex justify-between items-center mb-6">
+        <p class="text-sm" style="color:var(--text-secondary)"><?= $pag['total'] ?? count($items) ?> instituições</p>
+        <button type="button" @click="editing=null; open=true" class="admin-btn admin-btn-primary"><i data-lucide="plus" class="w-4 h-4"></i>Nova instituição</button>
     </div>
 
     <div class="admin-card overflow-hidden">
-    <table class="w-full">
-        <thead style="background:var(--areia-light)"><tr class="text-left text-xs font-bold uppercase tracking-wider" style="color:var(--text-secondary)"><th class="p-4">Nome</th><th class="p-4">Tipo</th><th class="p-4">Contato</th><th class="p-4">Status</th><th class="p-4"></th></tr></thead>
-        <tbody>
-            <?php if (empty($items)): ?>
-                <tr><td colspan="5" class="p-10 text-center" style="color:var(--text-muted)">Nenhuma instituição cadastrada.</td></tr>
-            <?php else: foreach ($items as $it): ?>
-                <tr class="border-t" style="border-color:var(--border-default)">
-                    <td class="p-4 font-semibold"><?= e($it['name']) ?></td>
-                    <td class="p-4 text-sm"><?= $types[$it['type']] ?? $it['type'] ?></td>
-                    <td class="p-4 text-sm"><?= e($it['contact_email']) ?></td>
-                    <td class="p-4"><span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white" style="background:<?= $it['active']?'#059669':'#6B7280' ?>"><?= $it['active']?'Ativa':'Inativa' ?></span></td>
-                    <td class="p-4">
-                        <div class="flex gap-2">
-                            <a href="?edit=<?= $it['id'] ?>" class="action-chip chip-edit"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i>Editar</a>
+        <?php if (empty($items)): ?>
+            <div class="p-12 text-center">
+                <i data-lucide="building-2" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
+                <h3 class="font-semibold mb-1" style="color:var(--sepia)">Nenhuma instituição cadastrada</h3>
+                <button type="button" @click="editing=null; open=true" class="admin-btn admin-btn-primary mt-4"><i data-lucide="plus" class="w-4 h-4"></i>Adicionar</button>
+            </div>
+        <?php else: ?>
+        <div class="overflow-x-auto">
+            <table class="admin-table">
+                <thead><tr><th>Nome</th><th>Tipo</th><th>Contato</th><th>Telefone</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+                <tbody>
+                <?php foreach ($items as $it): ?>
+                <tr>
+                    <td>
+                        <div class="font-semibold"><?= e($it['name']) ?></div>
+                        <?php if ($it['website']): ?><a href="<?= e($it['website']) ?>" target="_blank" class="text-xs" style="color:var(--horizonte)"><?= e($it['website']) ?></a><?php endif; ?>
+                    </td>
+                    <td><span class="badge badge-info"><?= $types[$it['type']] ?? $it['type'] ?></span></td>
+                    <td>
+                        <div class="text-sm"><?= e($it['contact_name'] ?: '—') ?></div>
+                        <div class="text-xs" style="color:var(--text-muted)"><?= e($it['contact_email']) ?></div>
+                    </td>
+                    <td><span class="text-sm"><?= e($it['contact_phone'] ?: '—') ?></span></td>
+                    <td><span class="badge badge-<?= $it['active']?'success':'muted' ?>"><?= $it['active']?'Ativa':'Inativa' ?></span></td>
+                    <td class="actions-cell">
+                        <div class="flex justify-end gap-1">
+                            <button type="button" @click="editing=<?= htmlspecialchars(json_encode($it), ENT_QUOTES) ?>; open=true" class="action-chip chip-edit" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i>Editar</button>
                             <form method="POST" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $it['id'] ?>"><button class="action-chip chip-danger" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></form>
                         </div>
                     </td>
                 </tr>
-            <?php endforeach; endif; ?>
-        </tbody>
-    </table>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Modal -->
+    <div x-show="open" x-cloak @keydown.escape.window="open=false" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)">
+        <div @click.outside="open=false" class="w-full max-w-xl rounded-2xl p-6" style="background:var(--bg-card);max-height:90vh;overflow-y:auto">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display text-xl font-bold" style="color:var(--sepia)" x-text="editing?'Editar instituição':'Nova instituição'"></h3>
+                <button type="button" @click="open=false" style="color:var(--text-muted)"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form method="POST" class="space-y-3">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="save">
+                <input type="hidden" name="id" :value="editing?editing.id:''">
+                <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Nome *</span><input type="text" name="name" :value="editing?editing.name:''" required class="admin-input w-full"></label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Tipo</span>
+                        <select name="type" class="admin-input w-full" :value="editing?editing.type:'empresa'">
+                            <?php foreach ($types as $k=>$v): ?><option value="<?= $k ?>"><?= $v ?></option><?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">CNPJ</span><input type="text" name="cnpj" :value="editing?editing.cnpj:''" class="admin-input w-full"></label>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Contato</span><input type="text" name="contact_name" :value="editing?editing.contact_name:''" class="admin-input w-full"></label>
+                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Telefone</span><input type="tel" name="contact_phone" :value="editing?editing.contact_phone:''" class="admin-input w-full"></label>
+                </div>
+                <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">E-mail</span><input type="email" name="contact_email" :value="editing?editing.contact_email:''" class="admin-input w-full"></label>
+                <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Website</span><input type="url" name="website" :value="editing?editing.website:''" class="admin-input w-full" placeholder="https://..."></label>
+                <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Notas</span><textarea name="notes" rows="3" class="admin-input w-full" x-text="editing?editing.notes:''"></textarea></label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="active" value="1" :checked="editing?editing.active==1:true"> <span class="text-sm">Ativa</span></label>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" @click="open=false" class="admin-btn admin-btn-secondary flex-1">Cancelar</button>
+                    <button type="submit" class="admin-btn admin-btn-primary flex-1">Salvar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
