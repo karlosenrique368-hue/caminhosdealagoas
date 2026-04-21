@@ -619,6 +619,11 @@ body {
 /* Rotating seal */
 .seal-rotate { animation: sealSpin 40s linear infinite; transform-origin: center; }
 @keyframes sealSpin { to { transform: rotate(360deg); } }
+/* Keyframe that preserves translateY(-50%) so the seal stays vertically centered. */
+@keyframes sealSpinY {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to   { transform: translateY(-50%) rotate(360deg); }
+}
 .seal-reverse { animation: sealSpinR 50s linear infinite; transform-origin: center; }
 @keyframes sealSpinR { to { transform: rotate(-360deg); } }
 
@@ -1528,7 +1533,7 @@ textarea.input-field { resize: vertical; min-height: 96px; }
     white-space: nowrap;
     position: relative; z-index: 1;
 }
-.action-chip:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.action-chip:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .action-chip.chip-edit {
     border-color: rgba(58,107,138,0.3); color: var(--horizonte);
     background: rgba(58,107,138,0.05);
@@ -1745,10 +1750,10 @@ textarea.input-field { resize: vertical; min-height: 96px; }
     top: 50%;
     width: 120px; height: 120px;
     background: var(--seal-img) center/contain no-repeat;
-    transform: translateY(-50%);
+    transform: translateY(-50%) rotate(0deg);
     opacity: 0.22;
     filter: drop-shadow(0 6px 18px rgba(30,58,82,0.15));
-    animation: sealSpin 22s linear infinite;
+    animation: sealSpinY 22s linear infinite;
 }
 /* Show MORE of the seal than hidden (~70% visible vs 30% past the edge) */
 .section-divider-seal::before { left: -36px; }
@@ -2224,3 +2229,131 @@ html, body { overflow-x: clip; max-width: 100vw; }
 .admin-sidebar nav::-webkit-scrollbar-track { background: transparent; }
 .admin-sidebar nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
 .admin-sidebar nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+/* ============================================================
+   AVAILABILITY CALENDAR (roteiro-detail)
+   ============================================================ */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+.calendar-cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms, color 150ms;
+    position: relative;
+    padding: 4px;
+}
+.calendar-cell.empty { visibility: hidden; cursor: default; }
+.calendar-cell.past { color: #CBD5E1; cursor: not-allowed; background: transparent; }
+.calendar-cell .cal-day { font-size: 14px; font-weight: 700; line-height: 1; }
+.calendar-cell .cal-price {
+    font-size: 9px; font-weight: 700; margin-top: 3px; letter-spacing: 0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.calendar-cell.available {
+    background: rgba(111,143,79,0.12);
+    border-color: rgba(111,143,79,0.3);
+    color: var(--maresia-dark);
+}
+.calendar-cell.available:hover {
+    background: rgba(111,143,79,0.25);
+    border-color: var(--maresia);
+}
+.calendar-cell.low {
+    background: rgba(245,158,11,0.12);
+    border-color: rgba(245,158,11,0.35);
+    color: #B45309;
+}
+.calendar-cell.low:hover { background: rgba(245,158,11,0.22); border-color: #F59E0B; }
+.calendar-cell.blocked {
+    background: #F3F4F6;
+    color: #9CA3AF;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+.calendar-cell.blocked:hover { background: #F3F4F6; }
+.calendar-cell.selected {
+    background: var(--terracota) !important;
+    border-color: var(--terracota-dark) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 14px rgba(201,107,74,0.35);
+}
+.calendar-cell.selected .cal-price { color: rgba(255,255,255,0.9); }
+@media (max-width: 640px) {
+    .calendar-cell .cal-price { display: none; }
+    .calendar-cell { font-size: 13px; padding: 2px; }
+}
+
+/* ============================================================
+   AVAILABILITY CALENDAR (roteiro-detail)
+   ============================================================ */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+.calendar-cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms, color 150ms;
+    position: relative;
+    padding: 4px;
+}
+.calendar-cell.empty { visibility: hidden; cursor: default; }
+.calendar-cell.past { color: #CBD5E1; cursor: not-allowed; background: transparent; }
+.calendar-cell .cal-day { font-size: 14px; font-weight: 700; line-height: 1; }
+.calendar-cell .cal-price {
+    font-size: 9px; font-weight: 700; margin-top: 3px; letter-spacing: 0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.calendar-cell.available {
+    background: rgba(111,143,79,0.12);
+    border-color: rgba(111,143,79,0.3);
+    color: var(--maresia-dark);
+}
+.calendar-cell.available:hover {
+    background: rgba(111,143,79,0.25);
+    border-color: var(--maresia);
+}
+.calendar-cell.low {
+    background: rgba(245,158,11,0.12);
+    border-color: rgba(245,158,11,0.35);
+    color: #B45309;
+}
+.calendar-cell.low:hover { background: rgba(245,158,11,0.22); border-color: #F59E0B; }
+.calendar-cell.blocked {
+    background: #F3F4F6;
+    color: #9CA3AF;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+.calendar-cell.blocked:hover { background: #F3F4F6; }
+.calendar-cell.selected {
+    background: var(--terracota) !important;
+    border-color: var(--terracota-dark) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 14px rgba(201,107,74,0.35);
+}
+.calendar-cell.selected .cal-price { color: rgba(255,255,255,0.9); }
+@media (max-width: 640px) {
+    .calendar-cell .cal-price { display: none; }
+    .calendar-cell { font-size: 13px; padding: 2px; }
+}

@@ -7,8 +7,21 @@ if (!$r) {
     return;
 }
 dbExec("UPDATE roteiros SET views = views + 1 WHERE id = ?", [$r['id']]);
-$departures = dbAll("SELECT * FROM departures WHERE entity_type='roteiro' AND entity_id=? AND status='open' AND departure_date>=CURDATE() ORDER BY departure_date", [$r['id']]);
-$related = dbAll("SELECT * FROM roteiros WHERE status='published' AND id<>? ORDER BY RAND() LIMIT 3", [$r['id']]);
+// Todas as saídas futuras (abertas E bloqueadas) para o calendário visual
+$departuresAll = dbAll("SELECT * FROM departures WHERE entity_type='roteiro' AND entity_id=? AND departure_date>=CURDATE() ORDER BY departure_date", [$r['id']]);
+$departures = array_values(array_filter($departuresAll, fn($d) => $d['status'] === 'open'));
+$related = dbAll("SELECT * FROM roteiros WHERE status='published' AND id<>? ORDER BY RAND() LIMIT 4", [$r['id']]);
+
+// Mapa de datas para o JS do calendario: { '2026-05-10': {status,seats,price}, ... }
+$availabilityMap = [];
+foreach ($departuresAll as $d) {
+    $availabilityMap[$d['departure_date']] = [
+        'status' => $d['status'],
+        'seats' => max(0, (int)$d['seats_total'] - (int)$d['seats_sold']),
+        'price' => $d['price_override'] !== null ? (float)$d['price_override'] : (float)($r['price_pix'] ?: $r['price']),
+        'time' => $d['departure_time'],
+    ];
+}
 
 // Galeria
 $gallery = [];
@@ -114,6 +127,70 @@ function galleryLightbox(images) {
                 </div>
 
                 <?php
+                $highlights = !empty($r['highlights']) ? json_decode($r['highlights'], true) : null;
+                if (is_array($highlights) && count($highlights) > 0):
+                ?>
+                <!-- Destaques -->
+                <div class="admin-card p-8">
+                    <h2 class="font-display text-2xl font-bold mb-6 flex items-center gap-3" style="color:var(--sepia)">
+                        <i data-lucide="sparkles" class="w-6 h-6" style="color:var(--terracota)"></i> Destaques
+                    </h2>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <?php foreach ($highlights as $h): ?>
+                            <div class="flex items-start gap-3 p-4 rounded-xl" style="background:rgba(201,107,74,0.06);border:1px solid rgba(201,107,74,0.12)">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--terracota);color:#fff">
+                                    <i data-lucide="star" class="w-4 h-4"></i>
+                                </div>
+                                <span class="text-sm leading-relaxed" style="color:var(--text-primary)"><?= e($h) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php
+                $itinerary = !empty($r['itinerary']) ? json_decode($r['itinerary'], true) : null;
+                if (is_array($itinerary) && count($itinerary) > 0):
+                ?>
+                <!-- Itinerário -->
+                <div class="admin-card p-8">
+                    <h2 class="font-display text-2xl font-bold mb-6 flex items-center gap-3" style="color:var(--sepia)">
+                        <i data-lucide="route" class="w-6 h-6" style="color:var(--horizonte)"></i> Itinerário
+                    </h2>
+                    <div class="space-y-4">
+                        <?php foreach ($itinerary as $idx => $item):
+                            $title = is_array($item) ? ($item['title'] ?? $item['name'] ?? '') : '';
+                            $desc  = is_array($item) ? ($item['description'] ?? $item['desc'] ?? '') : (string)$item;
+                            $time  = is_array($item) ? ($item['time'] ?? '') : '';
+                        ?>
+                            <div class="flex gap-4" x-data="{open: <?= $idx===0?'true':'false' ?>}">
+                                <div class="flex flex-col items-center flex-shrink-0">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-sm text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--horizonte-light))"><?= $idx + 1 ?></div>
+                                    <?php if ($idx < count($itinerary) - 1): ?>
+                                        <div class="flex-1 w-0.5 mt-2" style="background:var(--border-default);min-height:32px"></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="flex-1 pb-4">
+                                    <button type="button" @click="open = !open" class="w-full text-left flex items-start justify-between gap-3 group">
+                                        <div>
+                                            <?php if ($title): ?>
+                                                <div class="font-display font-bold text-base mb-1" style="color:var(--sepia)"><?= e($title) ?></div>
+                                            <?php endif; ?>
+                                            <?php if ($time): ?>
+                                                <div class="text-xs font-semibold inline-flex items-center gap-1" style="color:var(--terracota)"><i data-lucide="clock" class="w-3 h-3"></i><?= e($time) ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <i data-lucide="chevron-down" class="w-4 h-4 transition-transform mt-1" :class="open && 'rotate-180'" style="color:var(--text-muted)"></i>
+                                    </button>
+                                    <div x-show="open" x-collapse class="mt-2 text-sm leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e($desc)) ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php
                 $inc = $r['includes'] ? json_decode($r['includes'], true) : null;
                 $exc = $r['excludes'] ? json_decode($r['excludes'], true) : null;
                 ?>
@@ -156,6 +233,82 @@ function galleryLightbox(images) {
                     </div>
                 </div>
                 <?php endif; ?>
+
+                <!-- Calendário de disponibilidade -->
+                <div class="admin-card p-8" x-data="availabilityCalendar(<?= htmlspecialchars(json_encode([
+                    'mode' => $r['availability_mode'] ?? 'fixed',
+                    'map' => $availabilityMap,
+                    'basePrice' => (float)($r['price_pix'] ?: $r['price']),
+                    'checkoutBase' => url('/checkout?roteiro=' . $r['id']),
+                ]), ENT_QUOTES) ?>)">
+                    <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+                        <div>
+                            <h2 class="font-display text-2xl font-bold flex items-center gap-3" style="color:var(--sepia)">
+                                <i data-lucide="calendar-days" class="w-6 h-6" style="color:var(--terracota)"></i> Datas disponíveis
+                            </h2>
+                            <p class="text-sm mt-1" style="color:var(--text-muted)" x-text="modeLabel"></p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="prevMonth()" class="w-10 h-10 rounded-lg border flex items-center justify-center transition" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <div class="min-w-[160px] text-center font-display font-bold text-base" style="color:var(--sepia)" x-text="monthLabel"></div>
+                            <button type="button" @click="nextMonth()" class="w-10 h-10 rounded-lg border flex items-center justify-center transition" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Legenda -->
+                    <div class="flex flex-wrap items-center gap-4 mb-5 text-xs" style="color:var(--text-muted)">
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:var(--maresia)"></span> Disponível</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:#F59E0B"></span> Últimas vagas</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:#E5E7EB"></span> Indisponível</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:var(--terracota)"></span> Selecionado</span>
+                    </div>
+
+                    <!-- Grid do calendario -->
+                    <div class="calendar-grid">
+                        <template x-for="dow in ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']" :key="dow">
+                            <div class="text-center text-[11px] font-bold uppercase tracking-wider py-2" style="color:var(--text-muted)" x-text="dow"></div>
+                        </template>
+                        <template x-for="cell in cells" :key="cell.key">
+                            <button type="button"
+                                :disabled="!cell.available"
+                                @click="cell.available && select(cell)"
+                                class="calendar-cell"
+                                :class="{
+                                    'empty': cell.empty,
+                                    'past': cell.past,
+                                    'available': cell.available && !cell.lowSeats,
+                                    'low': cell.available && cell.lowSeats,
+                                    'blocked': cell.blocked,
+                                    'selected': cell.iso && cell.iso === selectedIso
+                                }">
+                                <span class="cal-day" x-text="cell.day"></span>
+                                <span class="cal-price" x-show="cell.available" x-text="cell.priceLabel"></span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <!-- Resumo + CTA -->
+                    <div x-show="selectedIso" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Data selecionada</div>
+                            <div class="font-display font-bold text-lg" style="color:var(--sepia)" x-text="selectedLabel"></div>
+                            <div class="text-xs mt-0.5" style="color:var(--text-secondary)" x-text="selectedDetail"></div>
+                        </div>
+                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar esta data</a>
+                    </div>
+                    <div x-show="!selectedIso && cells.some(c => c.available)" class="mt-6 text-sm text-center" style="color:var(--text-muted)">
+                        Clique em uma data disponível para reservar.
+                    </div>
+                    <div x-show="!cells.some(c => c.available) && mode !== 'on_request'" class="mt-6 p-5 rounded-xl text-center" style="background:var(--bg-surface)">
+                        <div class="text-sm font-semibold mb-1" style="color:var(--sepia)">Sem datas disponíveis neste mês</div>
+                        <div class="text-xs" style="color:var(--text-muted)">Tente o próximo mês ou fale com a gente no WhatsApp.</div>
+                    </div>
+                    <div x-show="mode === 'on_request'" class="mt-6 p-5 rounded-xl text-center" style="background:rgba(58,107,138,0.08);border:1px solid rgba(58,107,138,0.25)">
+                        <div class="text-sm font-semibold mb-2" style="color:var(--horizonte)">Passeio sob consulta</div>
+                        <div class="text-xs mb-3" style="color:var(--text-secondary)">Combine a data diretamente com nossa equipe.</div>
+                        <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Tenho%20interesse%20no%20passeio%20<?= urlencode($r['title']) ?>" target="_blank" class="btn-secondary"><i data-lucide="message-circle" class="w-4 h-4"></i> Falar no WhatsApp</a>
+                    </div>
+                </div>
             </div>
 
             <!-- Sidebar sticky -->
@@ -211,16 +364,33 @@ function galleryLightbox(images) {
         <?php if ($related): ?>
         <div class="mt-20">
             <h2 class="font-display text-3xl font-bold mb-8 text-center" style="color:var(--sepia)">Você também vai gostar</h2>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <?php foreach ($related as $rel): ?>
-                <a href="<?= url('/roteiros/'.$rel['slug']) ?>" class="roteiro-card group">
-                    <div class="img-wrap">
-                        <?php if ($rel['cover_image']): ?><img src="<?= storageUrl($rel['cover_image']) ?>" alt="<?= e($rel['title']) ?>">
-                        <?php else: ?><div class="img-placeholder w-full h-full"><span><?= e(mb_substr($rel['title'],0,1)) ?></span></div><?php endif; ?>
+                <a href="<?= url('/passeios/'.$rel['slug']) ?>" class="roteiro-card group">
+                    <div class="img-wrap" style="aspect-ratio:4/3">
+                        <?php if ($rel['cover_image']): ?>
+                            <div class="slide active" style="background-image:url('<?= e(storageUrl($rel['cover_image'])) ?>')"></div>
+                        <?php else: ?>
+                            <div class="img-placeholder w-full h-full"><span><?= e(mb_substr($rel['title'],0,1)) ?></span></div>
+                        <?php endif; ?>
+                        <?php if (!empty($rel['featured'])): ?><div class="badge-featured">Destaque</div><?php endif; ?>
                     </div>
                     <div class="p-5">
-                        <h3 class="font-display text-lg font-bold mb-2 line-clamp-2" style="color:var(--sepia)"><?= e($rel['title']) ?></h3>
-                        <div class="font-display text-lg font-bold" style="color:var(--terracota)"><?= formatBRL($rel['price_pix'] ?: $rel['price']) ?></div>
+                        <?php if (!empty($rel['location'])): ?>
+                        <div class="flex items-center gap-1.5 text-xs font-semibold mb-2" style="color:var(--horizonte)">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($rel['location']) ?>
+                        </div>
+                        <?php endif; ?>
+                        <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e($rel['title']) ?></h3>
+                        <div class="flex items-end justify-between pt-3 border-t" style="border-color:var(--border-default)">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>
+                                <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatBRL($rel['price_pix'] ?: $rel['price']) ?></div>
+                            </div>
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:bg-terracota group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)">
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </div>
+                        </div>
                     </div>
                 </a>
                 <?php endforeach; ?>
@@ -229,5 +399,99 @@ function galleryLightbox(images) {
         <?php endif; ?>
     </div>
 </section>
+
+<script>
+function availabilityCalendar(config) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return {
+        mode: config.mode,
+        map: config.map || {},
+        basePrice: config.basePrice || 0,
+        checkoutBase: config.checkoutBase,
+        viewYear: today.getFullYear(),
+        viewMonth: today.getMonth(),
+        selectedIso: null,
+
+        get modeLabel() {
+            if (this.mode === 'open') return 'Datas abertas — escolha quando quiser ir';
+            if (this.mode === 'on_request') return 'Passeio sob consulta — combine pelo WhatsApp';
+            return 'Apenas datas listadas abaixo';
+        },
+        get monthLabel() {
+            const names = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            return names[this.viewMonth] + ' ' + this.viewYear;
+        },
+        pad(n){ return n < 10 ? '0'+n : ''+n; },
+        iso(y,m,d){ return y + '-' + this.pad(m+1) + '-' + this.pad(d); },
+        brl(v){ return 'R$ ' + Number(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); },
+
+        get cells() {
+            const first = new Date(this.viewYear, this.viewMonth, 1);
+            const startDow = first.getDay();
+            const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+            const cells = [];
+            for (let i = 0; i < startDow; i++) cells.push({ key: 'e'+i, empty: true });
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateObj = new Date(this.viewYear, this.viewMonth, d);
+                const isoStr = this.iso(this.viewYear, this.viewMonth, d);
+                const past = dateObj < today;
+                const info = this.map[isoStr];
+                let available = false, lowSeats = false, blocked = false, price = this.basePrice;
+                if (past) {
+                    available = false;
+                } else if (this.mode === 'on_request') {
+                    available = false;
+                } else if (info) {
+                    if (info.status === 'open' && info.seats > 0) {
+                        available = true;
+                        lowSeats = info.seats <= 3;
+                        price = info.price;
+                    } else {
+                        blocked = true;
+                    }
+                } else if (this.mode === 'open') {
+                    available = true;
+                }
+                cells.push({
+                    key: isoStr, iso: isoStr, day: d, empty: false, past, available, lowSeats, blocked,
+                    priceLabel: available ? this.brl(price).replace('R$ ','R$') : '',
+                    seats: info ? info.seats : null,
+                    price,
+                });
+            }
+            return cells;
+        },
+        prevMonth() {
+            if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; } else { this.viewMonth--; }
+            this.$nextTick(() => window.lucide && window.lucide.createIcons());
+        },
+        nextMonth() {
+            if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; } else { this.viewMonth++; }
+            this.$nextTick(() => window.lucide && window.lucide.createIcons());
+        },
+        select(cell) {
+            this.selectedIso = cell.iso;
+            this.$nextTick(() => window.lucide && window.lucide.createIcons());
+        },
+        get selectedLabel() {
+            if (!this.selectedIso) return '';
+            const [y,m,d] = this.selectedIso.split('-').map(Number);
+            const names = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            return d + ' de ' + names[m-1] + ' de ' + y;
+        },
+        get selectedDetail() {
+            if (!this.selectedIso) return '';
+            const c = this.cells.find(x => x.iso === this.selectedIso);
+            if (!c) return '';
+            const parts = [this.brl(c.price) + ' por pessoa'];
+            if (c.seats !== null) parts.push(c.seats + ' vagas restantes');
+            return parts.join(' · ');
+        },
+        get selectedCheckoutUrl() {
+            return this.checkoutBase + '&date=' + (this.selectedIso || '');
+        },
+    };
+}
+</script>
 
 <?php include VIEWS_DIR . '/partials/public_foot.php'; ?>

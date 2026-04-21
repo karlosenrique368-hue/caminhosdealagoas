@@ -100,8 +100,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                 if (!empty($p['gallery'])) { $dg = json_decode($p['gallery'], true); if (is_array($dg)) foreach ($dg as $g) if ($g) $slides[] = storageUrl($g); }
                 $slides = array_values(array_unique($slides));
             ?>
-            <a href="<?= url('/pacotes/'.$p['slug']) ?>" class="card-lift group overflow-hidden" data-reveal style="animation-delay: <?= $i * 80 ?>ms">
-                <div class="relative aspect-[16/10] overflow-hidden slider-wrap" <?= count($slides)>1?'data-slider':'' ?>>
+            <a href="<?= url('/pacotes/'.$p['slug']) ?>" class="roteiro-card group" data-reveal style="animation-delay: <?= $i * 80 ?>ms">
+                <div class="img-wrap slider-wrap" <?= count($slides)>1?'data-slider':'' ?> style="aspect-ratio:4/3;position:relative">
                     <?php if ($slides): foreach ($slides as $si => $src): ?>
                         <div class="slide<?= $si===0?' active':'' ?>" style="background-image:url('<?= e($src) ?>')"></div>
                     <?php endforeach; else: ?>
@@ -112,23 +112,29 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <button type="button" class="slider-arrow prev" tabindex="-1" aria-label="Anterior"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                         <button type="button" class="slider-arrow next" tabindex="-1" aria-label="Próximo"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     <?php endif; ?>
+                    <?php if (!empty($p['featured'])): ?><div class="badge-featured">Destaque</div><?php endif; ?>
                     <button type="button" class="heart-btn" data-fav-type="pacote" data-fav-id="<?= (int)$p['id'] ?>" aria-label="Favoritar"><i data-lucide="heart" class="w-4 h-4"></i></button>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
-                    <div class="absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 inline-flex items-center gap-1.5" style="color:var(--sepia);z-index:3" title="<?= (int)$p['duration_days'] ?> dias e <?= (int)$p['duration_nights'] ?> noites"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i><?= e($p['duration_days']) ?>D / <?= e($p['duration_nights']) ?>N</div>
-                    <div class="absolute bottom-4 left-4 right-4" style="z-index:2">
-                        <div class="flex items-center gap-1.5 text-white/80 text-xs mb-2"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($p['destination']) ?></div>
-                        <h3 class="font-display text-xl font-bold text-white leading-tight line-clamp-2"><?= e($p['title']) ?></h3>
-                    </div>
                 </div>
-                <div class="p-6">
-                    <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary)"><?= e($p['short_desc'] ?? '') ?></p>
-                    <div class="flex items-end justify-between pt-4 border-t" style="border-color:var(--border-default)">
+                <div class="p-5">
+                    <?php if (!empty($p['destination'])): ?>
+                    <div class="flex items-center gap-1.5 text-xs font-semibold mb-2" style="color:var(--horizonte)">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($p['destination']) ?>
+                    </div>
+                    <?php endif; ?>
+                    <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e($p['title']) ?></h3>
+                    <p class="text-sm line-clamp-2 mb-3" style="color:var(--text-secondary)"><?= e($p['short_desc'] ?? '') ?></p>
+                    <div class="flex items-center gap-3 text-[11px] font-semibold mb-3" style="color:var(--text-muted)">
+                        <span class="inline-flex items-center gap-1"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i><?= (int)$p['duration_days'] ?>D / <?= (int)$p['duration_nights'] ?>N</span>
+                    </div>
+                    <div class="flex items-end justify-between pt-3 border-t" style="border-color:var(--border-default)">
                         <div>
                             <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>
-                            <div class="font-display text-2xl font-bold" style="color:var(--terracota)"><?= formatBRL($p['price_pix'] ?: $p['price']) ?></div>
-                            <?php if ($p['installments']>1): ?><div class="text-xs" style="color:var(--text-muted)">ou <?= $p['installments'] ?>x sem juros</div><?php endif; ?>
+                            <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatBRL($p['price_pix'] ?: $p['price']) ?></div>
+                            <?php if ($p['installments']>1): ?><div class="text-[11px]" style="color:var(--text-muted)">ou <?= $p['installments'] ?>x sem juros</div><?php endif; ?>
                         </div>
-                        <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--terracota)">Reservar<i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></span>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:bg-terracota group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)">
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </div>
                     </div>
                 </div>
             </a>

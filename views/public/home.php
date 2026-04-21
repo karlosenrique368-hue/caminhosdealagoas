@@ -340,73 +340,43 @@ include VIEWS_DIR . '/partials/public_head.php';
                 foreach ($gal as $g) $slides[] = storageUrl($g);
                 $slides = array_values(array_unique(array_filter($slides)));
             ?>
-            <div class="card-premium group" data-reveal style="animation-delay: <?= $i * 100 ?>ms">
-                <a href="<?= url('/pacotes/' . $p['slug']) ?>" class="block">
-                    <div class="slider-wrap" data-slider style="aspect-ratio:16/10;background:linear-gradient(135deg,var(--terracota-light),var(--horizonte-light))">
-                        <?php if (!empty($slides)): ?>
-                            <?php foreach ($slides as $sIdx => $src): ?>
-                                <div class="slide<?= $sIdx===0?' active':'' ?>" style="background-image:url('<?= e($src) ?>')"></div>
-                            <?php endforeach; ?>
-                            <?php if (count($slides) > 1): ?>
-                                <div class="slider-dots">
-                                    <?php foreach ($slides as $sIdx => $_): ?>
-                                        <span class="dot<?= $sIdx===0?' active':'' ?>"></span>
-                                    <?php endforeach; ?>
-                                </div>
-                                <button type="button" class="slider-arrow prev" tabindex="-1" aria-label="Anterior"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                                <button type="button" class="slider-arrow next" tabindex="-1" aria-label="Próximo"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <div class="img-placeholder w-full h-full absolute inset-0"><span><?= e(mb_substr($p['title'], 0, 1)) ?></span></div>
+            <a href="<?= url('/pacotes/' . $p['slug']) ?>" class="roteiro-card group" data-reveal style="animation-delay: <?= $i * 80 ?>ms">
+                <div class="img-wrap slider-wrap" <?= count($slides)>1?'data-slider':'' ?> style="aspect-ratio:4/3;position:relative">
+                    <?php if (!empty($slides)): ?>
+                        <?php foreach ($slides as $sIdx => $src): ?>
+                            <div class="slide<?= $sIdx===0?' active':'' ?>" style="background-image:url('<?= e($src) ?>')"></div>
+                        <?php endforeach; ?>
+                        <?php if (count($slides) > 1): ?>
+                            <div class="slider-dots"><?php foreach ($slides as $sIdx => $_): ?><span class="dot<?= $sIdx===0?' active':'' ?>"></span><?php endforeach; ?></div>
+                            <button type="button" class="slider-arrow prev" tabindex="-1" aria-label="Anterior"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <button type="button" class="slider-arrow next" tabindex="-1" aria-label="Próximo"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                         <?php endif; ?>
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
-                        <div class="ribbon"><i data-lucide="star" class="w-3 h-3"></i> Destaque</div>
-                        <button type="button" class="heart-btn" data-fav-type="pacote" data-fav-id="<?= (int)$p['id'] ?>" aria-label="Favoritar" style="top:14px;right:auto;left:14px"><i data-lucide="heart" class="w-4 h-4"></i></button>
-                        <div class="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 z-[3]" style="color:var(--sepia)">
-                            <?= e($p['duration_days']) ?> dias
-                        </div>
-                        <div class="absolute bottom-4 left-4 right-4 z-[3]">
-                            <div class="flex items-center gap-1.5 text-white/85 text-xs mb-2">
-                                <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
-                                <?= e($p['destination']) ?>
-                            </div>
-                            <h3 class="font-brand text-xl text-white leading-tight line-clamp-2" style="text-shadow:0 2px 12px rgba(0,0,0,0.5)">
-                                <?= e($p['title']) ?>
-                            </h3>
-                        </div>
-                    </div>
-                    <div class="p-6">
-                        <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary)">
-                            <?= e($p['short_desc'] ?? '') ?>
-                        </p>
-                        <div class="flex items-end justify-between pt-4 border-t" style="border-color:var(--border-default)">
-                            <div>
-                                <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>
-                                <div class="font-brand text-2xl" style="color:var(--terracota)">
-                                    <?= formatBRL($p['price_pix'] ?: $p['price']) ?>
-                                </div>
-                                <?php if ($p['installments'] > 1): ?>
-                                    <div class="text-xs" style="color:var(--text-muted)">
-                                        ou <?= $p['installments'] ?>x sem juros
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                            <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition group-hover:scale-105"
-                                  style="background:linear-gradient(135deg,var(--terracota),var(--terracota-dark))">
-                                Reservar
-                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                            </span>
-                        </div>
-                    </div>
-                </a>
-                <div class="px-6 pb-5">
-                    <button type="button" onclick="window.cart.add('pacote', <?= (int)$p['id'] ?>)"
-                            class="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:scale-[1.02]"
-                            style="background:rgba(58,107,138,0.08);color:var(--horizonte);border:1px solid rgba(58,107,138,0.15)">
-                        <i data-lucide="shopping-bag" class="w-4 h-4"></i> Adicionar ao carrinho
-                    </button>
+                    <?php else: ?>
+                        <div class="img-placeholder w-full h-full"><span><?= e(mb_substr($p['title'], 0, 1)) ?></span></div>
+                    <?php endif; ?>
+                    <?php if (!empty($p['featured'])): ?><div class="badge-featured">Destaque</div><?php endif; ?>
+                    <button type="button" class="heart-btn" data-fav-type="pacote" data-fav-id="<?= (int)$p['id'] ?>" aria-label="Favoritar"><i data-lucide="heart" class="w-4 h-4"></i></button>
                 </div>
-            </div>
+                <div class="p-5">
+                    <?php if (!empty($p['destination'])): ?>
+                    <div class="flex items-center gap-1.5 text-xs font-semibold mb-2" style="color:var(--horizonte)">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($p['destination']) ?>
+                    </div>
+                    <?php endif; ?>
+                    <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e($p['title']) ?></h3>
+                    <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary)"><?= e($p['short_desc'] ?? '') ?></p>
+                    <div class="flex items-end justify-between pt-3 border-t" style="border-color:var(--border-default)">
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>
+                            <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatBRL($p['price_pix'] ?: $p['price']) ?></div>
+                            <?php if ($p['installments'] > 1): ?><div class="text-[11px]" style="color:var(--text-muted)">ou <?= $p['installments'] ?>x sem juros</div><?php endif; ?>
+                        </div>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:bg-terracota group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)">
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
             <?php endforeach; ?>
         </div>
     </div>
