@@ -1,0 +1,153 @@
+<!-- ============== FOOTER ============== -->
+<footer class="footer-dark pt-20 pb-8 relative overflow-hidden">
+    <!-- Decorative wave top -->
+    <div class="absolute top-0 inset-x-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(201,107,74,0.5),transparent)"></div>
+    <!-- Strategic rotating seal (single, footer corner) -->
+    <img src="<?= asset('brand/selo-branco.png') ?>" class="seal-rotate absolute hidden md:block" style="bottom:30px;right:30px;width:90px;opacity:0.12" alt="">
+
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            <!-- Brand -->
+            <div>
+                <div class="mb-5">
+                    <img src="<?= asset('brand/logo-areia.png') ?>" alt="Caminhos de Alagoas" style="height:46px;width:auto">
+                </div>
+                <p class="text-sm text-white/60 leading-relaxed mb-4">
+                    Roteiros, passeios e pacotes autênticos para quem quer viver Alagoas de verdade.
+                </p>
+                <p class="text-xs text-white/40">CNPJ <?= e(getSetting('cnpj', '50.770.482/0001-37')) ?></p>
+            </div>
+
+            <!-- SAC -->
+            <div>
+                <h4 class="font-display text-lg font-semibold text-white mb-5">Atendimento</h4>
+                <ul class="space-y-3 text-sm">
+                    <li class="flex items-start gap-2">
+                        <i data-lucide="mail" class="w-4 h-4 mt-0.5 text-terracota-light"></i>
+                        <div>
+                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5">E-mail</div>
+                            <a href="mailto:<?= e(getSetting('contact_email', APP_EMAIL)) ?>"><?= e(getSetting('contact_email', APP_EMAIL)) ?></a>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i data-lucide="phone" class="w-4 h-4 mt-0.5 text-terracota-light"></i>
+                        <div>
+                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5">WhatsApp</div>
+                            <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>"><?= e(getSetting('contact_phone', APP_PHONE)) ?></a>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 mt-0.5 text-terracota-light"></i>
+                        <div>
+                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5">Horário</div>
+                            <div>Seg a Sex · 08h30 às 18h</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Navegue -->
+            <div>
+                <h4 class="font-display text-lg font-semibold text-white mb-5">Navegue</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="<?= url('/') ?>">Home</a></li>
+                    <li><a href="<?= url('/roteiros') ?>">Passeios</a></li>
+                    <li><a href="<?= url('/pacotes') ?>">Pacotes</a></li>
+                    <li><a href="<?= url('/sobre') ?>">Sobre nós</a></li>
+                    <li><a href="<?= url('/contato') ?>">Contato</a></li>
+                </ul>
+            </div>
+
+            <!-- Newsletter -->
+            <div>
+                <h4 class="font-display text-lg font-semibold text-white mb-3">Receba inspiração</h4>
+                <p class="text-sm text-white/60 mb-4">Roteiros exclusivos, ofertas e dicas de Alagoas.</p>
+                <form class="flex gap-2" onsubmit="event.preventDefault();caminhosApi('<?= url('/api/newsletter') ?>',{method:'POST',data:new FormData(this)}).then(r=>showToast(r.msg||'Inscrito!',r.ok?'success':'error'));this.reset();">
+                    <input type="email" name="email" required placeholder="seu@email.com"
+                           class="flex-1 px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/50 border outline-none"
+                           style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)">
+                    <button type="submit" class="px-4 py-2.5 rounded-xl text-white" style="background:var(--terracota)">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </form>
+                <div class="flex gap-3 mt-5">
+                    <a href="<?= e(getSetting('instagram_url', '#')) ?>" target="_blank" class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(255,255,255,0.08)">
+                        <i data-lucide="instagram" class="w-4 h-4"></i>
+                    </a>
+                    <a href="<?= e(getSetting('facebook_url', '#')) ?>" target="_blank" class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(255,255,255,0.08)">
+                        <i data-lucide="facebook" class="w-4 h-4"></i>
+                    </a>
+                    <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(255,255,255,0.08)">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/50">
+            <p>© <?= date('Y') ?> Caminhos de Alagoas · Todos os direitos reservados.</p>
+            <div class="flex gap-6">
+                <a href="#" class="hover:text-white">Política de Privacidade</a>
+                <a href="#" class="hover:text-white">Termos de Uso</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Floating WhatsApp -->
+<a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank"
+   class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
+   style="background:#25D366;box-shadow:0 10px 30px rgba(37,211,102,0.45)">
+    <i data-lucide="message-circle" class="w-6 h-6 text-white"></i>
+</a>
+
+<!-- ============== CART DRAWER ============== -->
+<div id="cart-backdrop" class="cart-backdrop" onclick="window.cart && window.cart.close()"></div>
+<aside id="cart-drawer" class="cart-drawer" aria-hidden="true">
+    <header class="px-6 py-5 flex items-center justify-between border-b" style="border-color:var(--border-default)">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(201,107,74,0.1)">
+                <i data-lucide="shopping-bag" class="w-5 h-5" style="color:var(--terracota)"></i>
+            </div>
+            <div>
+                <div class="font-display text-lg font-bold" style="color:var(--sepia)">Seu Carrinho</div>
+                <div class="text-xs" style="color:var(--text-muted)" id="cart-subtitle">0 itens</div>
+            </div>
+        </div>
+        <button onclick="window.cart && window.cart.close()" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-gray-100 transition" style="color:var(--text-secondary)">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <div id="cart-body" class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+        <!-- populated by JS -->
+    </div>
+
+    <div id="cart-empty" class="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
+        <div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-4" style="background:rgba(58,107,138,0.08)">
+            <i data-lucide="shopping-bag" class="w-10 h-10" style="color:var(--horizonte-light)"></i>
+        </div>
+        <h3 class="font-display text-xl font-bold mb-1" style="color:var(--sepia)">Carrinho vazio</h3>
+        <p class="text-sm mb-6 max-w-xs" style="color:var(--text-muted)">Escolha um passeio ou pacote para começar sua próxima aventura.</p>
+        <a href="<?= url('/roteiros') ?>" class="btn-primary" style="padding:12px 24px">
+            <i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios
+        </a>
+    </div>
+
+    <footer id="cart-footer" class="border-t px-6 py-5 space-y-4" style="border-color:var(--border-default);display:none">
+        <div class="flex justify-between items-end">
+            <div class="text-xs uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Total</div>
+            <div class="font-display text-2xl font-bold" id="cart-total" style="color:var(--terracota)">R$ 0,00</div>
+        </div>
+        <a href="<?= url('/checkout') ?>" id="cart-checkout-link" class="btn-primary w-full">
+            <i data-lucide="lock" class="w-4 h-4"></i> Finalizar Reserva
+        </a>
+        <button onclick="window.cart && window.cart.clear()" class="w-full text-xs font-semibold py-2 hover:underline" style="color:var(--text-muted)">
+            Limpar carrinho
+        </button>
+    </footer>
+</aside>
+
+<script src="<?= asset('js/app.js') ?>"></script>
+</body>
+</html>

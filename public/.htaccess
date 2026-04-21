@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# Send storage files directly
+RewriteRule ^storage/(.+)$ ../storage/$1 [L]
+
+# Route everything else through index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# Security
+<FilesMatch "\.(env|ini|log|sql|md)$">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes
