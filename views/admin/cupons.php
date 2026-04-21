@@ -35,7 +35,8 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$coupons = dbAll("SELECT * FROM coupons ORDER BY created_at DESC");
+$pag = paginate("SELECT COUNT(*) AS c FROM coupons", "SELECT * FROM coupons ORDER BY created_at DESC");
+$coupons = $pag['rows'];
 $msg = flash('success');
 ?>
 
@@ -122,4 +123,5 @@ $msg = flash('success');
     </div>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

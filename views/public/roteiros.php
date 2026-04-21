@@ -51,11 +51,21 @@ include VIEWS_DIR . '/partials/public_head.php';
             </div>
         <?php else: ?>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <?php foreach ($roteiros as $i => $r): ?>
+            <?php foreach ($roteiros as $i => $r): 
+                $slides = [];
+                if ($r['cover_image']) $slides[] = storageUrl($r['cover_image']);
+                if (!empty($r['gallery'])) { $dg = json_decode($r['gallery'], true); if (is_array($dg)) foreach ($dg as $g) if ($g) $slides[] = storageUrl($g); }
+                $slides = array_values(array_unique($slides));
+            ?>
             <a href="<?= url('/roteiros/' . $r['slug']) ?>" class="roteiro-card group" data-reveal style="animation-delay: <?= $i * 50 ?>ms">
-                <div class="img-wrap">
-                    <?php if ($r['cover_image']): ?>
-                        <img src="<?= storageUrl($r['cover_image']) ?>" alt="<?= e($r['title']) ?>">
+                <div class="img-wrap slider-wrap" <?= count($slides)>1?'data-slider':'' ?> style="aspect-ratio:4/3;position:relative">
+                    <?php if ($slides): ?>
+                        <?php foreach ($slides as $si => $src): ?>
+                            <div class="slide<?= $si===0?' active':'' ?>" style="background-image:url('<?= e($src) ?>')"></div>
+                        <?php endforeach; ?>
+                        <?php if (count($slides) > 1): ?>
+                            <div class="slider-dots"><?php foreach ($slides as $si => $_): ?><span class="dot<?= $si===0?' active':'' ?>"></span><?php endforeach; ?></div>
+                        <?php endif; ?>
                     <?php else: ?>
                         <div class="img-placeholder w-full h-full"><span><?= e(mb_substr($r['title'],0,1)) ?></span></div>
                     <?php endif; ?>

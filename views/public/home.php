@@ -4,7 +4,7 @@ $pageDesc  = 'Roteiros autênticos, pacotes premium e experiências únicas em A
 
 $featured = dbAll("SELECT * FROM roteiros WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 8");
 $pacotesFeatured = dbAll("SELECT * FROM pacotes WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 3");
-$testimonials = dbAll("SELECT * FROM testimonials WHERE active=1 AND featured=1 ORDER BY created_at DESC LIMIT 4");
+$testimonials = dbAll("SELECT * FROM testimonials WHERE active=1 ORDER BY featured DESC, created_at DESC LIMIT 4");
 
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
@@ -473,11 +473,18 @@ include VIEWS_DIR . '/partials/public_head.php';
             <?php foreach ($testimonials as $i => $t): ?>
             <div class="testimonial-card" data-reveal style="animation-delay: <?= $i * 100 ?>ms">
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-display text-xl font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))">
-                        <?= e(mb_substr($t['name'], 0, 1)) ?>
-                    </div>
+                    <?php if (!empty($t['avatar'])): ?>
+                        <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="w-12 h-12 rounded-full object-cover" style="border:2px solid rgba(58,107,138,0.15)">
+                    <?php else: ?>
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center font-display text-xl font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))">
+                            <?= e(mb_substr($t['name'], 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                     <div>
-                        <div class="font-bold" style="color:var(--sepia)"><?= e($t['name']) ?></div>
+                        <div class="font-bold flex items-center gap-1.5" style="color:var(--sepia)">
+                            <?= e($t['name']) ?>
+                            <?php if (!empty($t['author_url'])): ?><a href="<?= e($t['author_url']) ?>" target="_blank" rel="noopener" title="Ver perfil" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a><?php endif; ?>
+                        </div>
                         <div class="text-xs" style="color:var(--text-muted)"><?= e($t['location'] ?? '') ?></div>
                     </div>
                     <div class="ml-auto flex gap-0.5">

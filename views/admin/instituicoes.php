@@ -32,7 +32,8 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$items = dbAll('SELECT * FROM institutions ORDER BY name');
+$pag = paginate("SELECT COUNT(*) AS c FROM institutions", "SELECT * FROM institutions ORDER BY name");
+$items = $pag['rows'];
 $editId = (int)($_GET['edit'] ?? 0);
 $edit = $editId ? dbOne('SELECT * FROM institutions WHERE id=?', [$editId]) : null;
 $types = ['escola'=>'Escola','empresa'=>'Empresa','ong'=>'ONG','governo'=>'Governo','outro'=>'Outro'];
@@ -80,9 +81,9 @@ $types = ['escola'=>'Escola','empresa'=>'Empresa','ong'=>'ONG','governo'=>'Gover
                     <td class="p-4 text-sm"><?= e($it['contact_email']) ?></td>
                     <td class="p-4"><span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white" style="background:<?= $it['active']?'#059669':'#6B7280' ?>"><?= $it['active']?'Ativa':'Inativa' ?></span></td>
                     <td class="p-4">
-                        <div class="flex gap-1">
-                            <a href="?edit=<?= $it['id'] ?>" class="btn-secondary text-xs">Editar</a>
-                            <form method="POST" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $it['id'] ?>"><button class="btn-secondary text-xs" style="color:#DC2626">×</button></form>
+                        <div class="flex gap-2">
+                            <a href="?edit=<?= $it['id'] ?>" class="action-chip chip-edit"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i>Editar</a>
+                            <form method="POST" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $it['id'] ?>"><button class="action-chip chip-danger" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></form>
                         </div>
                     </td>
                 </tr>
@@ -92,4 +93,5 @@ $types = ['escola'=>'Escola','empresa'=>'Empresa','ong'=>'ONG','governo'=>'Gover
     </div>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

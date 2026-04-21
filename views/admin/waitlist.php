@@ -14,7 +14,11 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$list = dbAll('SELECT w.*, COALESCE(r.title,p.title) AS entity_title FROM waitlist w LEFT JOIN roteiros r ON w.entity_type="roteiro" AND w.entity_id=r.id LEFT JOIN pacotes p ON w.entity_type="pacote" AND w.entity_id=p.id ORDER BY w.created_at DESC');
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM waitlist",
+    'SELECT w.*, COALESCE(r.title,p.title) AS entity_title FROM waitlist w LEFT JOIN roteiros r ON w.entity_type="roteiro" AND w.entity_id=r.id LEFT JOIN pacotes p ON w.entity_type="pacote" AND w.entity_id=p.id ORDER BY w.created_at DESC'
+);
+$list = $pag['rows'];
 $statuses = ['waiting'=>'Aguardando','notified'=>'Notificado','converted'=>'Convertido','cancelled'=>'Cancelado'];
 $colors = ['waiting'=>'#D97706','notified'=>'#2563EB','converted'=>'#059669','cancelled'=>'#6B7280'];
 ?>
@@ -48,4 +52,5 @@ $colors = ['waiting'=>'#D97706','notified'=>'#2563EB','converted'=>'#059669','ca
 </table>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

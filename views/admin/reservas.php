@@ -24,7 +24,12 @@ $where = '1=1'; $params = [];
 if ($statusFilter) { $where .= " AND b.payment_status = ?"; $params[] = $statusFilter; }
 if ($q) { $where .= " AND (b.code LIKE ? OR c.name LIKE ? OR c.email LIKE ?)"; array_push($params, "%$q%", "%$q%", "%$q%"); }
 
-$bookings = dbAll("SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone FROM bookings b JOIN customers c ON b.customer_id=c.id WHERE $where ORDER BY b.created_at DESC", $params);
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM bookings b JOIN customers c ON b.customer_id=c.id WHERE $where",
+    "SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone FROM bookings b JOIN customers c ON b.customer_id=c.id WHERE $where ORDER BY b.created_at DESC",
+    $params
+);
+$bookings = $pag['rows'];
 $msg = flash('success');
 ?>
 
@@ -82,4 +87,5 @@ $msg = flash('success');
     <?php endif; ?>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

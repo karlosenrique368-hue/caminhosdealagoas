@@ -10,6 +10,15 @@ dbExec("UPDATE roteiros SET views = views + 1 WHERE id = ?", [$r['id']]);
 $departures = dbAll("SELECT * FROM departures WHERE entity_type='roteiro' AND entity_id=? AND status='open' AND departure_date>=CURDATE() ORDER BY departure_date", [$r['id']]);
 $related = dbAll("SELECT * FROM roteiros WHERE status='published' AND id<>? ORDER BY RAND() LIMIT 3", [$r['id']]);
 
+// Galeria
+$gallery = [];
+if ($r['cover_image']) $gallery[] = storageUrl($r['cover_image']);
+if (!empty($r['gallery'])) {
+    $decg = json_decode($r['gallery'], true);
+    if (is_array($decg)) foreach ($decg as $g) if ($g) $gallery[] = storageUrl($g);
+}
+$gallery = array_values(array_unique($gallery));
+
 $pageTitle = $r['title'];
 $pageDesc = $r['short_desc'] ?? '';
 
@@ -47,6 +56,49 @@ include VIEWS_DIR . '/partials/public_head.php';
         </div>
     </div>
 </section>
+
+<?php if (count($gallery) > 1): ?>
+<!-- Gallery premium -->
+<section class="py-8" x-data="galleryLightbox(<?= htmlspecialchars(json_encode($gallery), ENT_QUOTES) ?>)">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="hero-gallery-grid">
+            <?php $show = array_slice($gallery, 0, 5); foreach ($show as $idx => $img): ?>
+            <div @click="open(<?= $idx ?>)">
+                <img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($r['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>">
+                <?php if ($idx === 4 && count($gallery) > 5): ?>
+                <div class="hero-gallery-more">
+                    <i data-lucide="images" class="w-6 h-6"></i>
+                    +<?= count($gallery) - 5 ?> fotos
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Lightbox -->
+        <template x-teleport="body">
+            <div x-show="isOpen" x-cloak class="gallery-lightbox-backdrop" @keydown.escape.window="close()" @keydown.arrow-left.window="prev()" @keydown.arrow-right.window="next()">
+                <button class="gallery-lightbox-close" @click="close()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button class="gallery-lightbox-arrow prev" @click="prev()"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+                <img :src="images[current]" :alt="'Foto ' + (current+1)" class="gallery-lightbox-image">
+                <button class="gallery-lightbox-arrow next" @click="next()"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+                <div class="gallery-lightbox-counter"><span x-text="current+1"></span> / <span x-text="images.length"></span></div>
+            </div>
+        </template>
+    </div>
+</section>
+<script>
+function galleryLightbox(images) {
+    return {
+        images, isOpen:false, current:0,
+        open(i){ this.current=i; this.isOpen=true; document.body.style.overflow='hidden'; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        close(){ this.isOpen=false; document.body.style.overflow=''; },
+        prev(){ this.current = (this.current - 1 + this.images.length) % this.images.length; },
+        next(){ this.current = (this.current + 1) % this.images.length; },
+    };
+}
+</script>
+<?php endif; ?>
 
 <section class="py-16">
     <div class="max-w-7xl mx-auto px-6">

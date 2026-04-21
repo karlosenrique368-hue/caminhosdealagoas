@@ -6,14 +6,25 @@ if (isPost() && csrfVerify()) {
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
         $id = (int)($_POST['id'] ?? 0);
+        $existing = $id ? dbOne("SELECT * FROM testimonials WHERE id=?", [$id]) : null;
         $data = [
-            'name'    => trim($_POST['name'] ?? ''),
-            'location'=> trim($_POST['location'] ?? ''),
-            'rating'  => (int)($_POST['rating'] ?? 5),
-            'content' => trim($_POST['comment'] ?? ''),
-            'active'  => ($_POST['status'] ?? 'approved') === 'approved' ? 1 : 0,
-            'featured'=> isset($_POST['featured']) ? 1 : 0,
+            'name'      => trim($_POST['name'] ?? ''),
+            'location'  => trim($_POST['location'] ?? ''),
+            'author_url'=> trim($_POST['author_url'] ?? '') ?: null,
+            'rating'    => (int)($_POST['rating'] ?? 5),
+            'content'   => trim($_POST['comment'] ?? ''),
+            'active'    => ($_POST['status'] ?? 'approved') === 'approved' ? 1 : 0,
+            'featured'  => isset($_POST['featured']) ? 1 : 0,
         ];
+        // Avatar upload
+        if (!empty($_FILES['avatar']['name'])) {
+            $avPath = handleImageUpload($_FILES['avatar'], 'testimonials');
+            if ($avPath) $data['avatar'] = $avPath;
+        } elseif (!empty($_POST['avatar_keep']) && $existing) {
+            // mantem existente — nao incluir no update
+        } elseif (!empty($_POST['avatar_remove']) && $existing) {
+            $data['avatar'] = null;
+        }
         if ($id) {
             $sets = []; foreach ($data as $k=>$_) $sets[] = "`$k`=?";
             $values = array_values($data); $values[] = $id;
@@ -36,7 +47,8 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$testimonials = dbAll("SELECT * FROM testimonials ORDER BY created_at DESC");
+$pag = paginate("SELECT COUNT(*) AS c FROM testimonials", "SELECT * FROM testimonials ORDER BY created_at DESC");
+$testimonials = $pag['rows'];
 $msg = flash('success');
 ?>
 
@@ -53,9 +65,16 @@ $msg = flash('success');
         <div class="admin-card p-5">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:linear-gradient(135deg,var(--maresia),var(--maresia-dark));color:white"><?= e(mb_strtoupper(mb_substr($t['name'],0,2))) ?></div>
+                    <?php if (!empty($t['avatar'])): ?>
+                        <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="w-10 h-10 rounded-full object-cover" style="border:2px solid var(--border-default)">
+                    <?php else: ?>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:linear-gradient(135deg,var(--maresia),var(--maresia-dark));color:white"><?= e(mb_strtoupper(mb_substr($t['name'],0,2))) ?></div>
+                    <?php endif; ?>
                     <div>
-                        <div class="font-semibold text-sm"><?= e($t['name']) ?></div>
+                        <div class="font-semibold text-sm flex items-center gap-1.5">
+                            <?= e($t['name']) ?>
+                            <?php if (!empty($t['author_url'])): ?><a href="<?= e($t['author_url']) ?>" target="_blank" rel="noopener" title="Abrir link" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a><?php endif; ?>
+                        </div>
                         <?php if ($t['location']): ?><div class="text-xs" style="color:var(--text-muted)"><?= e($t['location']) ?></div><?php endif; ?>
                     </div>
                 </div>
@@ -89,13 +108,36 @@ $msg = flash('success');
                 <h3 class="font-display text-xl font-bold" style="color:var(--sepia)" x-text="editing?'Editar depoimento':'Novo depoimento'"></h3>
                 <button @click="open=false" style="color:var(--text-muted)"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form method="post" class="space-y-4">
+            <form method="post" enctype="multipart/form-data" class="space-y-4">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="id" :value="editing?editing.id:''">
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Nome *</label><input name="name" required :value="editing?editing.name:''" class="admin-input"></div>
                     <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Localização</label><input name="location" :value="editing?editing.location:''" class="admin-input" placeholder="Ex: São Paulo, SP"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Link do autor <span class="text-xs font-normal" style="color:var(--text-muted)">(Instagram, perfil, site)</span></label>
+                    <div class="form-input-group">
+                        <i data-lucide="link" class="form-input-icon w-4 h-4"></i>
+                        <input type="url" name="author_url" :value="editing?(editing.author_url||''):''" class="form-input" placeholder="https://instagram.com/usuario">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Avatar</label>
+                    <template x-if="editing && editing.avatar">
+                        <div class="flex items-center gap-3 mb-2">
+                            <img :src="'<?= e(url('storage/')) ?>' + editing.avatar" class="w-14 h-14 rounded-full object-cover" style="border:2px solid var(--border-default)">
+                            <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="avatar_remove" value="1"><span style="color:var(--text-secondary)">Remover avatar atual</span></label>
+                            <input type="hidden" name="avatar_keep" value="1">
+                        </div>
+                    </template>
+                    <label class="upload-zone block">
+                        <input type="file" name="avatar" accept="image/*">
+                        <div class="upload-zone-icon"><i data-lucide="user-circle" class="w-5 h-5"></i></div>
+                        <div class="upload-zone-title text-sm">Trocar / enviar avatar</div>
+                        <div class="upload-zone-hint">JPG, PNG ou WebP · 1:1 recomendado</div>
+                    </label>
                 </div>
                 <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Nota</label>
                     <select name="rating" class="admin-input" :value="editing?editing.rating:5">
@@ -116,4 +158,5 @@ $msg = flash('success');
     </div>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

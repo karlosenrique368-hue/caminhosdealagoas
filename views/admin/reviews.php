@@ -19,7 +19,11 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$reviews = dbAll('SELECT rv.*, c.name AS customer_name, COALESCE(r.title,p.title) AS entity_title FROM reviews rv LEFT JOIN customers c ON rv.customer_id=c.id LEFT JOIN roteiros r ON rv.entity_type="roteiro" AND rv.entity_id=r.id LEFT JOIN pacotes p ON rv.entity_type="pacote" AND rv.entity_id=p.id ORDER BY rv.created_at DESC');
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM reviews",
+    'SELECT rv.*, c.name AS customer_name, COALESCE(r.title,p.title) AS entity_title FROM reviews rv LEFT JOIN customers c ON rv.customer_id=c.id LEFT JOIN roteiros r ON rv.entity_type="roteiro" AND rv.entity_id=r.id LEFT JOIN pacotes p ON rv.entity_type="pacote" AND rv.entity_id=p.id ORDER BY rv.created_at DESC'
+);
+$reviews = $pag['rows'];
 $colors = ['pending'=>'#D97706','approved'=>'#059669','rejected'=>'#DC2626'];
 ?>
 
@@ -47,15 +51,16 @@ $colors = ['pending'=>'#D97706','approved'=>'#059669','rejected'=>'#DC2626'];
             <p class="text-sm mb-4" style="color:var(--text-secondary)"><?= e($rv['content']) ?></p>
             <div class="flex gap-2">
                 <?php if ($rv['status']!=='approved'): ?>
-                <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="btn-primary text-xs">Aprovar</button></form>
+                <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-success"><i data-lucide="check" class="w-3.5 h-3.5"></i>Aprovar</button></form>
                 <?php endif; ?>
                 <?php if ($rv['status']!=='rejected'): ?>
-                <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="btn-secondary text-xs">Rejeitar</button></form>
+                <form method="POST" class="inline"><?= csrfField() ?><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-warning"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i>Rejeitar</button></form>
                 <?php endif; ?>
-                <form method="POST" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="btn-secondary text-xs" style="color:#DC2626">Excluir</button></form>
+                <form method="POST" class="inline" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $rv['id'] ?>"><button class="action-chip chip-danger"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Excluir</button></form>
             </div>
         </div>
     <?php endforeach; endif; ?>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

@@ -23,7 +23,8 @@ tailwind.config = { theme: { extend: { colors: {
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23C96B4A'/><text x='50' y='68' text-anchor='middle' font-family='Georgia' font-size='48' font-style='italic' fill='white'>CA</text></svg>">
+<link rel="icon" type="image/png" href="<?= asset('brand/selo-terracota.png') ?>">
+<link rel="apple-touch-icon" href="<?= asset('brand/selo-terracota.png') ?>">
 <style>
 body { background: var(--bg-surface); }
 </style>
@@ -36,8 +37,8 @@ body { background: var(--bg-surface); }
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
            style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--terracota-dark));border:2px solid rgba(255,255,255,0.2)">
-                <span class="font-display italic text-white text-lg">CA</span>
+            <div class="admin-brand-mark">
+                <img src="<?= asset('brand/selo-terracota.png') ?>" alt="Caminhos">
             </div>
             <div class="min-w-0">
                 <div class="font-display text-lg font-bold text-white truncate">Caminhos</div>

@@ -12,7 +12,8 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$messages = dbAll("SELECT * FROM contact_messages ORDER BY created_at DESC");
+$pag = paginate("SELECT COUNT(*) AS c FROM contact_messages", "SELECT * FROM contact_messages ORDER BY created_at DESC");
+$messages = $pag['rows'];
 ?>
 
 <div class="grid md:grid-cols-3 gap-4 mb-6">
@@ -71,4 +72,5 @@ $messages = dbAll("SELECT * FROM contact_messages ORDER BY created_at DESC");
     <?php endforeach; ?>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

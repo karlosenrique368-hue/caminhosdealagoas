@@ -29,7 +29,12 @@ $q = trim($_GET['q'] ?? '');
 $where = '1=1'; $params = [];
 if ($q) { $where .= " AND r.title LIKE ?"; $params[] = "%$q%"; }
 
-$roteiros = dbAll("SELECT r.*, c.name AS category_name FROM roteiros r LEFT JOIN categories c ON r.category_id=c.id WHERE $where ORDER BY r.created_at DESC", $params);
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM roteiros r WHERE $where",
+    "SELECT r.*, c.name AS category_name FROM roteiros r LEFT JOIN categories c ON r.category_id=c.id WHERE $where ORDER BY r.created_at DESC",
+    $params
+);
+$roteiros = $pag['rows'];
 $successMsg = flash('success');
 ?>
 
@@ -104,19 +109,19 @@ $successMsg = flash('success');
                             <span class="badge badge-muted">Arquivado</span>
                         <?php endif; ?>
                     </td>
-                    <td>
+                    <td class="actions-cell">
                         <div class="flex justify-end gap-1">
-                            <a href="<?= url('/roteiros/' . $r['slug']) ?>" target="_blank" class="p-2 rounded-lg hover:bg-gray-100" title="Ver" style="color:var(--text-secondary)">
-                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            <a href="<?= url('/roteiros/' . $r['slug']) ?>" target="_blank" class="action-chip chip-view" title="Ver no site">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>Ver
                             </a>
-                            <a href="<?= url('/admin/roteiros/' . $r['id']) ?>" class="p-2 rounded-lg hover:bg-gray-100" title="Editar" style="color:var(--horizonte)">
-                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            <a href="<?= url('/admin/roteiros/' . $r['id']) ?>" class="action-chip chip-edit" title="Editar">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>Editar
                             </a>
                             <form method="post" class="inline" onsubmit="return confirm('Excluir este passeio?')">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
-                                <button class="p-2 rounded-lg hover:bg-red-50" title="Excluir" style="color:#EF4444"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <button class="action-chip chip-danger" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                             </form>
                         </div>
                     </td>
@@ -125,6 +130,7 @@ $successMsg = flash('success');
             </tbody>
         </table>
     </div>
+    <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
     <?php endif; ?>
 </div>
 

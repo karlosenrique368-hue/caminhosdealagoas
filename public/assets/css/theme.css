@@ -1460,3 +1460,236 @@ textarea.input-field { resize: vertical; min-height: 96px; }
 
 /* Textarea auto-grow */
 .auto-grow { overflow: hidden; }
+
+
+/* ============================================================
+   PAGINACAO (admin list)
+   ============================================================ */
+.pagination-bar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 16px 20px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-default);
+}
+.pagination-info { font-size: 13px; color: var(--text-secondary); display: flex; gap: 4px; align-items: center; }
+.pagination-info strong { color: var(--sepia); font-weight: 700; }
+.pagination-per-form { display: flex; }
+.pagination-per-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.pagination-per-select {
+    padding: 6px 10px; padding-right: 28px; border-radius: 8px;
+    border: 1px solid var(--border-default); background: var(--bg-card); color: var(--sepia);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236B7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 011.08 1.04l-4.25 4.4a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; background-size: 14px;
+    appearance: none; -webkit-appearance: none;
+}
+.pagination-per-select:focus { outline: none; border-color: var(--terracota); box-shadow: 0 0 0 3px rgba(201,107,74,0.15); }
+.pagination-nav { display: inline-flex; gap: 4px; align-items: center; }
+.pagination-btn {
+    min-width: 36px; height: 36px; padding: 0 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px; border: 1px solid var(--border-default);
+    background: var(--bg-card); color: var(--text-secondary);
+    font-size: 13px; font-weight: 600;
+    transition: all 160ms ease;
+}
+.pagination-btn:hover:not(.is-disabled):not(.is-active) {
+    background: var(--areia-light); color: var(--sepia);
+    transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.pagination-btn.is-active {
+    background: linear-gradient(135deg, var(--terracota), var(--terracota-dark));
+    border-color: var(--terracota-dark); color: #fff;
+    box-shadow: 0 2px 8px rgba(201,107,74,0.35);
+}
+.pagination-btn.is-disabled { opacity: 0.4; pointer-events: none; }
+.pagination-dots { padding: 0 6px; color: var(--text-muted); font-weight: 700; }
+
+/* ============================================================
+   ACOES EM LINHA (admin list) — botoes visiveis com texto + icone
+   ============================================================ */
+.action-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border-default);
+    background: var(--bg-card); color: var(--text-secondary);
+    transition: all 160ms ease;
+    white-space: nowrap;
+    position: relative; z-index: 1;
+}
+.action-chip:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.action-chip.chip-edit {
+    border-color: rgba(58,107,138,0.3); color: var(--horizonte);
+    background: rgba(58,107,138,0.05);
+}
+.action-chip.chip-edit:hover { background: rgba(58,107,138,0.12); color: var(--horizonte); }
+.action-chip.chip-view {
+    border-color: rgba(94,126,85,0.3); color: var(--maresia-dark);
+    background: rgba(94,126,85,0.05);
+}
+.action-chip.chip-view:hover { background: rgba(94,126,85,0.12); }
+.action-chip.chip-danger {
+    border-color: rgba(220,38,38,0.3); color: #DC2626;
+    background: rgba(220,38,38,0.05);
+}
+.action-chip.chip-danger:hover { background: rgba(220,38,38,0.12); color: #B91C1C; }
+.action-chip.chip-success {
+    border-color: rgba(5,150,105,0.3); color: #059669;
+    background: rgba(5,150,105,0.05);
+}
+.action-chip.chip-success:hover { background: rgba(5,150,105,0.12); color: #047857; }
+.action-chip.chip-warning {
+    border-color: rgba(217,119,6,0.3); color: #D97706;
+    background: rgba(217,119,6,0.05);
+}
+.action-chip.chip-warning:hover { background: rgba(217,119,6,0.12); color: #B45309; }
+.actions-cell { position: relative; }
+.actions-cell > div { position: relative; z-index: 1; }
+
+/* ============================================================
+   GALERIA PREMIUM (roteiro/pacote detail)
+   ============================================================ */
+.gallery-lightbox-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    animation: gallery-fade-in 220ms ease;
+}
+@keyframes gallery-fade-in { from { opacity:0 } to { opacity:1 } }
+.gallery-lightbox-close {
+    position: absolute; top: 20px; right: 20px;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: all 160ms ease;
+}
+.gallery-lightbox-close:hover { background: rgba(255,255,255,0.2); transform: rotate(90deg); }
+.gallery-lightbox-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: all 160ms ease;
+}
+.gallery-lightbox-arrow:hover { background: rgba(255,255,255,0.2); }
+.gallery-lightbox-arrow.prev { left: 20px; }
+.gallery-lightbox-arrow.next { right: 20px; }
+.gallery-lightbox-image { max-width: 92vw; max-height: 86vh; border-radius: 12px; object-fit: contain; box-shadow: 0 40px 80px rgba(0,0,0,0.6); }
+.gallery-lightbox-counter {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #fff;
+    padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    backdrop-filter: blur(8px);
+}
+
+/* Hero gallery (detail page) */
+.hero-gallery-grid {
+    display: grid; gap: 8px;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    aspect-ratio: 2/1;
+    border-radius: 20px; overflow: hidden;
+}
+.hero-gallery-grid > * { cursor: pointer; transition: all 300ms ease; position: relative; overflow: hidden; background: var(--bg-surface); }
+.hero-gallery-grid > *:first-child { grid-row: span 2; }
+.hero-gallery-grid > * img { width: 100%; height: 100%; object-fit: cover; transition: transform 500ms ease; }
+.hero-gallery-grid > *:hover img { transform: scale(1.05); }
+.hero-gallery-more {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5); color: #fff;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
+    font-weight: 700; font-size: 15px;
+    backdrop-filter: blur(2px);
+}
+@media (max-width: 768px) {
+    .hero-gallery-grid { grid-template-columns: 1fr; grid-template-rows: auto; aspect-ratio: auto; }
+    .hero-gallery-grid > *:not(:first-child) { display: none; }
+    .hero-gallery-grid > *:first-child { grid-row: auto; aspect-ratio: 16/10; }
+}
+
+/* ============================================================
+   CARD CAROUSEL (slider-wrap em cards do site)
+   ============================================================ */
+.slider-wrap { position: relative; overflow: hidden; background: var(--bg-surface); }
+.slider-wrap .slide {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0; transition: opacity 500ms ease;
+    pointer-events: none;
+}
+.slider-wrap .slide.active { opacity: 1; }
+.slider-dots {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    display: inline-flex; gap: 6px; padding: 6px 10px;
+    background: rgba(0,0,0,0.35); border-radius: 999px;
+    backdrop-filter: blur(8px);
+    z-index: 2;
+}
+.slider-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    transition: all 220ms ease;
+    cursor: pointer;
+}
+.slider-dots .dot.active { background: #fff; width: 20px; border-radius: 999px; }
+.slider-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.9); color: var(--sepia);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: all 220ms ease;
+    z-index: 2; border: none;
+}
+.slider-wrap:hover .slider-arrow { opacity: 1; }
+.slider-arrow.prev { left: 10px; }
+.slider-arrow.next { right: 10px; }
+.slider-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.1); }
+@media (hover: none) { .slider-arrow { opacity: 1; } }
+
+/* ============================================================
+   GALERIA EDITOR (admin) — preview grid com remove
+   ============================================================ */
+.gallery-editor-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+.gallery-editor-item {
+    position: relative; aspect-ratio: 1/1;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+}
+.gallery-editor-item img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-editor-remove {
+    position: absolute; top: 6px; right: 6px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(220,38,38,0.92); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: none; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: all 160ms ease;
+}
+.gallery-editor-remove:hover { background: #DC2626; transform: scale(1.08); }
+.gallery-editor-badge {
+    position: absolute; bottom: 6px; left: 6px;
+    padding: 3px 8px; border-radius: 999px;
+    background: rgba(0,0,0,0.65); color: #fff;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    backdrop-filter: blur(4px);
+}
+
+/* ============================================================
+   LOGO NO ADMIN — usar imagem em vez de iniciais
+   ============================================================ */
+.admin-brand-mark {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.admin-brand-mark img { width: 100%; height: 100%; object-fit: contain; }

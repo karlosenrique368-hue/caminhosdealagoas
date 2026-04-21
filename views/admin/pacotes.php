@@ -9,7 +9,11 @@ if (isPost() && ($_POST['action'] ?? '') === 'delete' && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$pacotes = dbAll("SELECT p.*, c.name AS category_name FROM pacotes p LEFT JOIN categories c ON p.category_id=c.id ORDER BY p.created_at DESC");
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM pacotes",
+    "SELECT p.*, c.name AS category_name FROM pacotes p LEFT JOIN categories c ON p.category_id=c.id ORDER BY p.created_at DESC"
+);
+$pacotes = $pag['rows'];
 $msg = flash('success');
 ?>
 
@@ -21,7 +25,7 @@ $msg = flash('success');
 <?php endif; ?>
 
 <div class="flex justify-between items-center mb-6">
-    <p class="text-sm" style="color:var(--text-secondary)"><?= count($pacotes) ?> pacotes cadastrados</p>
+    <p class="text-sm" style="color:var(--text-secondary)"><?= $pag['total'] ?> pacotes cadastrados</p>
     <a href="<?= url('/admin/pacotes/novo') ?>" class="admin-btn admin-btn-primary"><i data-lucide="plus" class="w-4 h-4"></i>Novo Pacote</a>
 </div>
 
@@ -54,13 +58,13 @@ $msg = flash('success');
                     <td><span class="text-sm"><?= $p['duration_days'] ?>D / <?= $p['duration_nights'] ?>N</span></td>
                     <td class="font-semibold"><?= formatBRL($p['price']) ?></td>
                     <td><span class="badge badge-<?= $p['status']==='published'?'success':($p['status']==='draft'?'warning':'muted') ?>"><?= ['published'=>'Publicado','draft'=>'Rascunho','archived'=>'Arquivado'][$p['status']] ?></span></td>
-                    <td>
+                    <td class="actions-cell">
                         <div class="flex justify-end gap-1">
-                            <a href="<?= url('/pacotes/'.$p['slug']) ?>" target="_blank" class="p-2 rounded-lg hover:bg-gray-100" style="color:var(--text-secondary)"><i data-lucide="external-link" class="w-4 h-4"></i></a>
-                            <a href="<?= url('/admin/pacotes/'.$p['id']) ?>" class="p-2 rounded-lg hover:bg-gray-100" style="color:var(--horizonte)"><i data-lucide="edit-3" class="w-4 h-4"></i></a>
+                            <a href="<?= url('/pacotes/'.$p['slug']) ?>" target="_blank" class="action-chip chip-view" title="Ver no site"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Ver</a>
+                            <a href="<?= url('/admin/pacotes/'.$p['id']) ?>" class="action-chip chip-edit" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i>Editar</a>
                             <form method="post" class="inline" onsubmit="return confirm('Excluir este pacote?')">
                                 <?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $p['id'] ?>">
-                                <button class="p-2 rounded-lg hover:bg-red-50" style="color:#EF4444"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <button class="action-chip chip-danger" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                             </form>
                         </div>
                     </td>
@@ -69,6 +73,7 @@ $msg = flash('success');
             </tbody>
         </table>
     </div>
+    <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
     <?php endif; ?>
 </div>
 

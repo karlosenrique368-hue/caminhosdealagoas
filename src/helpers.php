@@ -144,3 +144,60 @@ function handleImageUpload(array $file, string $subdir = 'general'): ?string {
 function storageUrl(string $path): string {
     return url('storage/' . ltrim($path, '/'));
 }
+
+// ============== Upload multiplo (galeria) ==============
+function handleMultipleImageUpload(array $files, string $subdir = 'general'): array {
+    $out = [];
+    if (empty($files['tmp_name']) || !is_array($files['tmp_name'])) return $out;
+    $count = count($files['tmp_name']);
+    for ($i = 0; $i < $count; $i++) {
+        if (!($files['tmp_name'][$i] ?? null)) continue;
+        $single = [
+            'name'     => $files['name'][$i]     ?? '',
+            'type'     => $files['type'][$i]     ?? '',
+            'tmp_name' => $files['tmp_name'][$i] ?? '',
+            'error'    => $files['error'][$i]    ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $files['size'][$i]     ?? 0,
+        ];
+        if ($single['error'] !== UPLOAD_ERR_OK) continue;
+        $p = handleImageUpload($single, $subdir);
+        if ($p) $out[] = $p;
+    }
+    return $out;
+}
+
+// ============== Paginacao (admin lists) ==============
+function paginate(string $countSql, string $dataSql, array $params = [], array $options = []): array {
+    $allowed   = $options['allowed']  ?? [5, 10, 20, 50];
+    $default   = $options['default']  ?? 10;
+    $perParam  = $options['per_param']?? 'per';
+    $pageParam = $options['page_param']?? 'page';
+
+    $per = (int) ($_GET[$perParam] ?? $default);
+    if (!in_array($per, $allowed, true)) $per = $default;
+    $page = max(1, (int) ($_GET[$pageParam] ?? 1));
+
+    $total = (int) (dbOne($countSql, $params)['c'] ?? 0);
+    $pages = max(1, (int) ceil($total / $per));
+    if ($page > $pages) $page = $pages;
+    $offset = ($page - 1) * $per;
+
+    $rows = dbAll($dataSql . " LIMIT {$per} OFFSET {$offset}", $params);
+
+    $qs = $_GET;
+    unset($qs[$pageParam], $qs[$perParam]);
+    $baseQs = http_build_query($qs);
+
+    return [
+        'rows'       => $rows,
+        'total'      => $total,
+        'per'        => $per,
+        'page'       => $page,
+        'pages'      => $pages,
+        'offset'     => $offset,
+        'allowed'    => $allowed,
+        'per_param'  => $perParam,
+        'page_param' => $pageParam,
+        'base_qs'    => $baseQs,
+    ];
+}

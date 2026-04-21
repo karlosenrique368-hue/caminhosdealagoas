@@ -27,6 +27,19 @@ if (isPost() && csrfVerify()) {
         $path = handleImageUpload($_FILES['cover_image'], 'pacotes');
         if ($path) $data['cover_image'] = $path;
     }
+
+    // Galeria
+    $existingGallery = [];
+    if (!empty($pacote['gallery'])) { $d = json_decode($pacote['gallery'], true); if (is_array($d)) $existingGallery = $d; }
+    $keep = $_POST['gallery_keep'] ?? [];
+    if (!is_array($keep)) $keep = [];
+    $keptGallery = array_values(array_intersect($existingGallery, $keep));
+    if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
+        $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'pacotes');
+        $keptGallery = array_merge($keptGallery, $newPaths);
+    }
+    $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
+
     if (!$data['title']) $error = 'O título é obrigatório.';
     else {
         if ($isNew) {
@@ -117,6 +130,36 @@ $msg = flash('success');
                     <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
                     <div class="upload-zone-title"><?= !empty($pacote['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
                     <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1600×900px</div>
+                </label>
+            </div>
+
+            <div class="admin-card p-6 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Galeria de imagens</h3>
+                    <?php
+                        $existingPG = [];
+                        if (!empty($pacote['gallery'])) { $d = json_decode($pacote['gallery'], true); if (is_array($d)) $existingPG = $d; }
+                    ?>
+                    <span class="text-[11px] font-semibold" style="color:var(--text-muted)"><?= count($existingPG) ?> foto<?= count($existingPG)===1?'':'s' ?></span>
+                </div>
+                <?php if ($existingPG): ?>
+                <div class="gallery-editor-grid">
+                    <?php foreach ($existingPG as $img): ?>
+                    <div class="gallery-editor-item" data-gallery-item>
+                        <input type="hidden" name="gallery_keep[]" value="<?= e($img) ?>">
+                        <img src="<?= storageUrl($img) ?>" alt="">
+                        <button type="button" class="gallery-editor-remove" onclick="this.closest('[data-gallery-item]').remove()" title="Remover">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+                <label class="upload-zone block">
+                    <input type="file" name="gallery_new[]" accept="image/*" multiple>
+                    <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
+                    <div class="upload-zone-title">Adicionar mais fotos</div>
+                    <div class="upload-zone-hint">Várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
                 </label>
             </div>
         </div>

@@ -22,15 +22,25 @@ include VIEWS_DIR . '/partials/public_head.php';
             </div>
         <?php else: ?>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php foreach ($pacotes as $i => $p): ?>
+            <?php foreach ($pacotes as $i => $p): 
+                $slides = [];
+                if ($p['cover_image']) $slides[] = storageUrl($p['cover_image']);
+                if (!empty($p['gallery'])) { $dg = json_decode($p['gallery'], true); if (is_array($dg)) foreach ($dg as $g) if ($g) $slides[] = storageUrl($g); }
+                $slides = array_values(array_unique($slides));
+            ?>
             <a href="<?= url('/pacotes/'.$p['slug']) ?>" class="card-lift group overflow-hidden" data-reveal style="animation-delay: <?= $i * 80 ?>ms">
-                <div class="relative aspect-[16/10] overflow-hidden">
-                    <?php if ($p['cover_image']): ?>
-                        <img src="<?= storageUrl($p['cover_image']) ?>" alt="<?= e($p['title']) ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                    <?php else: ?><div class="img-placeholder w-full h-full"><span><?= e(mb_substr($p['title'],0,1)) ?></span></div><?php endif; ?>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                    <div class="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95" style="color:var(--sepia)"><?= e($p['duration_days']) ?>D / <?= e($p['duration_nights']) ?>N</div>
-                    <div class="absolute bottom-4 left-4 right-4">
+                <div class="relative aspect-[16/10] overflow-hidden slider-wrap" <?= count($slides)>1?'data-slider':'' ?>>
+                    <?php if ($slides): foreach ($slides as $si => $src): ?>
+                        <div class="slide<?= $si===0?' active':'' ?>" style="background-image:url('<?= e($src) ?>')"></div>
+                    <?php endforeach; else: ?>
+                        <div class="img-placeholder w-full h-full"><span><?= e(mb_substr($p['title'],0,1)) ?></span></div>
+                    <?php endif; ?>
+                    <?php if (count($slides) > 1): ?>
+                        <div class="slider-dots"><?php foreach ($slides as $si => $_): ?><span class="dot<?= $si===0?' active':'' ?>"></span><?php endforeach; ?></div>
+                    <?php endif; ?>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
+                    <div class="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95" style="color:var(--sepia);z-index:2"><?= e($p['duration_days']) ?>D / <?= e($p['duration_nights']) ?>N</div>
+                    <div class="absolute bottom-4 left-4 right-4" style="z-index:2">
                         <div class="flex items-center gap-1.5 text-white/80 text-xs mb-2"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($p['destination']) ?></div>
                         <h3 class="font-display text-xl font-bold text-white leading-tight line-clamp-2"><?= e($p['title']) ?></h3>
                     </div>

@@ -6,7 +6,12 @@ $q = trim($_GET['q'] ?? '');
 $where = '1=1'; $params = [];
 if ($q) { $where .= " AND (c.name LIKE ? OR c.email LIKE ? OR c.phone LIKE ?)"; array_push($params, "%$q%", "%$q%", "%$q%"); }
 
-$clientes = dbAll("SELECT c.*, COUNT(b.id) AS total_bookings, COALESCE(SUM(CASE WHEN b.payment_status='paid' THEN b.total ELSE 0 END),0) AS total_spent FROM customers c LEFT JOIN bookings b ON b.customer_id=c.id WHERE $where GROUP BY c.id ORDER BY c.created_at DESC", $params);
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM customers c WHERE $where",
+    "SELECT c.*, COUNT(b.id) AS total_bookings, COALESCE(SUM(CASE WHEN b.payment_status='paid' THEN b.total ELSE 0 END),0) AS total_spent FROM customers c LEFT JOIN bookings b ON b.customer_id=c.id WHERE $where GROUP BY c.id ORDER BY c.created_at DESC",
+    $params
+);
+$clientes = $pag['rows'];
 ?>
 
 <form method="GET" class="mb-6 max-w-md relative">
@@ -48,4 +53,5 @@ $clientes = dbAll("SELECT c.*, COUNT(b.id) AS total_bookings, COALESCE(SUM(CASE 
     <?php endif; ?>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

@@ -17,7 +17,11 @@ if (isPost() && csrfVerify()) {
 }
 
 require VIEWS_DIR . '/partials/admin_head.php';
-$refunds = dbAll('SELECT rr.*, c.name AS customer_name, c.email AS customer_email, b.entity_title FROM refund_requests rr LEFT JOIN customers c ON rr.customer_id=c.id LEFT JOIN bookings b ON rr.booking_id=b.id ORDER BY rr.created_at DESC');
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM refund_requests",
+    "SELECT rr.*, c.name AS customer_name, c.email AS customer_email, b.entity_title FROM refund_requests rr LEFT JOIN customers c ON rr.customer_id=c.id LEFT JOIN bookings b ON rr.booking_id=b.id ORDER BY rr.created_at DESC"
+);
+$refunds = $pag['rows'];
 $statuses = ['em_analise'=>'Em análise','aprovado'=>'Aprovado','negado'=>'Negado','pago'=>'Pago'];
 $colors = ['em_analise'=>'#D97706','aprovado'=>'#059669','negado'=>'#DC2626','pago'=>'#2563EB'];
 ?>
@@ -66,4 +70,5 @@ $colors = ['em_analise'=>'#D97706','aprovado'=>'#059669','negado'=>'#DC2626','pa
     <?php endforeach; endif; ?>
 </div>
 
+<?php include VIEWS_DIR . '/partials/pagination.php'; ?>
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>
