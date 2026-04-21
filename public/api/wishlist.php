@@ -1,9 +1,19 @@
 <?php
 require_once dirname(__DIR__,2) . '/src/bootstrap.php';
+
+$action = $_GET['action'] ?? 'toggle';
+
+// list = read-only (no CSRF / no auth required — returns empty for guests)
+if ($action === 'list') {
+    if (!isCustomerLoggedIn()) jsonResponse(['ok'=>true,'items'=>[]]);
+    $rows = dbAll('SELECT entity_type, entity_id FROM wishlist WHERE customer_id=?', [currentCustomerId()]);
+    $items = array_map(fn($r) => $r['entity_type'].':'.$r['entity_id'], $rows);
+    jsonResponse(['ok'=>true,'items'=>$items]);
+}
+
 if (!csrfVerify()) jsonResponse(['ok'=>false,'msg'=>'CSRF inválido.'], 403);
 if (!isCustomerLoggedIn()) jsonResponse(['ok'=>false,'msg'=>'Faça login.'], 401);
 $cid = currentCustomerId();
-$action = $_GET['action'] ?? 'toggle';
 $type = $_POST['entity_type'] ?? $_POST['type'] ?? '';
 $eid = (int)($_POST['entity_id'] ?? $_POST['id'] ?? 0);
 

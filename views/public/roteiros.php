@@ -1,17 +1,29 @@
 <?php
-$pageTitle = 'Passeios e Roteiros';
-$pageDesc = 'Confira todos os passeios e roteiros disponíveis em Alagoas.';
+$pageTitle = 'Passeios';
+$pageDesc = 'Confira todos os passeios disponíveis em Alagoas.';
 
 $q = trim($_GET['q'] ?? '');
 $categoryId = (int) ($_GET['cat'] ?? 0);
+$location = trim($_GET['location'] ?? '');
+$sort = $_GET['sort'] ?? 'destaque';
 $where = "status='published'";
 $params = [];
 
 if ($q) { $where .= " AND (title LIKE ? OR short_desc LIKE ? OR location LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
 if ($categoryId) { $where .= " AND category_id = ?"; $params[] = $categoryId; }
+if ($location) { $where .= " AND location LIKE ?"; $params[] = "%$location%"; }
 
-$roteiros = dbAll("SELECT * FROM roteiros WHERE $where ORDER BY featured DESC, created_at DESC", $params);
+$orderBy = match($sort) {
+    'preco_asc'  => 'COALESCE(price_pix,price) ASC',
+    'preco_desc' => 'COALESCE(price_pix,price) DESC',
+    'recentes'   => 'created_at DESC',
+    'avaliados'  => 'rating_avg DESC, rating_count DESC',
+    default      => 'featured DESC, created_at DESC',
+};
+
+$roteiros = dbAll("SELECT * FROM roteiros WHERE $where ORDER BY $orderBy", $params);
 $categories = dbAll("SELECT * FROM categories WHERE type='roteiro' AND active=1 ORDER BY sort_order");
+$locations = dbAll("SELECT DISTINCT location FROM roteiros WHERE status='published' AND location IS NOT NULL AND location != '' ORDER BY location");
 
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
@@ -21,26 +33,54 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="absolute inset-0" style="background-image:radial-gradient(circle at 30% 50%, rgba(201,107,74,0.3) 0%, transparent 60%)"></div>
     <div class="relative max-w-7xl mx-auto px-6 text-center text-white">
         <span class="text-xs font-bold tracking-[0.3em] uppercase" style="color:var(--areia-light)">Nossas experiências</span>
-        <h1 class="font-display text-5xl md:text-6xl font-bold mt-3 mb-4">Passeios & Roteiros</h1>
+        <h1 class="font-display text-5xl md:text-6xl font-bold mt-3 mb-4">Passeios</h1>
         <p class="text-white/80 max-w-2xl mx-auto">Explore Alagoas com quem conhece cada praia, trilha e história.</p>
     </div>
 </section>
 
 <section class="py-16">
     <div class="max-w-7xl mx-auto px-6">
-        <!-- Filters -->
-        <form method="GET" class="admin-card p-4 mb-10 flex flex-wrap gap-3 items-center">
-            <div class="flex-1 min-w-[240px] relative">
-                <i data-lucide="search" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style="color:var(--text-muted)"></i>
-                <input type="text" name="q" value="<?= e($q) ?>" placeholder="Buscar por nome, local..." class="admin-input pl-11">
+        <!-- Premium Filter -->
+        <form method="GET" class="filter-premium">
+            <div class="filter-search">
+                <label class="filter-label">Buscar</label>
+                <i data-lucide="search" class="filter-search-icon"></i>
+                <input type="text" name="q" value="<?= e($q) ?>" placeholder="Nome, descrição ou local..." class="filter-input">
             </div>
-            <select name="cat" class="admin-input md:max-w-[220px]">
-                <option value="">Todas as categorias</option>
-                <?php foreach ($categories as $c): ?>
-                    <option value="<?= $c['id'] ?>" <?= $categoryId == $c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button type="submit" class="admin-btn admin-btn-primary"><i data-lucide="filter" class="w-4 h-4"></i>Filtrar</button>
+            <div>
+                <label class="filter-label">Categoria</label>
+                <select name="cat" class="filter-input">
+                    <option value="">Todas</option>
+                    <?php foreach ($categories as $c): ?>
+                        <option value="<?= $c['id'] ?>" <?= $categoryId == $c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Local</label>
+                <select name="location" class="filter-input">
+                    <option value="">Todos</option>
+                    <?php foreach ($locations as $l): ?>
+                        <option value="<?= e($l['location']) ?>" <?= $location === $l['location'] ? 'selected' : '' ?>><?= e($l['location']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Ordenar</label>
+                <select name="sort" class="filter-input">
+                    <option value="destaque"  <?= $sort==='destaque'?'selected':'' ?>>Em destaque</option>
+                    <option value="recentes"  <?= $sort==='recentes'?'selected':'' ?>>Mais recentes</option>
+                    <option value="preco_asc" <?= $sort==='preco_asc'?'selected':'' ?>>Menor preço</option>
+                    <option value="preco_desc"<?= $sort==='preco_desc'?'selected':'' ?>>Maior preço</option>
+                    <option value="avaliados" <?= $sort==='avaliados'?'selected':'' ?>>Mais avaliados</option>
+                </select>
+            </div>
+            <div class="flex gap-2 items-end">
+                <button type="submit" class="filter-submit"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Filtrar</button>
+                <?php if ($q || $categoryId || $location || ($sort && $sort !== 'destaque')): ?>
+                    <a href="<?= url('/passeios') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a>
+                <?php endif; ?>
+            </div>
         </form>
 
         <?php if (!$roteiros): ?>
@@ -50,6 +90,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <p class="text-sm mt-2" style="color:var(--text-muted)">Tente ajustar os filtros ou <a href="<?= url('/contato') ?>" class="underline" style="color:var(--terracota)">falar com a gente</a>.</p>
             </div>
         <?php else: ?>
+        <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= count($roteiros) ?></strong> passeio<?= count($roteiros)===1?'':'s' ?> encontrado<?= count($roteiros)===1?'':'s' ?></p>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <?php foreach ($roteiros as $i => $r): 
                 $slides = [];
@@ -57,7 +98,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 if (!empty($r['gallery'])) { $dg = json_decode($r['gallery'], true); if (is_array($dg)) foreach ($dg as $g) if ($g) $slides[] = storageUrl($g); }
                 $slides = array_values(array_unique($slides));
             ?>
-            <a href="<?= url('/roteiros/' . $r['slug']) ?>" class="roteiro-card group" data-reveal style="animation-delay: <?= $i * 50 ?>ms">
+            <a href="<?= url('/passeios/' . $r['slug']) ?>" class="roteiro-card group" data-reveal style="animation-delay: <?= $i * 50 ?>ms">
                 <div class="img-wrap slider-wrap" <?= count($slides)>1?'data-slider':'' ?> style="aspect-ratio:4/3;position:relative">
                     <?php if ($slides): ?>
                         <?php foreach ($slides as $si => $src): ?>

@@ -137,7 +137,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <!-- ================================================
      DESTAQUES — Roteiros
 ================================================ -->
-<div class="section-divider-seal" style="margin:-64px auto 0"><img src="<?= asset('brand/selo-terracota.png') ?>" alt=""></div>
+<div class="section-divider-seal" style="--seal-img: url('<?= asset('brand/selo-terracota.png') ?>'); margin:-32px auto 0" aria-hidden="true"></div>
 <section id="destaques" class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>
@@ -185,7 +185,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <button type="button" class="slider-arrow prev" aria-label="Anterior" tabindex="-1"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                             <button type="button" class="slider-arrow next" aria-label="Próximo" tabindex="-1"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                         <?php endif; ?>
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <div class="p-5">
                         <?php if ($r['location']): ?>
@@ -323,7 +323,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <!-- ================================================
      PACOTES EM DESTAQUE
 ================================================ -->
-<div class="section-divider-seal" style="margin:-64px auto 0"><img src="<?= asset('brand/selo-azul.png') ?>" alt=""></div>
+<div class="section-divider-seal" style="--seal-img: url('<?= asset('brand/selo-azul.png') ?>'); margin:-32px auto 0" aria-hidden="true"></div>
 <section class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>
@@ -360,7 +360,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <?php else: ?>
                             <div class="img-placeholder w-full h-full absolute inset-0"><span><?= e(mb_substr($p['title'], 0, 1)) ?></span></div>
                         <?php endif; ?>
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
                         <div class="ribbon"><i data-lucide="star" class="w-3 h-3"></i> Destaque</div>
                         <button type="button" class="heart-btn" data-fav-type="pacote" data-fav-id="<?= (int)$p['id'] ?>" aria-label="Favoritar" style="top:14px;right:auto;left:14px"><i data-lucide="heart" class="w-4 h-4"></i></button>
                         <div class="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 z-[3]" style="color:var(--sepia)">
@@ -470,7 +470,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <!-- ================================================
      TESTIMONIALS
 ================================================ -->
-<div class="section-divider-seal" style="margin:-64px auto 0"><img src="<?= asset('brand/selo-terracota.png') ?>" alt=""></div>
+<div class="section-divider-seal" style="--seal-img: url('<?= asset('brand/selo-terracota.png') ?>'); margin:-32px auto 0" aria-hidden="true"></div>
 <section class="py-24 relative overflow-hidden" style="background:var(--bg-surface)">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>

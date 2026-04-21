@@ -27,10 +27,12 @@ switch (true) {
         break;
 
     case $path === '/roteiros':
+    case $path === '/passeios':
         require VIEWS_DIR . '/public/roteiros.php';
         break;
 
     case preg_match('#^/roteiros/([a-z0-9-]+)$#', $path, $m):
+    case preg_match('#^/passeios/([a-z0-9-]+)$#', $path, $m):
         $_GET['slug'] = $m[1];
         require VIEWS_DIR . '/public/roteiro-detail.php';
         break;

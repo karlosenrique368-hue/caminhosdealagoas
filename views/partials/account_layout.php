@@ -34,7 +34,7 @@ $initials = mb_strtoupper(mb_substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) 
                     <div class="account-hero-email"><i data-lucide="mail" class="w-3.5 h-3.5 inline mr-1"></i><?= e($cust['email']) ?></div>
                 </div>
                 <div class="flex items-center gap-2 md:self-start flex-wrap">
-                    <a href="<?= url('/roteiros') ?>" class="account-hero-logout" style="background:rgba(201,107,74,0.85);border-color:rgba(255,255,255,0.3)">
+                    <a href="<?= url('/passeios') ?>" class="account-hero-logout" style="background:rgba(201,107,74,0.85);border-color:rgba(255,255,255,0.3)">
                         <i data-lucide="compass" class="w-4 h-4"></i> Explorar
                     </a>
                     <a href="<?= url('/conta/sair') ?>" class="account-hero-logout">
@@ -44,7 +44,7 @@ $initials = mb_strtoupper(mb_substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) 
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
+        <div class="account-grid grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
             <!-- Premium sidebar -->
             <aside class="account-sidebar h-fit">
                 <nav class="flex md:flex-col gap-1 overflow-x-auto">
@@ -61,4 +61,4 @@ $initials = mb_strtoupper(mb_substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) 
                 </div>
             </aside>
 
-            <div class="min-w-0">
+            <div class="account-content min-w-0">

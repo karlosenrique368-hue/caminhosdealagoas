@@ -23,8 +23,9 @@ tailwind.config = { theme: { extend: { colors: {
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
-<link rel="icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
-<link rel="apple-touch-icon" href="<?= asset('brand/logo-terracota.png') ?>">
+<link rel="icon" type="image/svg+xml" href="<?= asset('brand/Adesivo_1.svg') ?>">
+<link rel="alternate icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
+<link rel="apple-touch-icon" href="<?= asset('brand/Adesivo_1.svg') ?>">
 <style>
 body { background: var(--bg-surface); }
 </style>

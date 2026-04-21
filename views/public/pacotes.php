@@ -1,6 +1,31 @@
 <?php
 $pageTitle = 'Pacotes de Viagem';
-$pacotes = dbAll("SELECT * FROM pacotes WHERE status='published' ORDER BY featured DESC, created_at DESC");
+
+$q = trim($_GET['q'] ?? '');
+$destination = trim($_GET['destination'] ?? '');
+$duration = (int)($_GET['duration'] ?? 0);
+$sort = $_GET['sort'] ?? 'destaque';
+$where = "status='published'";
+$params = [];
+
+if ($q) { $where .= " AND (title LIKE ? OR short_desc LIKE ? OR destination LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
+if ($destination) { $where .= " AND destination LIKE ?"; $params[] = "%$destination%"; }
+if ($duration) {
+    if ($duration === 99) $where .= " AND duration_days >= 8";
+    else $where .= " AND duration_days = ?";
+    if ($duration !== 99) $params[] = $duration;
+}
+
+$orderBy = match($sort) {
+    'preco_asc'  => 'COALESCE(price_pix,price) ASC',
+    'preco_desc' => 'COALESCE(price_pix,price) DESC',
+    'recentes'   => 'created_at DESC',
+    'duracao'    => 'duration_days DESC',
+    default      => 'featured DESC, created_at DESC',
+};
+
+$pacotes = dbAll("SELECT * FROM pacotes WHERE $where ORDER BY $orderBy", $params);
+$destinations = dbAll("SELECT DISTINCT destination FROM pacotes WHERE status='published' AND destination IS NOT NULL AND destination != '' ORDER BY destination");
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
@@ -15,12 +40,59 @@ include VIEWS_DIR . '/partials/public_head.php';
 
 <section class="py-16">
     <div class="max-w-7xl mx-auto px-6">
+        <!-- Premium Filter -->
+        <form method="GET" class="filter-premium">
+            <div class="filter-search">
+                <label class="filter-label">Buscar</label>
+                <i data-lucide="search" class="filter-search-icon"></i>
+                <input type="text" name="q" value="<?= e($q) ?>" placeholder="Nome ou descrição do pacote..." class="filter-input">
+            </div>
+            <div>
+                <label class="filter-label">Destino</label>
+                <select name="destination" class="filter-input">
+                    <option value="">Todos</option>
+                    <?php foreach ($destinations as $d): ?>
+                        <option value="<?= e($d['destination']) ?>" <?= $destination === $d['destination'] ? 'selected' : '' ?>><?= e($d['destination']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Duração</label>
+                <select name="duration" class="filter-input">
+                    <option value="0">Qualquer</option>
+                    <option value="3" <?= $duration===3?'selected':'' ?>>3 dias</option>
+                    <option value="4" <?= $duration===4?'selected':'' ?>>4 dias</option>
+                    <option value="5" <?= $duration===5?'selected':'' ?>>5 dias</option>
+                    <option value="7" <?= $duration===7?'selected':'' ?>>7 dias</option>
+                    <option value="99" <?= $duration===99?'selected':'' ?>>8+ dias</option>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Ordenar</label>
+                <select name="sort" class="filter-input">
+                    <option value="destaque"  <?= $sort==='destaque'?'selected':'' ?>>Em destaque</option>
+                    <option value="recentes"  <?= $sort==='recentes'?'selected':'' ?>>Mais recentes</option>
+                    <option value="preco_asc" <?= $sort==='preco_asc'?'selected':'' ?>>Menor preço</option>
+                    <option value="preco_desc"<?= $sort==='preco_desc'?'selected':'' ?>>Maior preço</option>
+                    <option value="duracao"   <?= $sort==='duracao'?'selected':'' ?>>Mais longos</option>
+                </select>
+            </div>
+            <div class="flex gap-2 items-end">
+                <button type="submit" class="filter-submit"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Filtrar</button>
+                <?php if ($q || $destination || $duration || ($sort && $sort !== 'destaque')): ?>
+                    <a href="<?= url('/pacotes') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a>
+                <?php endif; ?>
+            </div>
+        </form>
+
         <?php if (!$pacotes): ?>
             <div class="text-center py-20">
                 <i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
-                <p class="text-lg font-semibold" style="color:var(--sepia)">Em breve novos pacotes!</p>
+                <p class="text-lg font-semibold" style="color:var(--sepia)">Nenhum pacote encontrado.</p>
+                <p class="text-sm mt-2" style="color:var(--text-muted)">Ajuste os filtros ou <a href="<?= url('/contato') ?>" class="underline" style="color:var(--terracota)">fale com a gente</a>.</p>
             </div>
         <?php else: ?>
+        <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= count($pacotes) ?></strong> pacote<?= count($pacotes)===1?'':'s' ?> encontrado<?= count($pacotes)===1?'':'s' ?></p>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php foreach ($pacotes as $i => $p): 
                 $slides = [];

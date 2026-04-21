@@ -131,58 +131,99 @@ document.addEventListener('input', (e) => {
 })();
 
 // ============================================================
-// PREMIUM: Card image slider (auto + hover speedup)
+// PREMIUM: Card image slider — manual only (arrows + swipe + dots, NO autoplay)
+// Uses event delegation so dynamically-rendered sliders also work.
 // ============================================================
 (function initSliders() {
-    document.querySelectorAll('[data-slider]').forEach(wrap => {
+    function getIdx(wrap) {
         const slides = wrap.querySelectorAll('.slide');
-        if (slides.length < 2) return;
-        let idx = 0, iv = null;
-        const dotsWrap = wrap.querySelector('.slider-dots');
-        const dots = dotsWrap ? [...dotsWrap.querySelectorAll('.dot')] : [];
-        const go = (n) => {
-            slides.forEach((s, i) => s.classList.toggle('active', i === n));
-            dots.forEach((d, i) => d.classList.toggle('active', i === n));
-            idx = n;
-        };
-        const next = () => go((idx + 1) % slides.length);
-        const start = (delay = 3200) => { stop(); iv = setInterval(next, delay); };
-        const stop  = () => { if (iv) { clearInterval(iv); iv = null; } };
-        go(0);
-        start();
-        wrap.addEventListener('mouseenter', () => start(1500));
-        wrap.addEventListener('mouseleave', () => start(3200));
-        dots.forEach((d, i) => d.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go(i); start(); }));
+        let idx = 0;
+        slides.forEach((s, i) => { if (s.classList.contains('active')) idx = i; });
+        return idx;
+    }
+    function go(wrap, n) {
+        const slides = wrap.querySelectorAll('.slide');
+        if (!slides.length) return;
+        const total = slides.length;
+        const next = ((n % total) + total) % total;
+        slides.forEach((s, i) => s.classList.toggle('active', i === next));
+        const dots = wrap.querySelectorAll('.slider-dots .dot');
+        dots.forEach((d, i) => d.classList.toggle('active', i === next));
+    }
+    // Delegated arrow + dot clicks (works for static + dynamic sliders)
+    document.addEventListener('click', (e) => {
+        const arrow = e.target.closest('.slider-arrow');
+        const dot   = e.target.closest('.slider-dots .dot');
+        if (!arrow && !dot) return;
+        const wrap = (arrow || dot).closest('[data-slider]');
+        if (!wrap) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (arrow) {
+            const dir = arrow.classList.contains('next') ? 1 : -1;
+            go(wrap, getIdx(wrap) + dir);
+        } else if (dot) {
+            const dots = [...wrap.querySelectorAll('.slider-dots .dot')];
+            go(wrap, dots.indexOf(dot));
+        }
+    }, true); // capture phase so parent <a> never wins
 
-        // Arrows (optional)
-        const prevBtn = wrap.querySelector('.slider-arrow.prev');
-        const nextBtn = wrap.querySelector('.slider-arrow.next');
-        if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go((idx - 1 + slides.length) % slides.length); start(); });
-        if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); next(); start(); });
-
-        // Swipe
-        let sx = 0;
-        wrap.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+    // Touch swipe (delegated via touch events on document is unreliable; bind per-wrap once)
+    function bindSwipe(wrap) {
+        if (wrap.dataset.swipeBound) return;
+        wrap.dataset.swipeBound = '1';
+        let sx = 0, sy = 0;
+        wrap.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
         wrap.addEventListener('touchend', (e) => {
             const dx = (e.changedTouches[0].clientX || 0) - sx;
-            if (Math.abs(dx) > 40) { if (dx < 0) next(); else go((idx - 1 + slides.length) % slides.length); start(); }
+            const dy = (e.changedTouches[0].clientY || 0) - sy;
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                go(wrap, getIdx(wrap) + (dx < 0 ? 1 : -1));
+            }
         }, { passive: true });
-    });
+    }
+    function bindAll() { document.querySelectorAll('[data-slider]').forEach(bindSwipe); }
+    bindAll();
+    new MutationObserver(bindAll).observe(document.body, { childList: true, subtree: true });
 })();
 
 // ============================================================
-// PREMIUM: Wishlist toggle (delegated)
+// PREMIUM: Wishlist toggle (delegated) — loads initial state on page load
 // ============================================================
 (function initWishlist() {
+    // 1) Load current favorites and mark .heart-btn.active
+    async function syncState() {
+        const buttons = document.querySelectorAll('.heart-btn[data-fav-type][data-fav-id]');
+        if (!buttons.length) return;
+        try {
+            const res = await fetch((window.BASE_PATH || '') + '/api/wishlist?action=list', { credentials: 'same-origin' });
+            const j = await res.json();
+            if (!j.ok || !Array.isArray(j.items)) return;
+            const set = new Set(j.items);
+            buttons.forEach(btn => {
+                const key = btn.dataset.favType + ':' + btn.dataset.favId;
+                btn.classList.toggle('active', set.has(key));
+            });
+        } catch (e) { /* silent */ }
+    }
+    document.addEventListener('DOMContentLoaded', syncState);
+    // also re-sync when new heart buttons are inserted
+    let resyncTimer = null;
+    new MutationObserver(() => {
+        if (resyncTimer) return;
+        resyncTimer = setTimeout(() => { resyncTimer = null; syncState(); }, 250);
+    }).observe(document.body, { childList: true, subtree: true });
+
+    // 2) Click handler — capture phase to beat the parent <a> link
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.heart-btn[data-fav-type][data-fav-id]');
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
+        if (btn.dataset.busy === '1') return;
+        btn.dataset.busy = '1';
         const type = btn.dataset.favType;
         const id = btn.dataset.favId;
-        if (!type || !id) return;
-        btn.disabled = true;
         const wasActive = btn.classList.contains('active');
         btn.classList.toggle('active'); // optimistic
         try {
@@ -191,22 +232,23 @@ document.addEventListener('input', (e) => {
             fd.append('entity_id', id);
             const r = await window.caminhosApi((window.BASE_PATH || '') + '/api/wishlist?action=toggle', { method: 'POST', data: fd });
             if (!r || !r.ok) {
-                btn.classList.toggle('active'); // revert
-                if (r && r.msg === 'Faça login.') {
+                btn.classList.toggle('active', wasActive); // revert
+                if (r && (r.msg === 'Faça login.' || r.msg === 'FaÃ§a login.')) {
                     window.location.href = (window.BASE_PATH || '') + '/login';
                     return;
                 }
                 if (window.showToast) window.showToast((r && r.msg) || 'Erro ao favoritar', 'error');
             } else {
+                btn.classList.toggle('active', !!r.added); // sync with server truth
                 if (window.showToast) window.showToast(r.added ? 'Adicionado aos favoritos' : 'Removido dos favoritos', r.added ? 'success' : 'info');
             }
         } catch (err) {
-            btn.classList.toggle('active');
+            btn.classList.toggle('active', wasActive);
             if (window.showToast) window.showToast('Erro de rede', 'error');
         } finally {
-            btn.disabled = false;
+            btn.dataset.busy = '0';
         }
-    });
+    }, true); // capture phase
 })();
 
 // ============================================================

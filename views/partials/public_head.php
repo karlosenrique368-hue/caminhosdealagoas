@@ -18,8 +18,9 @@ $currentCurrency = $_SESSION['currency'] ?? 'BRL';
 <meta name="robots" content="index,follow">
 <meta name="author" content="Caminhos de Alagoas">
 <link rel="canonical" href="<?= e($currentUrl) ?>">
-<link rel="icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
-<link rel="apple-touch-icon" href="<?= asset('brand/logo-terracota.png') ?>">
+<link rel="icon" type="image/svg+xml" href="<?= asset('brand/Adesivo_1.svg') ?>">
+    <link rel="alternate icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
+    <link rel="apple-touch-icon" href="<?= asset('brand/Adesivo_1.svg') ?>">
 
 <script>window.BASE_PATH = '<?= e(BASE_PATH) ?>';</script>
 
@@ -144,7 +145,7 @@ tailwind.config = {
         <!-- Desktop menu -->
         <div class="hidden lg:flex items-center gap-8">
             <a href="<?= url('/') ?>" class="nav-link nav-link-tr text-sm">Home</a>
-            <a href="<?= url('/roteiros') ?>" class="nav-link nav-link-tr text-sm">Passeios</a>
+            <a href="<?= url('/passeios') ?>" class="nav-link nav-link-tr text-sm">Passeios</a>
             <a href="<?= url('/pacotes') ?>" class="nav-link nav-link-tr text-sm">Pacotes</a>
             <a href="<?= url('/sobre') ?>" class="nav-link nav-link-tr text-sm">Sobre</a>
             <a href="<?= url('/contato') ?>" class="nav-link nav-link-tr text-sm">Contato</a>
@@ -214,7 +215,7 @@ tailwind.config = {
     <div id="mobile-menu" class="hidden lg:hidden border-t" style="background:white;border-color:var(--border-default)">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-1">
             <a href="<?= url('/') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Home</a>
-            <a href="<?= url('/roteiros') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Passeios</a>
+            <a href="<?= url('/passeios') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Passeios</a>
             <a href="<?= url('/pacotes') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Pacotes</a>
             <a href="<?= url('/sobre') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Sobre</a>
             <a href="<?= url('/contato') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Contato</a>
