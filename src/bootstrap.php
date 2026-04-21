@@ -10,23 +10,16 @@ require_once __DIR__ . '/customer_auth.php';
 require_once __DIR__ . '/institution_auth.php';
 require_once __DIR__ . '/i18n.php';
 
-// Handle language switch
-if (!empty($_GET['lang'])) {
-    $langs = ['pt-BR','en','es','fr','de','it','zh'];
-    if (in_array($_GET['lang'], $langs, true)) {
-        $_SESSION['lang'] = $_GET['lang'];
-        $clean = strtok($_SERVER['REQUEST_URI'], '?');
-        header('Location: ' . $clean);
-        exit;
-    }
-}
-// Handle currency switch
-if (!empty($_GET['currency'])) {
-    $currencies = ['BRL','USD','EUR','GBP','ARS'];
-    if (in_array($_GET['currency'], $currencies, true)) {
-        $_SESSION['currency'] = $_GET['currency'];
-        $clean = strtok($_SERVER['REQUEST_URI'], '?');
-        header('Location: ' . $clean);
-        exit;
-    }
+// Troca de idioma/moeda via query string (?lang=en&currency=USD). Persiste em cookie.
+if (!empty($_GET['lang']) || !empty($_GET['currency'])) {
+    if (!empty($_GET['lang']))     setLang((string)$_GET['lang']);
+    if (!empty($_GET['currency'])) setCurrency((string)$_GET['currency']);
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $parts = parse_url($uri);
+    $qs = [];
+    if (!empty($parts['query'])) parse_str($parts['query'], $qs);
+    unset($qs['lang'], $qs['currency']);
+    $clean = ($parts['path'] ?? '/') . ($qs ? ('?' . http_build_query($qs)) : '');
+    header('Location: ' . $clean);
+    exit;
 }

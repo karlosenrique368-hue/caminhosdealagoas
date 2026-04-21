@@ -68,7 +68,7 @@ body { background: var(--bg-surface); }
                 ['path' => '/admin/mensagens', 'icon' => 'mail', 'label' => 'Mensagens'],
                 ['path' => '/admin/instituicoes', 'icon' => 'building-2', 'label' => 'Instituições'],
                 ['heading' => 'Sistema'],
-                ['path' => '/admin/traducoes', 'icon' => 'languages', 'label' => 'Traduções'],
+                ['path' => '/admin/traducoes', 'icon' => 'languages', 'label' => 'Idiomas & Moedas'],
                 ['path' => '/admin/configuracoes', 'icon' => 'settings', 'label' => 'Configurações'],
             ];
             $cur = currentPath();

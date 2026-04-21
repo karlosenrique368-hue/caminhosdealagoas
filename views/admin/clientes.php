@@ -32,7 +32,7 @@ $clientes = $pag['rows'];
             <tbody>
                 <?php foreach ($clientes as $c): ?>
                 <tr>
-                    <td>
+                    <td data-label="Cliente">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:linear-gradient(135deg,var(--terracota),var(--terracota-dark));color:white"><?= e(mb_strtoupper(mb_substr($c['name'],0,2))) ?></div>
                             <div>
@@ -41,10 +41,10 @@ $clientes = $pag['rows'];
                             </div>
                         </div>
                     </td>
-                    <td><div class="text-sm"><?= e($c['email']) ?></div><div class="text-xs" style="color:var(--text-muted)"><?= e($c['phone'] ?? '') ?></div></td>
-                    <td><span class="badge badge-info"><?= (int)$c['total_bookings'] ?> reserva<?= $c['total_bookings']!=1?'s':'' ?></span></td>
-                    <td class="font-semibold"><?= formatBRL($c['total_spent']) ?></td>
-                    <td><span class="text-sm"><?= date('d/m/Y', strtotime($c['created_at'])) ?></span></td>
+                    <td data-label="Contato"><div class="text-sm"><?= e($c['email']) ?></div><div class="text-xs" style="color:var(--text-muted)"><?= e($c['phone'] ?? '') ?></div></td>
+                    <td data-label="Reservas"><span class="badge badge-info"><?= (int)$c['total_bookings'] ?> reserva<?= $c['total_bookings']!=1?'s':'' ?></span></td>
+                    <td data-label="Total gasto" class="font-semibold"><?= formatBRL($c['total_spent']) ?></td>
+                    <td data-label="Cadastro"><span class="text-sm"><?= date('d/m/Y', strtotime($c['created_at'])) ?></span></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

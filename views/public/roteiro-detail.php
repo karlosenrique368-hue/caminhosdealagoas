@@ -315,9 +315,9 @@ function galleryLightbox(images) {
             <aside class="lg:sticky lg:top-28 lg:self-start space-y-5">
                 <div class="admin-card p-6">
                     <div class="text-xs uppercase tracking-wider font-semibold mb-1" style="color:var(--text-muted)">A partir de</div>
-                    <div class="font-display text-4xl font-bold mb-1" style="color:var(--terracota)"><?= formatBRL($r['price_pix'] ?: $r['price']) ?></div>
+                    <div class="font-display text-4xl font-bold mb-1" style="color:var(--terracota)"><?= formatPrice($r['price_pix'] ?: $r['price']) ?></div>
                     <?php if ($r['price_pix']): ?>
-                        <div class="text-xs" style="color:var(--text-muted)">por pessoa · PIX · ou <?= formatBRL($r['price']) ?> no cartão</div>
+                        <div class="text-xs" style="color:var(--text-muted)">por pessoa · PIX · ou <?= formatPrice($r['price']) ?> no cartão</div>
                     <?php else: ?>
                         <div class="text-xs" style="color:var(--text-muted)">por pessoa</div>
                     <?php endif; ?>
@@ -385,7 +385,7 @@ function galleryLightbox(images) {
                         <div class="flex items-end justify-between pt-3 border-t" style="border-color:var(--border-default)">
                             <div>
                                 <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>
-                                <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatBRL($rel['price_pix'] ?: $rel['price']) ?></div>
+                                <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatPrice($rel['price_pix'] ?: $rel['price']) ?></div>
                             </div>
                             <div class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:bg-terracota group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)">
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>

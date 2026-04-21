@@ -63,13 +63,13 @@ $msg = flash('success');
             <tbody>
                 <?php foreach ($bookings as $b): ?>
                 <tr>
-                    <td><span class="font-mono text-xs font-semibold"><?= e($b['code']) ?></span><div class="text-[10px]" style="color:var(--text-muted)"><?= date('d/m/Y H:i', strtotime($b['created_at'])) ?></div></td>
-                    <td><div class="font-semibold text-sm"><?= e($b['customer_name']) ?></div><div class="text-xs" style="color:var(--text-muted)"><?= e($b['customer_email']) ?></div></td>
-                    <td><div class="text-sm"><?= e($b['entity_title']) ?></div><div class="text-[10px] uppercase tracking-wider" style="color:var(--text-muted)"><?= e($b['entity_type']) ?></div></td>
-                    <td><span class="text-sm"><?= $b['travel_date'] ? date('d/m/Y', strtotime($b['travel_date'])) : '—' ?></span></td>
-                    <td><span class="text-sm"><?= (int)($b['adults'] + $b['children']) ?></span></td>
-                    <td class="font-semibold"><?= formatBRL($b['total']) ?></td>
-                    <td>
+                    <td data-label="Código"><span class="font-mono text-xs font-semibold"><?= e($b['code']) ?></span><div class="text-[10px]" style="color:var(--text-muted)"><?= date('d/m/Y H:i', strtotime($b['created_at'])) ?></div></td>
+                    <td data-label="Cliente"><div class="font-semibold text-sm"><?= e($b['customer_name']) ?></div><div class="text-xs" style="color:var(--text-muted)"><?= e($b['customer_email']) ?></div></td>
+                    <td data-label="Passeio"><div class="text-sm"><?= e($b['entity_title']) ?></div><div class="text-[10px] uppercase tracking-wider" style="color:var(--text-muted)"><?= e($b['entity_type']) ?></div></td>
+                    <td data-label="Data"><span class="text-sm"><?= $b['travel_date'] ? date('d/m/Y', strtotime($b['travel_date'])) : '—' ?></span></td>
+                    <td data-label="Pessoas"><span class="text-sm"><?= (int)($b['adults'] + $b['children']) ?></span></td>
+                    <td data-label="Total" class="font-semibold"><?= formatBRL($b['total']) ?></td>
+                    <td data-label="Pagamento">
                         <form method="post" class="inline">
                             <?= csrfField() ?><input type="hidden" name="action" value="update_payment"><input type="hidden" name="id" value="<?= $b['id'] ?>">
                             <select name="payment_status" onchange="this.form.submit()" class="text-xs px-2 py-1 rounded-md border" style="border-color:var(--border-default)">

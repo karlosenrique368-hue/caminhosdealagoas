@@ -457,6 +457,51 @@ body {
 }
 .admin-table tbody tr:hover td { background: var(--bg-surface); }
 
+/* Admin tables — mobile: stack em cards com data-label */
+@media (max-width: 767px) {
+    .admin-table thead { display: none; }
+    .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; }
+    .admin-table tbody tr {
+        background: var(--bg-card);
+        border: 1px solid var(--border-default);
+        border-radius: 14px;
+        margin-bottom: 14px;
+        padding: 8px 4px;
+        box-shadow: 0 1px 2px rgba(58,56,53,0.04);
+    }
+    .admin-table tbody td {
+        border-bottom: 1px dashed var(--border-default);
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .admin-table tbody td:last-child { border-bottom: 0; }
+    .admin-table tbody td::before {
+        content: attr(data-label);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        flex-shrink: 0;
+    }
+    .admin-table tbody td:not([data-label])::before { display: none; }
+    .admin-table tbody td[data-label]::before { min-width: 80px; }
+    .admin-table tbody td.actions-cell { justify-content: flex-end; padding-top: 12px; }
+    .admin-table tbody td.actions-cell::before { display: none; }
+    .admin-table tbody td.actions-cell > div { flex-wrap: wrap; gap: 6px; }
+    .admin-table tbody tr:hover td { background: transparent; }
+}
+
+/* Admin filters bar — mobile stack */
+@media (max-width: 639px) {
+    .admin-btn { padding: 10px 14px; font-size: 13px; }
+    .admin-btn .w-4 { width: 14px; height: 14px; }
+    .admin-card { border-radius: 14px; }
+}
+
 /* Badges */
 .badge {
     display: inline-flex;

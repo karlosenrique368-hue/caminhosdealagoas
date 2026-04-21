@@ -1,72 +1,241 @@
 <?php
-$pageTitle = 'Traduções';
+requireAdmin();
+$pageTitle = 'Idiomas & Moedas';
 
+// ===== actions =====
 if (isPost() && csrfVerify()) {
-    requireAdmin();
     $action = $_POST['action'] ?? '';
-    if ($action === 'save') {
+    if ($action === 'save_translation') {
         $lang = $_POST['lang'] ?? '';
-        $key = trim($_POST['tkey'] ?? '');
-        $val = trim($_POST['value'] ?? '');
-        if ($lang && $key) {
+        $key  = trim($_POST['tkey'] ?? '');
+        $val  = trim($_POST['value'] ?? '');
+        if (isset(I18N_SUPPORTED_LANGS[$lang]) && $key !== '') {
             dbExec('INSERT INTO translations (lang,tkey,value) VALUES (?,?,?) ON DUPLICATE KEY UPDATE value=VALUES(value)', [$lang,$key,$val]);
+            flash('success','Tradução salva.');
         }
     }
-    if ($action === 'delete') dbExec('DELETE FROM translations WHERE id=?', [(int)$_POST['id']]);
+    if ($action === 'delete_translation') {
+        dbExec('DELETE FROM translations WHERE id=?', [(int)$_POST['id']]);
+        flash('success','Tradução removida.');
+    }
+    if ($action === 'bulk_delete_key') {
+        $key = trim($_POST['tkey'] ?? '');
+        if ($key) { dbExec('DELETE FROM translations WHERE tkey=?', [$key]); flash('success','Chave removida em todos os idiomas.'); }
+    }
+    if ($action === 'save_rates') {
+        $rates = [];
+        foreach (I18N_SUPPORTED_CURRENCIES as $code => $_) {
+            if ($code === 'BRL') continue;
+            $rates[$code] = max(0, (float) str_replace(',', '.', $_POST['rate_'.$code] ?? 0));
+        }
+        setSetting('currency_rates', json_encode($rates));
+        flash('success','Taxas de câmbio atualizadas.');
+    }
     redirect('/admin/traducoes');
 }
 
-require VIEWS_DIR . '/partials/admin_head.php';
+// ===== data =====
 $filterLang = $_GET['lang'] ?? '';
-$langs = ['pt-BR'=>'🇧🇷 Português','en'=>'🇺🇸 English','es'=>'🇪🇸 Español','fr'=>'🇫🇷 Français','de'=>'🇩🇪 Deutsch','it'=>'🇮🇹 Italiano','zh'=>'🇨🇳 中文'];
-$rows = $filterLang
-    ? dbAll('SELECT * FROM translations WHERE lang=? ORDER BY tkey', [$filterLang])
-    : dbAll('SELECT * FROM translations ORDER BY lang, tkey');
+$filterQ    = trim($_GET['q'] ?? '');
+
+$where = []; $params = [];
+if ($filterLang) { $where[] = 'lang=?'; $params[] = $filterLang; }
+if ($filterQ)    { $where[] = '(tkey LIKE ? OR value LIKE ?)'; $params[] = "%$filterQ%"; $params[] = "%$filterQ%"; }
+$whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+$rows = dbAll("SELECT * FROM translations$whereSql ORDER BY tkey, lang", $params);
+
+// agrupa por chave → { key: { lang => value } }
+$grouped = [];
+foreach ($rows as $r) { $grouped[$r['tkey']][$r['lang']] = $r; }
+
+// completude por idioma
+$stats = [];
+$totalKeys = (int)(dbOne("SELECT COUNT(DISTINCT tkey) AS c FROM translations")['c'] ?? 0);
+foreach (I18N_SUPPORTED_LANGS as $code => $meta) {
+    $cnt = (int)(dbOne('SELECT COUNT(*) AS c FROM translations WHERE lang=?', [$code])['c'] ?? 0);
+    $stats[$code] = ['count'=>$cnt,'pct'=>$totalKeys?round($cnt*100/$totalKeys):0,'meta'=>$meta];
+}
+
+$rates = currencyRates();
+$flashOk = flash('success');
+$flashErr = flash('error');
+
+require VIEWS_DIR . '/partials/admin_head.php';
 ?>
 
-<div class="grid lg:grid-cols-[400px_1fr] gap-6">
-    <div class="admin-card p-5">
-        <h2 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Nova tradução</h2>
-        <form method="POST" class="space-y-3">
-            <?= csrfField() ?>
-            <input type="hidden" name="action" value="save">
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Idioma</span>
-                <select name="lang" required class="input-field w-full">
-                    <?php foreach ($langs as $k=>$v): ?><option value="<?= $k ?>"><?= $v ?></option><?php endforeach; ?>
-                </select>
-            </label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Chave</span><input type="text" name="tkey" required placeholder="ex: home.hero.title" class="input-field w-full"></label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Tradução</span><textarea name="value" rows="3" required class="input-field w-full"></textarea></label>
-            <button class="btn-primary w-full justify-center">Salvar</button>
-        </form>
+<?php if ($flashOk): ?>
+<div class="mb-4 p-3 rounded-xl flex items-center gap-2 text-sm" style="background:rgba(122,157,110,0.1);border:1px solid rgba(122,157,110,0.3);color:var(--maresia-dark)">
+    <i data-lucide="check-circle" class="w-4 h-4"></i><?= e($flashOk) ?>
+</div>
+<?php endif; ?>
 
-        <div class="mt-6 pt-5 border-t" style="border-color:var(--border-default)">
-            <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted)">Filtrar por idioma</p>
-            <div class="flex flex-wrap gap-1">
-                <a href="?" class="text-xs px-2 py-1 rounded-lg <?= !$filterLang?'font-bold':'' ?>" style="background:var(--areia-light)">Todos</a>
-                <?php foreach ($langs as $k=>$v): ?>
-                    <a href="?lang=<?= $k ?>" class="text-xs px-2 py-1 rounded-lg <?= $filterLang===$k?'font-bold':'' ?>" style="background:var(--areia-light)"><?= explode(' ', $v)[0] ?></a>
-                <?php endforeach; ?>
+<!-- Tabs -->
+<div x-data="{tab:'<?= $filterQ || $filterLang ? 'translations' : 'translations' ?>'}" class="space-y-6">
+    <div class="admin-card p-2 inline-flex flex-wrap gap-1 w-full sm:w-auto">
+        <button @click="tab='translations'" :class="tab==='translations'?'admin-btn-primary':''" class="admin-btn admin-btn-secondary"><i data-lucide="languages" class="w-4 h-4"></i>Traduções</button>
+        <button @click="tab='currencies'"    :class="tab==='currencies'?'admin-btn-primary':''"    class="admin-btn admin-btn-secondary"><i data-lucide="coins" class="w-4 h-4"></i>Moedas & câmbio</button>
+        <button @click="tab='coverage'"      :class="tab==='coverage'?'admin-btn-primary':''"      class="admin-btn admin-btn-secondary"><i data-lucide="pie-chart" class="w-4 h-4"></i>Cobertura</button>
+    </div>
+
+    <!-- ================= TRADUÇÕES ================= -->
+    <div x-show="tab==='translations'">
+        <div class="grid lg:grid-cols-[380px_1fr] gap-6">
+            <!-- FORM NOVA / EDITAR -->
+            <div class="admin-card p-5 h-fit lg:sticky lg:top-6">
+                <h2 class="font-display text-lg font-bold mb-1" style="color:var(--sepia)">Nova / atualizar</h2>
+                <p class="text-xs mb-4" style="color:var(--text-muted)">Mesma chave em outro idioma sobrescreve.</p>
+                <form method="POST" class="space-y-3">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="save_translation">
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Idioma</span>
+                        <select name="lang" required class="admin-input w-full">
+                            <?php foreach (I18N_SUPPORTED_LANGS as $code=>$m): ?>
+                                <option value="<?= $code ?>"><?= $m['flag'] ?> <?= e($m['native']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Chave</span>
+                        <input type="text" name="tkey" required placeholder="ex: nav.home" class="admin-input w-full font-mono text-sm">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Valor</span>
+                        <textarea name="value" rows="4" required class="admin-input w-full"></textarea>
+                    </label>
+                    <button class="admin-btn admin-btn-primary w-full justify-center"><i data-lucide="save" class="w-4 h-4"></i>Salvar</button>
+                </form>
+            </div>
+
+            <!-- TABLE -->
+            <div class="space-y-4">
+                <!-- Filters -->
+                <form method="GET" class="admin-card p-4 flex flex-wrap items-end gap-3">
+                    <label class="flex-1 min-w-[200px]">
+                        <span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-muted)">Buscar</span>
+                        <input type="text" name="q" value="<?= e($filterQ) ?>" placeholder="chave ou valor…" class="admin-input w-full">
+                    </label>
+                    <label class="min-w-[160px]">
+                        <span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-muted)">Idioma</span>
+                        <select name="lang" class="admin-input w-full">
+                            <option value="">Todos</option>
+                            <?php foreach (I18N_SUPPORTED_LANGS as $code=>$m): ?>
+                                <option value="<?= $code ?>" <?= $filterLang===$code?'selected':'' ?>><?= $m['flag'] ?> <?= e($m['native']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <button class="admin-btn admin-btn-primary"><i data-lucide="search" class="w-4 h-4"></i>Filtrar</button>
+                    <?php if ($filterQ || $filterLang): ?>
+                        <a href="<?= url('/admin/traducoes') ?>" class="admin-btn admin-btn-secondary"><i data-lucide="x" class="w-4 h-4"></i>Limpar</a>
+                    <?php endif; ?>
+                </form>
+
+                <!-- Grouped -->
+                <div class="admin-card overflow-hidden">
+                    <div class="hidden md:grid gap-3 p-4 text-xs font-bold uppercase tracking-wider" style="background:var(--bg-surface);color:var(--text-secondary);grid-template-columns:1fr 2fr 120px">
+                        <span>Chave</span><span>Valores por idioma</span><span></span>
+                    </div>
+                    <?php if (!$grouped): ?>
+                        <div class="p-10 text-center" style="color:var(--text-muted)">Nenhuma tradução encontrada.</div>
+                    <?php else: foreach ($grouped as $key => $byLang): ?>
+                        <div class="border-t grid gap-3 p-4 items-start" style="border-color:var(--border-default);grid-template-columns:1fr;@media (min-width:768px){grid-template-columns:1fr 2fr 120px}">
+                            <div class="md:contents">
+                                <code class="text-xs px-2 py-0.5 rounded font-mono inline-block" style="background:var(--bg-surface);color:var(--terracota);word-break:break-all"><?= e($key) ?></code>
+                                <div class="flex flex-wrap gap-2 mt-2 md:mt-0">
+                                    <?php foreach (I18N_SUPPORTED_LANGS as $code=>$m):
+                                        $v = $byLang[$code] ?? null; ?>
+                                        <div class="text-xs px-2 py-1 rounded-lg flex items-start gap-1.5 <?= $v?'':'opacity-40' ?>" style="background:var(--bg-surface);max-width:100%">
+                                            <span title="<?= e($m['native']) ?>"><?= $m['flag'] ?></span>
+                                            <span class="font-medium" style="color:<?= $v?'var(--text-primary)':'var(--text-muted)' ?>;word-break:break-word"><?= $v ? e($v['value']) : '—' ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="flex gap-1 mt-2 md:mt-0 md:justify-end">
+                                    <form method="POST" onsubmit="return confirm('Remover todas traduções dessa chave?')" class="inline">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="action" value="bulk_delete_key">
+                                        <input type="hidden" name="tkey" value="<?= e($key) ?>">
+                                        <button class="admin-btn admin-btn-secondary text-xs" style="color:#DC2626"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; endif; ?>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="admin-card overflow-hidden">
-        <table class="w-full">
-            <thead style="background:var(--areia-light)"><tr class="text-left text-xs font-bold uppercase tracking-wider" style="color:var(--text-secondary)"><th class="p-4">Idioma</th><th class="p-4">Chave</th><th class="p-4">Tradução</th><th class="p-4"></th></tr></thead>
-            <tbody>
-                <?php if (empty($rows)): ?>
-                    <tr><td colspan="4" class="p-10 text-center" style="color:var(--text-muted)">Nenhuma tradução cadastrada.</td></tr>
-                <?php else: foreach ($rows as $r): ?>
-                    <tr class="border-t" style="border-color:var(--border-default)">
-                        <td class="p-4 text-xs font-bold"><?= e($r['lang']) ?></td>
-                        <td class="p-4"><code class="text-xs px-2 py-0.5 rounded" style="background:var(--areia-light)"><?= e($r['tkey']) ?></code></td>
-                        <td class="p-4 text-sm"><?= e($r['value']) ?></td>
-                        <td class="p-4"><form method="POST" onsubmit="return confirm('Excluir?')"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn-secondary text-xs" style="color:#DC2626">×</button></form></td>
-                    </tr>
-                <?php endforeach; endif; ?>
-            </tbody>
-        </table>
+    <!-- ================= MOEDAS ================= -->
+    <div x-show="tab==='currencies'" x-cloak class="space-y-4">
+        <div class="admin-card p-6">
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="font-display text-lg font-bold mb-1" style="color:var(--sepia)">Taxas de câmbio</h2>
+                    <p class="text-sm" style="color:var(--text-secondary)">Base: <b>1,00 BRL</b>. Ajuste quanto vale 1 real em cada moeda.</p>
+                </div>
+                <i data-lucide="coins" class="w-8 h-8" style="color:var(--terracota)"></i>
+            </div>
+            <form method="POST" class="grid sm:grid-cols-2 gap-4">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="save_rates">
+                <?php foreach (I18N_SUPPORTED_CURRENCIES as $code => $m):
+                    if ($code === 'BRL') continue;
+                    $current = $rates[$code] ?? 0;
+                ?>
+                <label class="block p-4 rounded-xl border-2 transition hover:border-[var(--terracota)]" style="border-color:var(--border-default);background:var(--bg-surface)">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold flex items-center gap-2" style="color:var(--sepia)"><span style="font-size:20px"><?= $m['flag'] ?></span><?= $code ?> <span class="text-xs font-normal" style="color:var(--text-muted)"><?= e($m['name']) ?></span></span>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded" style="background:white;color:var(--terracota)"><?= $m['symbol'] ?></span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-xs" style="color:var(--text-muted)">1 BRL =</span>
+                        <input type="number" step="0.0001" min="0" name="rate_<?= $code ?>" value="<?= number_format($current, 4, '.', '') ?>" class="admin-input flex-1 text-base font-semibold" style="color:var(--terracota)">
+                    </div>
+                    <div class="text-[11px] mt-1.5" style="color:var(--text-muted)">R$ 100,00 ≈ <span class="font-mono"><?= e(formatPrice(100, $code)) ?></span></div>
+                </label>
+                <?php endforeach; ?>
+                <div class="sm:col-span-2 flex items-center justify-end gap-2 mt-2">
+                    <a href="https://wise.com/br/currency-converter/brl-to-usd-rate" target="_blank" class="text-xs" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3 h-3 inline"></i> Consultar taxa hoje</a>
+                    <button class="admin-btn admin-btn-primary"><i data-lucide="save" class="w-4 h-4"></i>Atualizar taxas</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="admin-card p-6">
+            <h3 class="font-display text-base font-bold mb-3" style="color:var(--sepia)">Como funciona</h3>
+            <ul class="space-y-2 text-sm" style="color:var(--text-secondary)">
+                <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 mt-0.5" style="color:var(--maresia-dark)"></i>Todos os preços são salvos no banco <b>em BRL</b>.</li>
+                <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 mt-0.5" style="color:var(--maresia-dark)"></i>A função <code class="text-xs px-1.5 py-0.5 rounded" style="background:var(--bg-surface)">formatPrice($brl)</code> converte automaticamente para a moeda escolhida pelo visitante.</li>
+                <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 mt-0.5" style="color:var(--maresia-dark)"></i>A escolha do visitante é salva em sessão <i>e</i> cookie (1 ano), válida no site e no checkout.</li>
+                <li class="flex gap-2"><i data-lucide="info" class="w-4 h-4 mt-0.5" style="color:var(--horizonte)"></i>O pagamento é sempre processado em BRL (Pix/cartão BR). A conversão é apenas visual.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ================= COBERTURA ================= -->
+    <div x-show="tab==='coverage'" x-cloak>
+        <div class="admin-card p-6">
+            <h2 class="font-display text-lg font-bold mb-1" style="color:var(--sepia)">Cobertura das traduções</h2>
+            <p class="text-sm mb-5" style="color:var(--text-secondary)"><b><?= $totalKeys ?></b> chaves distintas cadastradas. Idiomas incompletos terão fallback automático para PT-BR.</p>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <?php foreach ($stats as $code => $s): ?>
+                <div class="p-4 rounded-xl border" style="border-color:var(--border-default);background:var(--bg-surface)">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold flex items-center gap-2" style="color:var(--sepia)"><span style="font-size:20px"><?= $s['meta']['flag'] ?></span><?= e($s['meta']['native']) ?></span>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded" style="background:white;color:var(--text-muted)"><?= $code ?></span>
+                    </div>
+                    <div class="flex items-baseline justify-between mb-2">
+                        <span class="font-display text-2xl font-bold" style="color:<?= $s['pct']>=80?'var(--maresia-dark)':($s['pct']>=40?'#D97706':'#DC2626') ?>"><?= $s['pct'] ?>%</span>
+                        <span class="text-xs" style="color:var(--text-muted)"><?= $s['count'] ?> / <?= $totalKeys ?> chaves</span>
+                    </div>
+                    <div class="h-2 rounded-full overflow-hidden" style="background:var(--border-default)">
+                        <div class="h-full rounded-full transition-all" style="width:<?= $s['pct'] ?>%;background:linear-gradient(90deg,var(--terracota),var(--horizonte))"></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
     </div>
 </div>
 

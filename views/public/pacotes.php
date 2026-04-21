@@ -129,7 +129,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <div class="flex items-end justify-between pt-3 border-t" style="border-color:var(--border-default)">
                         <div>
                             <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>
-                            <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatBRL($p['price_pix'] ?: $p['price']) ?></div>
+                            <div class="font-display text-xl font-bold" style="color:var(--terracota)"><?= formatPrice($p['price_pix'] ?: $p['price']) ?></div>
                             <?php if ($p['installments']>1): ?><div class="text-[11px]" style="color:var(--text-muted)">ou <?= $p['installments'] ?>x sem juros</div><?php endif; ?>
                         </div>
                         <div class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:bg-terracota group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)">

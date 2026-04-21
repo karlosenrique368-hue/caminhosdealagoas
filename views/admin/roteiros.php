@@ -79,7 +79,7 @@ $successMsg = flash('success');
             <tbody>
                 <?php foreach ($roteiros as $r): ?>
                 <tr>
-                    <td>
+                    <td data-label="Passeio">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden" style="background:var(--bg-surface)">
                                 <?php if ($r['cover_image']): ?>
@@ -97,10 +97,10 @@ $successMsg = flash('success');
                             </div>
                         </div>
                     </td>
-                    <td><span class="text-sm"><?= e($r['category_name'] ?? '—') ?></span></td>
-                    <td class="font-semibold"><?= formatBRL($r['price']) ?></td>
-                    <td><span class="text-sm"><?= (int)$r['views'] ?></span></td>
-                    <td>
+                    <td data-label="Categoria"><span class="text-sm"><?= e($r['category_name'] ?? '—') ?></span></td>
+                    <td data-label="Preço" class="font-semibold"><?= formatBRL($r['price']) ?></td>
+                    <td data-label="Views"><span class="text-sm"><?= (int)$r['views'] ?></span></td>
+                    <td data-label="Status">
                         <?php if ($r['status'] === 'published'): ?>
                             <span class="badge badge-success">Publicado</span>
                         <?php elseif ($r['status'] === 'draft'): ?>

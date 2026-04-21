@@ -43,7 +43,7 @@ $msg = flash('success');
             <tbody>
                 <?php foreach ($pacotes as $p): ?>
                 <tr>
-                    <td>
+                    <td data-label="Pacote">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden" style="background:var(--bg-surface)">
                                 <?php if ($p['cover_image']): ?><img src="<?= storageUrl($p['cover_image']) ?>" class="w-full h-full object-cover"><?php else: ?><div class="img-placeholder w-full h-full text-sm"><span><?= e(mb_substr($p['title'],0,1)) ?></span></div><?php endif; ?>
@@ -54,10 +54,10 @@ $msg = flash('success');
                             </div>
                         </div>
                     </td>
-                    <td><span class="text-sm"><?= e($p['destination'] ?? '—') ?></span></td>
-                    <td><span class="text-sm"><?= $p['duration_days'] ?>D / <?= $p['duration_nights'] ?>N</span></td>
-                    <td class="font-semibold"><?= formatBRL($p['price']) ?></td>
-                    <td><span class="badge badge-<?= $p['status']==='published'?'success':($p['status']==='draft'?'warning':'muted') ?>"><?= ['published'=>'Publicado','draft'=>'Rascunho','archived'=>'Arquivado'][$p['status']] ?></span></td>
+                    <td data-label="Destino"><span class="text-sm"><?= e($p['destination'] ?? '—') ?></span></td>
+                    <td data-label="Duração"><span class="text-sm"><?= $p['duration_days'] ?>D / <?= $p['duration_nights'] ?>N</span></td>
+                    <td data-label="Preço" class="font-semibold"><?= formatBRL($p['price']) ?></td>
+                    <td data-label="Status"><span class="badge badge-<?= $p['status']==='published'?'success':($p['status']==='draft'?'warning':'muted') ?>"><?= ['published'=>'Publicado','draft'=>'Rascunho','archived'=>'Arquivado'][$p['status']] ?></span></td>
                     <td class="actions-cell">
                         <div class="flex justify-end gap-1">
                             <a href="<?= url('/pacotes/'.$p['slug']) ?>" target="_blank" class="action-chip chip-view" title="Ver no site"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Ver</a>
