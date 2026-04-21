@@ -17,37 +17,48 @@ $links = [
     ['reembolso', '/conta/reembolso', 'refresh-ccw', 'Reembolsos'],
     ['perfil',    '/conta/perfil', 'user-cog', 'Perfil'],
 ];
+
+// Initials
+$parts = preg_split('/\s+/', trim($cust['name'] ?? 'U'));
+$initials = mb_strtoupper(mb_substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? mb_substr($parts[1], 0, 1) : ''));
 ?>
 <section class="pt-24 pb-16 min-h-screen" style="background:var(--bg-surface)">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <!-- greeting banner -->
-        <div class="mb-8 p-6 md:p-8 rounded-3xl relative overflow-hidden" style="background:linear-gradient(135deg,var(--azul-profundo),#1a3a5c);color:#fff">
-            <img src="<?= asset('brand/selo-branco.png') ?>" class="seal-watermark xl dark reverse" style="top:-80px;right:-80px" alt="">
-            <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <p class="text-xs uppercase tracking-[0.2em] opacity-70 mb-2">Olá, viajante</p>
-                    <h1 class="font-display text-3xl md:text-4xl font-bold"><?= e($cust['name']) ?></h1>
-                    <p class="text-sm opacity-80 mt-2"><?= e($cust['email']) ?></p>
+        <!-- Premium hero banner -->
+        <div class="account-hero mb-8" data-reveal>
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center gap-5">
+                <div class="account-hero-avatar"><?= e($initials) ?></div>
+                <div class="flex-1 min-w-0">
+                    <div class="account-hero-eyebrow">Olá, viajante</div>
+                    <h1 class="account-hero-name"><?= e($cust['name']) ?></h1>
+                    <div class="account-hero-email"><i data-lucide="mail" class="w-3.5 h-3.5 inline mr-1"></i><?= e($cust['email']) ?></div>
                 </div>
-                <a href="<?= url('/conta/sair') ?>" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition" style="background:rgba(255,255,255,0.15);backdrop-filter:blur(8px)">
-                    <i data-lucide="log-out" class="w-4 h-4"></i> Sair
-                </a>
+                <div class="flex items-center gap-2 md:self-start flex-wrap">
+                    <a href="<?= url('/roteiros') ?>" class="account-hero-logout" style="background:rgba(201,107,74,0.85);border-color:rgba(255,255,255,0.3)">
+                        <i data-lucide="compass" class="w-4 h-4"></i> Explorar
+                    </a>
+                    <a href="<?= url('/conta/sair') ?>" class="account-hero-logout">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Sair
+                    </a>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
-            <!-- sidebar -->
-            <aside class="glass-card rounded-2xl p-4 h-fit border" style="background:#fff;border-color:var(--border-default)">
+        <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
+            <!-- Premium sidebar -->
+            <aside class="account-sidebar h-fit">
                 <nav class="flex md:flex-col gap-1 overflow-x-auto">
                     <?php foreach ($links as [$key,$href,$icon,$label]): $active = ($tab===$key); ?>
-                        <a href="<?= url($href) ?>" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition whitespace-nowrap"
-                           style="<?= $active ? 'background:var(--terracota);color:#fff' : 'color:var(--text-secondary)' ?>"
-                           onmouseover="if(!<?= $active?'true':'false' ?>)this.style.background='var(--areia-light)'"
-                           onmouseout="if(!<?= $active?'true':'false' ?>)this.style.background=''">
+                        <a href="<?= url($href) ?>" class="account-sidebar-link whitespace-nowrap<?= $active ? ' active' : '' ?>">
                             <i data-lucide="<?= $icon ?>" class="w-4 h-4"></i> <?= $label ?>
                         </a>
                     <?php endforeach; ?>
                 </nav>
+                <div class="mt-4 pt-4 border-t" style="border-color:var(--border-default)">
+                    <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="account-sidebar-link" style="color:#10B981">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i> Suporte
+                    </a>
+                </div>
             </aside>
 
             <div class="min-w-0">

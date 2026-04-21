@@ -4,66 +4,100 @@ $accountTab = 'reembolso';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
-$msg = '';
-if (isPost() && csrfVerify()) {
-    $bid = (int)($_POST['booking_id'] ?? 0);
-    $reason = trim($_POST['reason'] ?? '');
-    $b = dbOne('SELECT * FROM bookings WHERE id=? AND customer_user_id=?', [$bid,$cid]);
-    if ($b && $reason) {
-        dbExec('INSERT INTO refund_requests (booking_id,customer_id,reason,amount) VALUES (?,?,?,?)',
-            [$bid,$cid,$reason,(float)$b['total']]);
-        $msg = 'Solicitação enviada! Nossa equipe analisará em breve.';
-    } else {
-        $msg = 'Reserva inválida ou motivo não informado.';
-    }
-}
-
-$refunds = dbAll('SELECT rr.*, b.total AS total, b.entity_title FROM refund_requests rr LEFT JOIN bookings b ON rr.booking_id=b.id WHERE rr.customer_id=? ORDER BY rr.created_at DESC', [$cid]);
-$eligibleBookings = dbAll("SELECT b.id, b.total, b.entity_title AS title FROM bookings b WHERE b.customer_user_id=? AND b.payment_status='paid' AND b.id NOT IN (SELECT booking_id FROM refund_requests WHERE customer_id=?) ORDER BY b.created_at DESC", [$cid,$cid]);
+$refunds = dbAll('
+    SELECT rr.*, b.total AS total, b.entity_title, b.code
+    FROM refund_requests rr
+    LEFT JOIN bookings b ON rr.booking_id=b.id
+    WHERE rr.customer_id=?
+    ORDER BY rr.created_at DESC', [$cid]);
+$eligibleBookings = dbAll("
+    SELECT b.id, b.total, b.entity_title AS title, b.code
+    FROM bookings b
+    WHERE b.customer_user_id=?
+      AND b.payment_status='paid'
+      AND b.id NOT IN (SELECT booking_id FROM refund_requests WHERE customer_id=?)
+    ORDER BY b.created_at DESC", [$cid, $cid]);
+$preselect = (int)($_GET['booking'] ?? 0);
 ?>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="rounded-2xl border p-6" style="background:#fff;border-color:var(--border-default)">
-        <h2 class="font-display text-xl font-bold mb-5" style="color:var(--sepia)">Solicitar reembolso</h2>
-        <?php if ($msg): ?><div class="p-3 rounded-xl text-sm mb-4" style="background:var(--areia-light);color:var(--text-primary)"><?= e($msg) ?></div><?php endif; ?>
+<div class="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
+    <!-- Request form -->
+    <div class="glass-card p-6">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(201,107,74,0.1);color:var(--terracota)">
+                <i data-lucide="refresh-ccw" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Solicitar reembolso</h2>
+                <p class="text-xs" style="color:var(--text-muted)">Sua solicitação será analisada em até 48h</p>
+            </div>
+        </div>
 
         <?php if (empty($eligibleBookings)): ?>
-            <p class="text-sm" style="color:var(--text-muted)">Nenhuma reserva elegível para reembolso.</p>
+            <div class="empty-state" style="padding:32px 20px">
+                <div class="empty-state-icon"><i data-lucide="check-circle" class="w-7 h-7"></i></div>
+                <div class="empty-state-title">Nada para reembolsar</div>
+                <div class="empty-state-desc">Todas as suas reservas pagas já têm solicitações ou ainda não há reservas elegíveis.</div>
+            </div>
         <?php else: ?>
-            <form method="POST" class="space-y-4">
+            <form id="refund-form" data-ajax action="<?= url('/api/refund') ?>" method="POST" class="space-y-4">
                 <?= csrfField() ?>
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">Reserva</span>
-                    <select name="booking_id" required class="input-field w-full">
-                        <option value="">Selecione...</option>
-                        <?php foreach ($eligibleBookings as $b): ?>
-                            <option value="<?= $b['id'] ?>"><?= e($b['title']) ?> — <?= formatPrice((float)$b['total']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">Motivo</span>
-                    <textarea name="reason" rows="4" required class="input-field w-full" placeholder="Descreva o motivo do reembolso..."></textarea>
-                </label>
-                <button class="btn-primary w-full justify-center">Enviar solicitação</button>
+                <div class="form-field">
+                    <label class="form-field-label">Reserva</label>
+                    <div class="form-input-group">
+                        <i data-lucide="calendar" class="form-input-icon w-4 h-4"></i>
+                        <select name="booking_id" required class="form-input">
+                            <option value="">Selecione uma reserva...</option>
+                            <?php foreach ($eligibleBookings as $b): ?>
+                                <option value="<?= (int)$b['id'] ?>" <?= $preselect===(int)$b['id']?'selected':'' ?>>
+                                    <?= e($b['title']) ?> — <?= formatPrice((float)$b['total']) ?> (<?= e($b['code']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label class="form-field-label">Motivo</label>
+                    <textarea name="reason" rows="5" required class="form-input auto-grow" minlength="10" placeholder="Descreva o motivo do reembolso com o máximo de detalhes possível..."></textarea>
+                    <p class="text-xs mt-1.5" style="color:var(--text-muted)">Mínimo 10 caracteres.</p>
+                </div>
+                <button type="submit" class="btn-primary w-full justify-center">
+                    <span class="btn-content"><i data-lucide="send" class="w-4 h-4"></i> Enviar solicitação</span>
+                </button>
             </form>
         <?php endif; ?>
     </div>
 
-    <div class="rounded-2xl border p-6" style="background:#fff;border-color:var(--border-default)">
-        <h2 class="font-display text-xl font-bold mb-5" style="color:var(--sepia)">Histórico</h2>
+    <!-- History -->
+    <div class="glass-card p-6">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(58,107,138,0.1);color:var(--horizonte)">
+                <i data-lucide="history" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Histórico</h2>
+                <p class="text-xs" style="color:var(--text-muted)"><?= count($refunds) ?> solicitação<?= count($refunds)===1?'':'s' ?></p>
+            </div>
+        </div>
+
         <?php if (empty($refunds)): ?>
-            <p class="text-sm" style="color:var(--text-muted)">Nenhuma solicitação anterior.</p>
+            <p class="text-sm text-center py-8" style="color:var(--text-muted)">Nenhuma solicitação anterior.</p>
         <?php else: ?>
             <div class="space-y-3">
-                <?php foreach ($refunds as $r): ?>
-                    <div class="p-4 rounded-xl" style="background:var(--areia-light)">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-semibold text-sm" style="color:var(--text-primary)"><?= e($r['entity_title']) ?></span>
-                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background:var(--terracota);color:#fff"><?= e($r['status']) ?></span>
+                <?php foreach ($refunds as $r):
+                    $pill = ['pending'=>'pill-warning','approved'=>'pill-success','rejected'=>'pill-danger','processed'=>'pill-info'][$r['status']] ?? 'pill-info';
+                    $statusLabel = ['pending'=>'pendente','approved'=>'aprovado','rejected'=>'rejeitado','processed'=>'processado'][$r['status']] ?? $r['status'];
+                ?>
+                    <div class="p-4 rounded-xl border" style="background:var(--areia-light);border-color:var(--border-default)">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <span class="font-bold text-sm truncate" style="color:var(--sepia)"><?= e($r['entity_title']) ?></span>
+                            <span class="pill <?= $pill ?>"><?= e($statusLabel) ?></span>
                         </div>
-                        <p class="text-xs" style="color:var(--text-muted)"><?= e($r['reason']) ?></p>
-                        <p class="text-xs mt-2" style="color:var(--text-secondary)">Valor: <strong><?= formatPrice((float)$r['amount']) ?></strong> · <?= date('d/m/Y', strtotime($r['created_at'])) ?></p>
+                        <p class="text-xs mb-2 line-clamp-2" style="color:var(--text-secondary)"><?= e($r['reason']) ?></p>
+                        <div class="flex items-center justify-between text-xs" style="color:var(--text-muted)">
+                            <span><?= date('d/m/Y', strtotime($r['created_at'])) ?></span>
+                            <span class="font-bold" style="color:var(--terracota)"><?= formatPrice((float)$r['amount']) ?></span>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>

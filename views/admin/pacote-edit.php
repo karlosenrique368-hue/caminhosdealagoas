@@ -111,8 +111,13 @@ $msg = flash('success');
             </div>
             <div class="admin-card p-6 space-y-3">
                 <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>
-                <?php if (!empty($pacote['cover_image'])): ?><img src="<?= storageUrl($pacote['cover_image']) ?>" class="w-full aspect-[16/10] object-cover rounded-lg"><?php endif; ?>
-                <input type="file" name="cover_image" accept="image/*" class="admin-input text-xs">
+                <?php if (!empty($pacote['cover_image'])): ?><img src="<?= storageUrl($pacote['cover_image']) ?>" class="w-full aspect-[16/10] object-cover rounded-xl" style="border:1px solid var(--border-default)"><?php endif; ?>
+                <label class="upload-zone block">
+                    <input type="file" name="cover_image" accept="image/*">
+                    <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
+                    <div class="upload-zone-title"><?= !empty($pacote['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
+                    <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1600×900px</div>
+                </label>
             </div>
         </div>
     </div>

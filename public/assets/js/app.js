@@ -296,3 +296,177 @@ window.cart = (function () {
 
     return { open, close, add, remove, update, clear, refresh, get state() { return state; } };
 })();
+
+
+// ============================================================
+// AJAX FORMS — generic [data-ajax] form handler
+// ============================================================
+(function initAjaxForms() {
+    document.addEventListener('submit', async (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.hasAttribute('data-ajax')) return;
+        e.preventDefault();
+        const url = form.getAttribute('action') || window.location.href;
+        const method = (form.getAttribute('method') || 'POST').toUpperCase();
+        const btn = form.querySelector('[type="submit"]');
+        if (btn) {
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+            if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+            const content = btn.querySelector('.btn-content');
+            if (content) content.dataset.origHtml = content.innerHTML;
+            btn.insertAdjacentHTML('beforeend', '<span class="ajax-spinner" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></span>');
+        }
+        try {
+            const body = new FormData(form);
+            const r = await fetch(url, {
+                method,
+                body: method === 'GET' ? undefined : body,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            });
+            let data;
+            try { data = await r.json(); } catch { data = { ok: r.ok, msg: 'Resposta inválida.' }; }
+            if (data.ok) {
+                showToast(data.msg || 'Feito!', 'success');
+                // Clear password fields after success
+                form.querySelectorAll('input[type="password"]').forEach(i => i.value = '');
+                // Custom callback
+                if (form.dataset.afterAjax === 'reload') {
+                    setTimeout(() => location.reload(), 700);
+                } else if (form.dataset.afterAjax === 'reset') {
+                    form.reset();
+                }
+                form.dispatchEvent(new CustomEvent('ajax:success', { detail: data }));
+            } else {
+                showToast(data.msg || 'Erro ao processar.', 'error');
+                form.dispatchEvent(new CustomEvent('ajax:error', { detail: data }));
+            }
+        } catch (err) {
+            showToast('Erro de rede. Tente novamente.', 'error');
+        } finally {
+            if (btn) {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                const spinner = btn.querySelector('.ajax-spinner');
+                if (spinner) spinner.remove();
+            }
+        }
+    });
+})();
+
+// ============================================================
+// UPLOAD ZONE — drag/drop + preview
+// ============================================================
+(function initUploadZones() {
+    function hydrate(zone) {
+        if (zone.dataset.hydrated) return;
+        zone.dataset.hydrated = '1';
+        const input = zone.querySelector('input[type="file"]');
+        const preview = zone.querySelector('.upload-zone-preview') || (() => {
+            const d = document.createElement('div');
+            d.className = 'upload-zone-preview';
+            zone.appendChild(d);
+            return d;
+        })();
+        const progressBar = document.createElement('div');
+        progressBar.className = 'upload-zone-progress';
+        zone.appendChild(progressBar);
+
+        const maxFiles = parseInt(zone.dataset.max || '10', 10);
+        const uploadUrl = zone.dataset.url;
+        const fieldName = zone.dataset.field || 'file';
+        let files = [];
+
+        function render() {
+            preview.querySelectorAll('.upload-zone-preview-item[data-pending]').forEach(e => e.remove());
+            files.forEach((f, idx) => {
+                const item = document.createElement('div');
+                item.className = 'upload-zone-preview-item';
+                item.dataset.pending = '1';
+                const url = URL.createObjectURL(f);
+                item.innerHTML = `<img src="${url}" alt=""><button type="button" class="remove-btn" data-idx="${idx}"><i data-lucide="x" class="w-3 h-3"></i></button>`;
+                preview.appendChild(item);
+            });
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function handleFiles(fl) {
+            const toAdd = Array.from(fl).slice(0, maxFiles - files.length);
+            files = files.concat(toAdd);
+            render();
+            if (uploadUrl) uploadAll();
+        }
+
+        async function uploadAll() {
+            if (!uploadUrl || !files.length) return;
+            for (let i = 0; i < files.length; i++) {
+                const fd = new FormData();
+                fd.append(fieldName, files[i]);
+                const csrf = document.querySelector('meta[name="csrf-token"]');
+                if (csrf) fd.append('csrf_token', csrf.content);
+                progressBar.style.width = ((i / files.length) * 100) + '%';
+                try {
+                    const r = await fetch(uploadUrl, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                    const data = await r.json();
+                    if (!data.ok) { showToast(data.msg || 'Falha no upload', 'error'); break; }
+                    if (data.data && data.data.url) {
+                        // Append persistent preview
+                        const item = document.createElement('div');
+                        item.className = 'upload-zone-preview-item';
+                        item.innerHTML = `<img src="${data.data.url}" alt=""><input type="hidden" name="${fieldName}[]" value="${data.data.path || data.data.url}"><button type="button" class="remove-btn" onclick="this.closest('.upload-zone-preview-item').remove()"><i data-lucide="x" class="w-3 h-3"></i></button>`;
+                        preview.appendChild(item);
+                        if (window.lucide) window.lucide.createIcons();
+                    }
+                } catch (e) {
+                    showToast('Erro de rede no upload', 'error');
+                    break;
+                }
+            }
+            progressBar.style.width = '100%';
+            files = [];
+            render();
+            setTimeout(() => { progressBar.style.width = '0'; }, 600);
+            showToast('Uploads concluídos!', 'success');
+        }
+
+        input.addEventListener('change', () => handleFiles(input.files));
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+        preview.addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-btn[data-idx]');
+            if (!btn) return;
+            e.preventDefault();
+            const idx = parseInt(btn.dataset.idx, 10);
+            files.splice(idx, 1);
+            render();
+        });
+    }
+    document.querySelectorAll('.upload-zone').forEach(hydrate);
+    // Re-hydrate dynamically added zones
+    new MutationObserver((muts) => {
+        muts.forEach(m => m.addedNodes.forEach(n => {
+            if (n.nodeType === 1) {
+                if (n.matches && n.matches('.upload-zone')) hydrate(n);
+                n.querySelectorAll && n.querySelectorAll('.upload-zone').forEach(hydrate);
+            }
+        }));
+    }).observe(document.body, { childList: true, subtree: true });
+})();
+
+// ============================================================
+// Auto-grow textareas
+// ============================================================
+(function initAutoGrow() {
+    document.addEventListener('input', (e) => {
+        if (!e.target.matches('textarea.auto-grow')) return;
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(400, e.target.scrollHeight) + 'px';
+    });
+})();

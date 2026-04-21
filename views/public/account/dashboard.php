@@ -7,67 +7,86 @@ $cid = currentCustomerId();
 $totalBookings = (int)(dbOne('SELECT COUNT(*) c FROM bookings WHERE customer_user_id=?', [$cid])['c'] ?? 0);
 $totalWishlist = (int)(dbOne('SELECT COUNT(*) c FROM wishlist WHERE customer_id=?', [$cid])['c'] ?? 0);
 $totalSpent = (float)(dbOne("SELECT COALESCE(SUM(total),0) s FROM bookings WHERE customer_user_id=? AND payment_status='paid'", [$cid])['s'] ?? 0);
+$paidCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE customer_user_id=? AND payment_status='paid'", [$cid])['c'] ?? 0);
+$pendingCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE customer_user_id=? AND payment_status='pending'", [$cid])['c'] ?? 0);
 $recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.customer_user_id=? ORDER BY b.created_at DESC LIMIT 5", [$cid]);
 ?>
 
+<!-- Premium stat grid -->
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-    <div class="p-6 rounded-2xl border relative overflow-hidden" style="background:#fff;border-color:var(--border-default)">
-        <img src="<?= asset('brand/selo-terracota.png') ?>" class="seal-watermark sm" style="top:-20px;right:-20px" alt="">
-        <div class="flex items-center gap-3 mb-3 relative z-10">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--terracota);color:#fff">
-                <i data-lucide="calendar-check" class="w-5 h-5"></i>
-            </div>
-            <span class="text-xs uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Reservas</span>
+    <div class="stat-card-premium" data-reveal
+         style="--accent:var(--terracota); --tint:rgba(201,107,74,0.1); --accent-shadow:rgba(201,107,74,0.4)">
+        <img src="<?= asset('brand/selo-terracota.png') ?>" class="stat-seal" alt="">
+        <div class="stat-head">
+            <div class="stat-icon-box"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
+            <span class="stat-label">Reservas</span>
         </div>
-        <p class="font-display text-4xl font-bold relative z-10" style="color:var(--sepia)"><?= $totalBookings ?></p>
+        <div class="stat-value" data-counter="<?= $totalBookings ?>"><?= $totalBookings ?></div>
+        <div class="stat-sub"><?= $paidCount ?> paga<?= $paidCount===1?'':'s' ?> · <?= $pendingCount ?> pendente<?= $pendingCount===1?'':'s' ?></div>
     </div>
-    <div class="p-6 rounded-2xl border relative overflow-hidden" style="background:#fff;border-color:var(--border-default)">
-        <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-watermark sm" style="top:-20px;right:-20px" alt="">
-        <div class="flex items-center gap-3 mb-3 relative z-10">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--azul-profundo);color:#fff">
-                <i data-lucide="heart" class="w-5 h-5"></i>
-            </div>
-            <span class="text-xs uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Favoritos</span>
+
+    <div class="stat-card-premium" data-reveal style="animation-delay:80ms;
+         --accent:var(--horizonte); --tint:rgba(58,107,138,0.1); --accent-shadow:rgba(58,107,138,0.4)">
+        <img src="<?= asset('brand/selo-azul.png') ?>" class="stat-seal" alt="">
+        <div class="stat-head">
+            <div class="stat-icon-box"><i data-lucide="heart" class="w-5 h-5"></i></div>
+            <span class="stat-label">Favoritos</span>
         </div>
-        <p class="font-display text-4xl font-bold relative z-10" style="color:var(--sepia)"><?= $totalWishlist ?></p>
+        <div class="stat-value" data-counter="<?= $totalWishlist ?>"><?= $totalWishlist ?></div>
+        <div class="stat-sub">Itens salvos para voltar depois</div>
     </div>
-    <div class="p-6 rounded-2xl border relative overflow-hidden" style="background:#fff;border-color:var(--border-default)">
-        <img src="<?= asset('brand/selo-areia.png') ?>" class="seal-watermark sm reverse" style="top:-20px;right:-20px" alt="">
-        <div class="flex items-center gap-3 mb-3 relative z-10">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--areia-dark);color:#fff">
-                <i data-lucide="banknote" class="w-5 h-5"></i>
-            </div>
-            <span class="text-xs uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Investido</span>
+
+    <div class="stat-card-premium" data-reveal style="animation-delay:160ms;
+         --accent:var(--maresia-dark); --tint:rgba(122,157,110,0.12); --accent-shadow:rgba(122,157,110,0.4)">
+        <img src="<?= asset('brand/selo-areia.png') ?>" class="stat-seal" alt="">
+        <div class="stat-head">
+            <div class="stat-icon-box"><i data-lucide="wallet" class="w-5 h-5"></i></div>
+            <span class="stat-label">Investido</span>
         </div>
-        <p class="font-display text-3xl font-bold relative z-10" style="color:var(--sepia)"><?= formatPrice($totalSpent) ?></p>
+        <div class="stat-value" style="font-size:28px"><?= formatPrice($totalSpent) ?></div>
+        <div class="stat-sub">Total em experiências pagas</div>
     </div>
 </div>
 
-<div class="rounded-2xl border p-6" style="background:#fff;border-color:var(--border-default)">
+<!-- Recent bookings -->
+<div class="glass-card p-6" data-reveal>
     <div class="flex items-center justify-between mb-5">
-        <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Reservas recentes</h2>
-        <a href="<?= url('/conta/reservas') ?>" class="text-sm font-semibold" style="color:var(--terracota)">Ver todas →</a>
+        <div>
+            <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Reservas recentes</h2>
+            <p class="text-xs" style="color:var(--text-muted)">Últimas 5 atividades da sua conta</p>
+        </div>
+        <a href="<?= url('/conta/reservas') ?>" class="text-sm font-bold flex items-center gap-1" style="color:var(--terracota)">
+            Ver todas <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </a>
     </div>
     <?php if (empty($recent)): ?>
-        <div class="text-center py-10">
-            <i data-lucide="map" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted)"></i>
-            <p class="mb-4" style="color:var(--text-secondary)">Você ainda não tem nenhuma reserva.</p>
-            <a href="<?= url('/roteiros') ?>" class="btn-primary inline-flex">Explorar roteiros</a>
+        <div class="empty-state">
+            <div class="empty-state-icon"><i data-lucide="map" class="w-7 h-7"></i></div>
+            <div class="empty-state-title">Nenhuma viagem ainda</div>
+            <div class="empty-state-desc">Comece explorando nossos roteiros curados em Alagoas.</div>
+            <a href="<?= url('/roteiros') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar roteiros</a>
         </div>
     <?php else: ?>
         <div class="space-y-3">
-            <?php foreach ($recent as $b): $title = $b['title'] ?: $b['entity_title']; ?>
-                <div class="flex items-center gap-4 p-4 rounded-xl transition" style="background:var(--areia-light)">
-                    <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:var(--terracota);color:#fff">
-                        <i data-lucide="<?= $b['entity_type']==='roteiro' ? 'mountain' : ($b['entity_type']==='pacote'?'package':'car') ?>" class="w-5 h-5"></i>
-                    </div>
+            <?php foreach ($recent as $b): $title = $b['title'] ?: ($b['entity_title'] ?? 'Reserva');
+                $iconName = $b['entity_type']==='roteiro' ? 'mountain' : ($b['entity_type']==='pacote' ? 'package' : 'car');
+                $statusPill = ['paid'=>'pill-success','pending'=>'pill-warning','failed'=>'pill-danger','refunded'=>'pill-info'][$b['payment_status']] ?? 'pill-info';
+            ?>
+                <div class="booking-row">
+                    <div class="booking-icon"><i data-lucide="<?= $iconName ?>" class="w-5 h-5"></i></div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-semibold truncate" style="color:var(--text-primary)"><?= e($title ?: 'Reserva') ?></p>
-                        <p class="text-xs" style="color:var(--text-muted)"><?= date('d/m/Y', strtotime($b['created_at'])) ?></p>
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="pill pill-primary"><?= e($b['entity_type']) ?></span>
+                            <span class="pill <?= $statusPill ?>"><?= e($b['payment_status']) ?></span>
+                        </div>
+                        <p class="font-bold truncate" style="color:var(--sepia)"><?= e($title) ?></p>
+                        <p class="text-xs mt-1" style="color:var(--text-muted)">
+                            <?= date('d/m/Y', strtotime($b['created_at'])) ?>
+                            <?php if (!empty($b['code'])): ?> · <code style="font-size:11px"><?= e($b['code']) ?></code><?php endif; ?>
+                        </p>
                     </div>
-                    <div class="text-right">
-                        <p class="font-bold" style="color:var(--sepia)"><?= formatPrice((float)$b['total']) ?></p>
-                        <span class="text-xs font-semibold"><?= e($b['payment_status']) ?></span>
+                    <div class="text-right md:ml-auto">
+                        <p class="font-display font-bold text-lg" style="color:var(--terracota)"><?= formatPrice((float)$b['total']) ?></p>
                     </div>
                 </div>
             <?php endforeach; ?>
