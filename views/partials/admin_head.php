@@ -28,13 +28,14 @@ tailwind.config = { theme: { extend: { colors: {
 <link rel="apple-touch-icon" href="<?= asset('brand/Adesivo_1.svg') ?>">
 <style>
 body { background: var(--bg-surface); }
+[x-cloak] { display: none !important; }
 </style>
 </head>
 <body x-data="{sidebarOpen: window.innerWidth>=1024}">
 
 <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="admin-sidebar fixed lg:relative inset-y-0 left-0 z-40 flex-shrink-0 transition-transform"
+    <aside class="admin-sidebar fixed lg:sticky lg:top-0 inset-y-0 lg:inset-y-auto left-0 z-40 flex-shrink-0 transition-transform lg:h-screen lg:self-start"
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
            style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
@@ -103,6 +104,7 @@ body { background: var(--bg-surface); }
 
     <!-- Backdrop mobile -->
     <div x-show="sidebarOpen && window.innerWidth<1024" @click="sidebarOpen=false"
+         x-cloak style="display:none"
          class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
 
     <!-- Main content -->

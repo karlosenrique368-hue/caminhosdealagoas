@@ -207,9 +207,20 @@ document.addEventListener('input', (e) => {
         } catch (e) { /* silent */ }
     }
     document.addEventListener('DOMContentLoaded', syncState);
-    // also re-sync when new heart buttons are inserted
+    // Re-sync ONLY when new heart buttons are added (never on class/attr changes,
+    // which would race with our optimistic toggle and undo it mid-flight)
     let resyncTimer = null;
-    new MutationObserver(() => {
+    new MutationObserver((muts) => {
+        let hasNewBtns = false;
+        for (const m of muts) {
+            for (const n of m.addedNodes) {
+                if (n.nodeType !== 1) continue;
+                if (n.matches && n.matches('.heart-btn')) { hasNewBtns = true; break; }
+                if (n.querySelector && n.querySelector('.heart-btn')) { hasNewBtns = true; break; }
+            }
+            if (hasNewBtns) break;
+        }
+        if (!hasNewBtns) return;
         if (resyncTimer) return;
         resyncTimer = setTimeout(() => { resyncTimer = null; syncState(); }, 250);
     }).observe(document.body, { childList: true, subtree: true });

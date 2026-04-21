@@ -91,7 +91,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             </div>
         <?php else: ?>
         <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= count($roteiros) ?></strong> passeio<?= count($roteiros)===1?'':'s' ?> encontrado<?= count($roteiros)===1?'':'s' ?></p>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($roteiros as $i => $r): 
                 $slides = [];
                 if ($r['cover_image']) $slides[] = storageUrl($r['cover_image']);

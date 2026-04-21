@@ -203,22 +203,112 @@ tailwind.config = {
                style="background:linear-gradient(135deg,var(--terracota),var(--terracota-dark))">
                 <i data-lucide="message-circle" class="w-4 h-4"></i> Reservar
             </a>
-            <!-- Mobile menu button -->
-            <button class="lg:hidden p-2 rounded-lg nav-link-tr"
-                    x-data @click="document.getElementById('mobile-menu').classList.toggle('hidden')">
+            <!-- Menu drawer button (premium, always visible) -->
+            <button type="button" class="p-2.5 rounded-xl nav-link-tr transition hover:scale-105"
+                    x-data @click="window.openMenuDrawer && window.openMenuDrawer()"
+                    aria-label="Abrir menu">
                 <i data-lucide="menu" class="w-6 h-6"></i>
             </button>
         </div>
     </div>
+</nav>
 
-    <!-- Mobile menu -->
-    <div id="mobile-menu" class="hidden lg:hidden border-t" style="background:white;border-color:var(--border-default)">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-1">
-            <a href="<?= url('/') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Home</a>
-            <a href="<?= url('/passeios') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Passeios</a>
-            <a href="<?= url('/pacotes') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Pacotes</a>
-            <a href="<?= url('/sobre') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Sobre</a>
-            <a href="<?= url('/contato') ?>" class="px-3 py-3 rounded-lg text-sm font-medium hover:bg-gray-50">Contato</a>
+<!-- ============== PREMIUM OFF-CANVAS DRAWER ============== -->
+<div id="menu-drawer-backdrop" class="menu-drawer-backdrop" onclick="window.closeMenuDrawer && window.closeMenuDrawer()"></div>
+<aside id="menu-drawer" class="menu-drawer" aria-hidden="true" aria-label="Menu principal">
+    <div class="menu-drawer-inner">
+        <!-- Header -->
+        <div class="menu-drawer-header">
+            <img src="<?= asset('brand/logo-azul.png') ?>" alt="Caminhos de Alagoas" class="h-10">
+            <button type="button" class="menu-drawer-close" onclick="window.closeMenuDrawer && window.closeMenuDrawer()" aria-label="Fechar">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="menu-drawer-nav">
+            <div class="menu-drawer-section-title">Navegação</div>
+            <a href="<?= url('/') ?>" class="menu-drawer-link"><i data-lucide="home" class="w-4 h-4"></i>Home</a>
+            <a href="<?= url('/passeios') ?>" class="menu-drawer-link"><i data-lucide="compass" class="w-4 h-4"></i>Passeios</a>
+            <a href="<?= url('/pacotes') ?>" class="menu-drawer-link"><i data-lucide="package" class="w-4 h-4"></i>Pacotes</a>
+            <a href="<?= url('/sobre') ?>" class="menu-drawer-link"><i data-lucide="book-open" class="w-4 h-4"></i>Sobre nós</a>
+            <a href="<?= url('/contato') ?>" class="menu-drawer-link"><i data-lucide="mail" class="w-4 h-4"></i>Contato</a>
+
+            <div class="menu-drawer-section-title">Conta</div>
+            <?php if (isCustomerLoggedIn()): ?>
+                <a href="<?= url('/conta') ?>" class="menu-drawer-link"><i data-lucide="user-circle" class="w-4 h-4"></i>Minha conta</a>
+                <a href="<?= url('/conta/reservas') ?>" class="menu-drawer-link"><i data-lucide="calendar-check" class="w-4 h-4"></i>Minhas reservas</a>
+                <a href="<?= url('/conta/favoritos') ?>" class="menu-drawer-link"><i data-lucide="heart" class="w-4 h-4"></i>Favoritos</a>
+                <a href="<?= url('/conta/sair') ?>" class="menu-drawer-link"><i data-lucide="log-out" class="w-4 h-4"></i>Sair</a>
+            <?php else: ?>
+                <a href="<?= url('/conta/login') ?>" class="menu-drawer-link"><i data-lucide="log-in" class="w-4 h-4"></i>Entrar</a>
+                <a href="<?= url('/conta/cadastro') ?>" class="menu-drawer-link"><i data-lucide="user-plus" class="w-4 h-4"></i>Criar conta</a>
+            <?php endif; ?>
+
+            <div class="menu-drawer-section-title">Preferências</div>
+            <div class="menu-drawer-prefs">
+                <div class="menu-drawer-pref" x-data="{open:false}" @click.away="open=false">
+                    <button type="button" @click="open=!open" class="menu-drawer-pref-btn">
+                        <span><span style="font-size:16px"><?= $flags[$currentLang] ?? '🇧🇷' ?></span> Idioma</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4" :class="open?'rotate-180':''"></i>
+                    </button>
+                    <div x-show="open" x-transition x-cloak class="menu-drawer-pref-list">
+                        <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
+                            <a href="?lang=<?= e($code) ?>"><span><?= $flags[$code] ?? '🌐' ?></span> <?= e($name) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="menu-drawer-pref" x-data="{open:false}" @click.away="open=false">
+                    <button type="button" @click="open=!open" class="menu-drawer-pref-btn">
+                        <span><i data-lucide="coins" class="w-4 h-4 inline"></i> <?= e($currentCurrency) ?></span>
+                        <i data-lucide="chevron-down" class="w-4 h-4" :class="open?'rotate-180':''"></i>
+                    </button>
+                    <div x-show="open" x-transition x-cloak class="menu-drawer-pref-list">
+                        <?php foreach (['BRL'=>'R$ Real','USD'=>'US$ Dólar','EUR'=>'€ Euro','GBP'=>'£ Libra','ARS'=>'AR$ Peso'] as $code=>$name): ?>
+                            <a href="?currency=<?= e($code) ?>"><?= e($name) ?> <?= $currentCurrency===$code ? '✓' : '' ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- CTA + Socials -->
+        <div class="menu-drawer-footer">
+            <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="menu-drawer-cta">
+                <i data-lucide="message-circle" class="w-4 h-4"></i> Reservar via WhatsApp
+            </a>
+            <div class="menu-drawer-socials">
+                <a href="<?= e(getSetting('social_instagram','https://instagram.com/caminhosdealagoas')) ?>" target="_blank" aria-label="Instagram">
+                    <i data-lucide="instagram" class="w-4 h-4"></i>
+                </a>
+                <a href="<?= e(getSetting('social_facebook','https://facebook.com')) ?>" target="_blank" aria-label="Facebook">
+                    <i data-lucide="facebook" class="w-4 h-4"></i>
+                </a>
+                <a href="<?= e(getSetting('social_youtube','https://youtube.com')) ?>" target="_blank" aria-label="YouTube">
+                    <i data-lucide="youtube" class="w-4 h-4"></i>
+                </a>
+                <a href="<?= e(getSetting('social_tiktok','https://tiktok.com')) ?>" target="_blank" aria-label="TikTok">
+                    <i data-lucide="music-2" class="w-4 h-4"></i>
+                </a>
+                <a href="mailto:<?= e(getSetting('contact_email','contato@caminhosdealagoas.com')) ?>" aria-label="Email">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                </a>
+            </div>
+            <div class="menu-drawer-copy">© <?= date('Y') ?> Caminhos de Alagoas</div>
         </div>
     </div>
-</nav>
+</aside>
+
+<script>
+window.openMenuDrawer = function(){
+    document.getElementById('menu-drawer').classList.add('open');
+    document.getElementById('menu-drawer-backdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+};
+window.closeMenuDrawer = function(){
+    document.getElementById('menu-drawer').classList.remove('open');
+    document.getElementById('menu-drawer-backdrop').classList.remove('open');
+    document.body.style.overflow = '';
+};
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.closeMenuDrawer(); });
+</script>

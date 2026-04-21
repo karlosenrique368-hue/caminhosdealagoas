@@ -114,7 +114,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <?php endif; ?>
                     <button type="button" class="heart-btn" data-fav-type="pacote" data-fav-id="<?= (int)$p['id'] ?>" aria-label="Favoritar"><i data-lucide="heart" class="w-4 h-4"></i></button>
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
-                    <div class="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95" style="color:var(--sepia);z-index:2"><?= e($p['duration_days']) ?>D / <?= e($p['duration_nights']) ?>N</div>
+                    <div class="absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 inline-flex items-center gap-1.5" style="color:var(--sepia);z-index:3" title="<?= (int)$p['duration_days'] ?> dias e <?= (int)$p['duration_nights'] ?> noites"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i><?= e($p['duration_days']) ?>D / <?= e($p['duration_nights']) ?>N</div>
                     <div class="absolute bottom-4 left-4 right-4" style="z-index:2">
                         <div class="flex items-center gap-1.5 text-white/80 text-xs mb-2"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($p['destination']) ?></div>
                         <h3 class="font-display text-xl font-bold text-white leading-tight line-clamp-2"><?= e($p['title']) ?></h3>
