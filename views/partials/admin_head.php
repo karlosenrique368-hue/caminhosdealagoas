@@ -48,7 +48,7 @@ body { background: var(--bg-surface); }
             </div>
         </div>
 
-        <nav class="p-4 space-y-1 overflow-y-auto" style="max-height:calc(100vh - 180px)">
+        <nav class="p-4 space-y-1" style="max-height:calc(100vh - 180px)">
             <?php
             $menu = [
                 ['path' => '/admin/dashboard', 'icon' => 'layout-dashboard', 'label' => 'Dashboard'],

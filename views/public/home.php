@@ -3,7 +3,7 @@ $pageTitle = 'Turismo Premium em Alagoas';
 $pageDesc  = 'Roteiros autênticos, pacotes premium e experiências únicas em Alagoas. Reserve sua viagem dos sonhos.';
 
 $featured = dbAll("SELECT * FROM roteiros WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 8");
-$pacotesFeatured = dbAll("SELECT * FROM pacotes WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 3");
+$pacotesFeatured = dbAll("SELECT * FROM pacotes WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 4");
 $testimonials = dbAll("SELECT * FROM testimonials WHERE active=1 ORDER BY featured DESC, created_at DESC LIMIT 4");
 
 include VIEWS_DIR . '/partials/public_head.php';
@@ -109,9 +109,34 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <!-- ================================================
+     TRUST STRIP
+================================================ -->
+<section class="py-10 relative" style="background:var(--bg-surface);border-bottom:1px solid var(--border-default)">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+            <div class="flex items-center gap-3" data-reveal>
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(201,107,74,0.1);color:var(--terracota)"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                <div><div class="text-sm font-bold" style="color:var(--sepia)">Pagamento seguro</div><div class="text-xs" style="color:var(--text-muted)">Pix ou cartão até 12x</div></div>
+            </div>
+            <div class="flex items-center gap-3" data-reveal style="animation-delay:100ms">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(58,107,138,0.1);color:var(--horizonte)"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
+                <div><div class="text-sm font-bold" style="color:var(--sepia)">Curadoria local</div><div class="text-xs" style="color:var(--text-muted)">Feito por alagoanos</div></div>
+            </div>
+            <div class="flex items-center gap-3" data-reveal style="animation-delay:200ms">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(16,185,129,0.1);color:#10B981"><i data-lucide="headphones" class="w-5 h-5"></i></div>
+                <div><div class="text-sm font-bold" style="color:var(--sepia)">Suporte 24/7</div><div class="text-xs" style="color:var(--text-muted)">Durante sua viagem</div></div>
+            </div>
+            <div class="flex items-center gap-3" data-reveal style="animation-delay:300ms">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.1);color:#F59E0B"><i data-lucide="badge-check" class="w-5 h-5"></i></div>
+                <div><div class="text-sm font-bold" style="color:var(--sepia)">Melhor preço</div><div class="text-xs" style="color:var(--text-muted)">Garantido ou devolvemos</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================
      DESTAQUES — Roteiros
 ================================================ -->
-<div class="section-divider-seal" style="--seal-img: url('<?= asset('brand/selo-terracota.png') ?>')" aria-hidden="true"></div>
 <section id="destaques" class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>
@@ -306,7 +331,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             <p class="section-subtitle">Viagens curadas com hospedagem, transporte e passeios incluídos.</p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-6">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($pacotesFeatured as $i => $p):
                 $gal = [];
                 if (!empty($p['gallery'])) { $dec = json_decode($p['gallery'], true); if (is_array($dec)) $gal = $dec; }

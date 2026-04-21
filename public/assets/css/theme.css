@@ -622,13 +622,13 @@ body {
 .seal-reverse { animation: sealSpinR 50s linear infinite; transform-origin: center; }
 @keyframes sealSpinR { to { transform: rotate(-360deg); } }
 
-/* Section watermark seals — scatter across page, subtle decorative rotating */
+/* Section watermark seals — scatter across page, subtle decorative rotating (home pages, FASTER than hero) */
 .seal-watermark {
     position: absolute;
     pointer-events: none;
     user-select: none;
     z-index: 0;
-    animation: sealSpin 60s linear infinite;
+    animation: sealSpin 25s linear infinite;
     transform-origin: center;
     mix-blend-mode: multiply;
 }
@@ -637,7 +637,7 @@ body {
 .seal-watermark.md { width: 160px; height: 160px; opacity: 0.10; }
 .seal-watermark.lg { width: 240px; height: 240px; opacity: 0.08; }
 .seal-watermark.xl { width: 360px; height: 360px; opacity: 0.06; }
-.seal-watermark.reverse { animation-direction: reverse; animation-duration: 80s; }
+.seal-watermark.reverse { animation-direction: reverse; animation-duration: 30s; }
 
 /* Seal badge used inline next to titles */
 .seal-inline {
@@ -1728,17 +1728,15 @@ textarea.input-field { resize: vertical; min-height: 96px; }
     .slider-arrow { opacity: 0.92; }
 }
 
-/* Section divider — TWO rotating seals glued to viewport edges (left + right). Zoom keeps them on borders, never covers center content. More exposed than hidden (translateX positive on each side). Rotation matches hero seal (40s). */
+/* Section divider — TWO rotating seals glued to viewport edges. Uses 100% + overflow:hidden on ancestors to avoid horizontal scrollbar. More exposed than hidden. Speed is FASTER than hero (hero = 40s, divider = 22s). */
 .section-divider-seal {
     position: relative;
     height: 0;
-    width: 100vw;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 100%;
     pointer-events: none;
     z-index: 2;
     overflow: visible;
-    margin: 24px auto 8px;
+    margin: 24px 0 8px;
 }
 .section-divider-seal::before,
 .section-divider-seal::after {
@@ -1750,22 +1748,28 @@ textarea.input-field { resize: vertical; min-height: 96px; }
     transform: translateY(-50%);
     opacity: 0.22;
     filter: drop-shadow(0 6px 18px rgba(30,58,82,0.15));
-    animation: sealSpin 40s linear infinite;
+    animation: sealSpin 22s linear infinite;
 }
-/* Show MORE of the seal than hidden: keep 70% visible, only 30% behind the edge */
+/* Show MORE of the seal than hidden (~70% visible vs 30% past the edge) */
 .section-divider-seal::before { left: -36px; }
 .section-divider-seal::after  { right: -36px; animation-direction: reverse; }
 @media (min-width: 768px) {
-    .section-divider-seal { margin: 40px auto 16px; }
+    .section-divider-seal { margin: 40px 0 16px; }
     .section-divider-seal::before, .section-divider-seal::after { width: 160px; height: 160px; }
     .section-divider-seal::before { left: -48px; }
     .section-divider-seal::after  { right: -48px; }
 }
 @media (min-width: 1280px) {
-    .section-divider-seal { margin: 56px auto 24px; }
+    .section-divider-seal { margin: 56px 0 24px; }
     .section-divider-seal::before, .section-divider-seal::after { width: 200px; height: 200px; }
     .section-divider-seal::before { left: -60px; }
     .section-divider-seal::after  { right: -60px; }
+}
+/* On very small screens, shrink seals and push them more past the edge so mobile menu is not affected */
+@media (max-width: 640px) {
+    .section-divider-seal::before, .section-divider-seal::after { width: 80px; height: 80px; opacity: 0.16; }
+    .section-divider-seal::before { left: -30px; }
+    .section-divider-seal::after  { right: -30px; }
 }
 
 /* Premium Ver Reembolso button (used in suas viagens) */
@@ -2167,3 +2171,56 @@ textarea.input-field { resize: vertical; min-height: 96px; }
 
 /* Hide mobile-menu-button duplication if present */
 #mobile-menu { display: none !important; }
+
+/* ============================================================
+   GLOBAL: prevent horizontal overflow from rotating seals
+   Needed because .section-divider-seal pseudos extend past viewport edges.
+   Mobile menu + drawer depend on body width = 100%.
+   ============================================================ */
+html, body { overflow-x: clip; max-width: 100vw; }
+@supports not (overflow-x: clip) {
+    html, body { overflow-x: hidden; }
+}
+
+/* ============================================================
+   FIX: card hover transform shifts the .heart-btn vertically mid-click
+   on PC (not on mobile — no hover), causing mousedown/mouseup on different
+   coordinates and browser discarding the click. Solution: deepen shadow
+   instead of translating the card.
+   ============================================================ */
+.card-premium:hover {
+    transform: none !important;
+    box-shadow: 0 16px 36px rgba(46,62,79,0.14), 0 36px 80px rgba(46,62,79,0.18);
+    border-color: rgba(201,107,74,0.28);
+}
+.roteiro-card:hover,
+.card-lift:hover,
+.pacote-card:hover {
+    transform: none !important;
+    box-shadow: 0 16px 36px rgba(46,62,79,0.14), 0 36px 80px rgba(46,62,79,0.18) !important;
+}
+/* Ensure heart is above every overlay and has its own compositing layer */
+.heart-btn { z-index: 5 !important; will-change: auto; }
+.heart-btn svg { pointer-events: none; }
+
+/* ============================================================
+   ADMIN SIDEBAR: hidden overflow by default, scroll on hover only
+   ============================================================ */
+.admin-sidebar {
+    overflow: hidden !important;
+    transition: none;
+}
+.admin-sidebar nav {
+    overflow-y: hidden !important;
+    transition: overflow-y 150ms;
+}
+.admin-sidebar:hover nav,
+.admin-sidebar nav:hover,
+.admin-sidebar nav:focus-within {
+    overflow-y: auto !important;
+}
+/* Slim scrollbar for sidebar */
+.admin-sidebar nav::-webkit-scrollbar { width: 6px; }
+.admin-sidebar nav::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+.admin-sidebar nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
