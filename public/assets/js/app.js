@@ -245,7 +245,7 @@ document.addEventListener('input', (e) => {
             if (!r || !r.ok) {
                 btn.classList.toggle('active', wasActive); // revert
                 if (r && (r.msg === 'Faça login.' || r.msg === 'FaÃ§a login.')) {
-                    window.location.href = (window.BASE_PATH || '') + '/login';
+                    window.location.href = (window.BASE_PATH || '') + '/conta/login';
                     return;
                 }
                 if (window.showToast) window.showToast((r && r.msg) || 'Erro ao favoritar', 'error');

@@ -144,15 +144,15 @@ tailwind.config = {
 
         <!-- Desktop menu -->
         <div class="hidden lg:flex items-center gap-8">
-            <a href="<?= url('/') ?>" class="nav-link nav-link-tr text-sm">Home</a>
-            <a href="<?= url('/passeios') ?>" class="nav-link nav-link-tr text-sm">Passeios</a>
-            <a href="<?= url('/pacotes') ?>" class="nav-link nav-link-tr text-sm">Pacotes</a>
-            <a href="<?= url('/sobre') ?>" class="nav-link nav-link-tr text-sm">Sobre</a>
-            <a href="<?= url('/contato') ?>" class="nav-link nav-link-tr text-sm">Contato</a>
+            <a href="<?= url('/') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.home')) ?></a>
+            <a href="<?= url('/passeios') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.tours')) ?></a>
+            <a href="<?= url('/pacotes') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.packages')) ?></a>
+            <a href="<?= url('/sobre') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.about')) ?></a>
+            <a href="<?= url('/contato') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.contact')) ?></a>
             <?php if (isCustomerLoggedIn()): ?>
-                <a href="<?= url('/conta') ?>" class="nav-link nav-link-tr text-sm font-bold" style="color:var(--terracota)"><i data-lucide="user-circle" class="w-4 h-4 inline"></i> Minha conta</a>
+                <a href="<?= url('/conta') ?>" class="nav-link nav-link-tr text-sm font-bold" style="color:var(--terracota)"><i data-lucide="user-circle" class="w-4 h-4 inline"></i> <?= e(t('nav.account')) ?></a>
             <?php else: ?>
-                <a href="<?= url('/conta/login') ?>" class="nav-link nav-link-tr text-sm">Entrar</a>
+                <a href="<?= url('/conta/login') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.login')) ?></a>
             <?php endif; ?>
         </div>
 
@@ -201,10 +201,10 @@ tailwind.config = {
             <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank"
                class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white shadow-md hover:shadow-lg transition"
                style="background:linear-gradient(135deg,var(--terracota),var(--terracota-dark))">
-                <i data-lucide="message-circle" class="w-4 h-4"></i> Reservar
+                <i data-lucide="message-circle" class="w-4 h-4"></i> <?= e(t('nav.book_now')) ?>
             </a>
-            <!-- Menu drawer button (premium, always visible) -->
-            <button type="button" class="p-2.5 rounded-xl nav-link-tr transition hover:scale-105"
+            <!-- Menu drawer button (mobile only) -->
+            <button type="button" class="lg:hidden p-2.5 rounded-xl nav-link-tr transition hover:scale-105"
                     x-data @click="window.openMenuDrawer && window.openMenuDrawer()"
                     aria-label="Abrir menu">
                 <i data-lucide="menu" class="w-6 h-6"></i>

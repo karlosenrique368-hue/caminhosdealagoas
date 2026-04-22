@@ -13,8 +13,18 @@ function institutionApi(url, opts = {}) {
 }
 document.addEventListener('DOMContentLoaded', () => window.lucide && window.lucide.createIcons());
 document.addEventListener('alpine:initialized', () => window.lucide && window.lucide.createIcons());
+// Debounced MutationObserver — evita loop infinito porque createIcons() substitui <i> por <svg>
+let _luTimer = null;
 const mo = new MutationObserver((muts) => {
-    for (const m of muts) if (m.addedNodes.length) { window.lucide && window.lucide.createIcons(); break; }
+    for (const m of muts) {
+        for (const n of m.addedNodes) {
+            if (n.nodeType === 1 && n.tagName === 'I' && n.hasAttribute('data-lucide')) {
+                if (_luTimer) return;
+                _luTimer = setTimeout(() => { _luTimer = null; window.lucide && window.lucide.createIcons(); }, 80);
+                return;
+            }
+        }
+    }
 });
 mo.observe(document.body, { childList: true, subtree: true });
 </script>

@@ -1,5 +1,6 @@
 <?php
 $pageTitle = 'Cadastro de parceiro';
+$solidNav = true;
 $err = null; $ok = null;
 
 if (isPost() && csrfVerify()) {
@@ -24,7 +25,7 @@ if (isPost() && csrfVerify()) {
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
-<section class="py-12 sm:py-16" style="min-height:calc(100vh - 80px);background:linear-gradient(180deg,var(--bg-surface) 0%,var(--bg-page) 50%)">
+<section class="pt-32 sm:pt-36 pb-16" style="min-height:calc(100vh - 80px);background:linear-gradient(180deg,var(--bg-surface) 0%,var(--bg-page) 50%)">
     <div class="max-w-2xl mx-auto px-4 sm:px-6">
         <div class="text-center mb-8">
             <a href="<?= url('/parceiro') ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</a>
@@ -54,7 +55,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <label class="relative cursor-pointer">
                             <input type="radio" name="partner_type" value="<?= $t[0] ?>" x-model="sel" class="peer sr-only" <?= $t[0]==='individual'?'checked':'' ?>>
                             <div class="p-4 rounded-xl border-2 transition flex items-start gap-3" :class="sel==='<?= $t[0] ?>' ? 'border-[var(--terracota)] bg-[rgba(201,107,74,0.08)]' : 'border-[var(--border-default)] hover:border-[var(--text-muted)]'">
-                                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" :class="sel==='<?= $t[0] ?>' ? 'bg-[var(--terracota)] text-white' : 'bg-[var(--bg-surface)]'" style="color:<?= 'var(--terracota)' ?>">
+                                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors" :style="sel==='<?= $t[0] ?>' ? { background:'var(--terracota)', color:'#ffffff' } : { background:'var(--bg-surface)', color:'var(--terracota)' }">
                                     <i data-lucide="<?= $t[1] ?>" class="w-4 h-4"></i>
                                 </div>
                                 <div>
@@ -99,7 +100,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 Seus dados são armazenados com segurança. Não compartilhamos com terceiros. Você pode pedir exclusão a qualquer momento.
             </div>
 
-            <button class="btn-primary w-full justify-center">
+            <button type="submit" class="btn-primary w-full justify-center">
                 <i data-lucide="sparkles" class="w-5 h-5"></i> Criar minha parceria
             </button>
 

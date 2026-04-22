@@ -9,6 +9,15 @@ $recent = dbAll("SELECT b.*, c.name AS customer_name FROM bookings b LEFT JOIN c
 $peopleTraveled = (int) (dbOne("SELECT COALESCE(SUM(adults+children),0) AS p FROM bookings WHERE (institution_id=? OR referral_code=?) AND payment_status='paid'", [$i['id'], $partner['referral_code'] ?? ''])['p'] ?? 0);
 $shareUrl = referralShareUrl($partner['referral_code'] ?? '', '/');
 
+// Atividade dos últimos 6 meses — conta indicações por mês
+$monthly = [];
+for ($i2 = 5; $i2 >= 0; $i2--) {
+    $m = date('Y-m', strtotime("-$i2 months"));
+    $row = dbOne("SELECT COUNT(*) AS total, SUM(CASE WHEN payment_status='paid' THEN 1 ELSE 0 END) AS paid FROM bookings WHERE (institution_id=? OR referral_code=?) AND DATE_FORMAT(created_at,'%Y-%m')=?", [$i['id'], $partner['referral_code'] ?? '', $m]);
+    $monthly[] = ['label' => date('M', strtotime($m.'-01')), 'total' => (int)($row['total'] ?? 0), 'paid' => (int)($row['paid'] ?? 0)];
+}
+$maxMonthly = max(1, max(array_column($monthly, 'total')));
+
 include VIEWS_DIR . '/partials/institution_head.php';
 ?>
 
@@ -64,14 +73,45 @@ include VIEWS_DIR . '/partials/institution_head.php';
     </div>
 </div>
 
+<!-- ATIVIDADE DOS ÚLTIMOS 6 MESES -->
+<div class="admin-card p-5 sm:p-6 mb-6">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h2 class="font-display text-lg font-bold" style="color:var(--sepia)">Atividade dos últimos 6 meses</h2>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted)">Indicações totais · confirmadas</p>
+        </div>
+        <div class="hidden sm:flex items-center gap-3 text-[11px]">
+            <span class="flex items-center gap-1.5" style="color:var(--text-secondary)"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--terracota)"></span>Confirmadas</span>
+            <span class="flex items-center gap-1.5" style="color:var(--text-secondary)"><span class="w-2.5 h-2.5 rounded-sm" style="background:rgba(201,107,74,.2)"></span>Totais</span>
+        </div>
+    </div>
+    <div class="flex items-end justify-between gap-2 sm:gap-4 h-40">
+        <?php foreach ($monthly as $mRow):
+            $hTotal = max(4, ($mRow['total'] / $maxMonthly) * 140);
+            $hPaid  = max(0, ($mRow['paid']  / $maxMonthly) * 140);
+        ?>
+        <div class="flex-1 flex flex-col items-center gap-2">
+            <div class="relative w-full flex items-end justify-center" style="height:140px">
+                <div class="w-full max-w-[40px] rounded-t-lg relative" style="height:<?= $hTotal ?>px;background:rgba(201,107,74,.2);transition:all .4s">
+                    <div class="absolute bottom-0 left-0 right-0 rounded-t-lg" style="height:<?= $hPaid ?>px;background:linear-gradient(180deg,var(--terracota),var(--terracota-dark));transition:all .4s"></div>
+                    <?php if ($mRow['total'] > 0): ?>
+                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[11px] font-bold" style="color:var(--sepia)"><?= $mRow['total'] ?></div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="text-[11px] font-semibold uppercase" style="color:var(--text-muted)"><?= e($mRow['label']) ?></div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <div class="grid lg:grid-cols-[1fr_380px] gap-5 sm:gap-6">
     <!-- RESERVAS RECENTES -->
     <div class="admin-card p-5 sm:p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="font-display text-lg font-bold" style="color:var(--sepia)">Reservas via seu link</h2>
             <a href="<?= url('/parceiro/reservas') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Ver todas →</a>
-        </div>
-        <?php if (!$recent): ?>
+        </div>        <?php if (!$recent): ?>
             <div class="py-10 text-center">
                 <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted)"></i>
                 <p class="text-sm font-semibold mb-1" style="color:var(--sepia)">Ainda sem indicações confirmadas</p>
@@ -117,6 +157,11 @@ include VIEWS_DIR . '/partials/institution_head.php';
                     <i data-lucide="send" class="w-4 h-4"></i>WhatsApp
                 </a>
             </div>
+            <div class="grid grid-cols-3 gap-2 mt-2">
+                <a href="mailto:?subject=<?= urlencode('Caminhos de Alagoas') ?>&body=<?= urlencode('Olha que incrível: '.$shareUrl) ?>" class="admin-btn admin-btn-ghost justify-center !p-2" title="E-mail"><i data-lucide="mail" class="w-4 h-4"></i></a>
+                <a href="https://t.me/share/url?url=<?= urlencode($shareUrl) ?>&text=<?= urlencode('Viva Alagoas com a gente!') ?>" target="_blank" class="admin-btn admin-btn-ghost justify-center !p-2" title="Telegram"><i data-lucide="send-horizontal" class="w-4 h-4"></i></a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode($shareUrl) ?>" target="_blank" class="admin-btn admin-btn-ghost justify-center !p-2" title="Facebook"><i data-lucide="facebook" class="w-4 h-4"></i></a>
+            </div>
         </div>
 
         <!-- Progresso gratuidade -->
@@ -158,4 +203,4 @@ include VIEWS_DIR . '/partials/institution_head.php';
     </div>
 </div>
 
-<?php include VIEWS_DIR . '/partials/institution_foot.php';
+<?php include VIEWS_DIR . '/partials/institution_foot.php';

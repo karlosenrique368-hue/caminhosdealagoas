@@ -36,8 +36,8 @@ function isInstitutionUser(): bool {
 function requireInstitution(): void {
     if (!isInstitutionUser()) {
         if (isAjax()) jsonResponse(['ok'=>false,'msg'=>'Não autenticado.'], 401);
-        flash('error','Faça login da instituição para continuar.');
-        redirect('/instituicao/login');
+        flash('error','Faça login para continuar.');
+        redirect('/parceiro/login');
     }
 }
 

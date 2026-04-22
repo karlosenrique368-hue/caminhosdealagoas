@@ -8,7 +8,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <section class="relative overflow-hidden" style="margin-top:-80px">
     <div class="absolute inset-0" style="background:linear-gradient(135deg, var(--sepia) 0%, var(--terracota-dark) 60%, var(--horizonte) 100%)"></div>
     <img src="<?= asset('brand/selo-branco.png') ?>" class="seal-rotate absolute hidden md:block" style="top:110px;right:60px;width:120px;opacity:0.18;z-index:5" alt="">
-    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-32 pb-20 sm:pb-28 text-white">
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-40 sm:pt-48 pb-20 sm:pb-28 text-white">
         <div class="inline-block text-[11px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full mb-5" style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px)">
             <i data-lucide="handshake" class="w-3.5 h-3.5 inline -mt-0.5"></i> Programa de indicação
         </div>
