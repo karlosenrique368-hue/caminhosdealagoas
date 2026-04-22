@@ -1,6 +1,8 @@
 <?php
 $i = currentInstitution();
-$pageTitle = $pageTitle ?? 'Portal da Instituição';
+$pageTitle = $pageTitle ?? 'Portal do Parceiro';
+$_curPartner = dbOne('SELECT referral_code, partner_type, free_spots_earned, free_spots_used FROM institutions WHERE id=?', [$i['id']]);
+$_partnerIcon = ['individual'=>'user','familia'=>'users','grupo'=>'users-round','instituicao'=>'building-2','revendedor'=>'store'][$_curPartner['partner_type'] ?? 'individual'] ?? 'user';
 ?><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -29,24 +31,26 @@ tailwind.config = { theme: { extend: { colors: {
     <aside class="admin-sidebar fixed lg:sticky lg:top-0 inset-y-0 lg:inset-y-auto left-0 z-40 flex-shrink-0 transition-transform lg:h-screen lg:self-start"
            :class="sidebarOpen?'translate-x-0':'-translate-x-full lg:translate-x-0'" style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="building-2" class="w-5 h-5"></i></div>
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="<?= $_partnerIcon ?>" class="w-5 h-5"></i></div>
             <div class="min-w-0">
                 <div class="font-display text-base font-bold text-white truncate"><?= e($i['name']) ?></div>
-                <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60">Portal parceiro</div>
+                <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60">Área do parceiro</div>
             </div>
         </div>
         <nav class="p-4 space-y-1">
             <?php
             $menu = [
-                ['path'=>'/instituicao/dashboard','icon'=>'layout-dashboard','label'=>'Visão geral'],
-                ['path'=>'/instituicao/reservas','icon'=>'calendar-check','label'=>'Nossas reservas'],
-                ['path'=>'/instituicao/cotacao','icon'=>'file-text','label'=>'Pedir cotação'],
-                ['path'=>'/instituicao/catalogo','icon'=>'compass','label'=>'Catálogo'],
-                ['path'=>'/instituicao/perfil','icon'=>'settings','label'=>'Conta'],
+                ['path'=>'/parceiro/dashboard','icon'=>'layout-dashboard','label'=>'Visão geral'],
+                ['path'=>'/parceiro/reservas','icon'=>'calendar-check','label'=>'Minhas indicações'],
+                ['path'=>'/parceiro/link','icon'=>'link-2','label'=>'Meu link'],
+                ['path'=>'/parceiro/catalogo','icon'=>'compass','label'=>'Catálogo'],
+                ['path'=>'/parceiro/perfil','icon'=>'settings','label'=>'Minha conta'],
             ];
             $cur = currentPath();
             foreach ($menu as $m):
-                $active = strpos($cur, $m['path']) === 0;
+                // compat: reconhece /instituicao/... como ativo na entrada correspondente
+                $altPath = str_replace('/parceiro/', '/instituicao/', $m['path']);
+                $active = strpos($cur, $m['path']) === 0 || strpos($cur, $altPath) === 0;
             ?>
                 <a href="<?= url($m['path']) ?>" class="admin-sidebar-link <?= $active?'active':'' ?>">
                     <i data-lucide="<?= $m['icon'] ?>" class="w-4 h-4 flex-shrink-0"></i>
@@ -61,7 +65,7 @@ tailwind.config = { theme: { extend: { colors: {
                     <div class="text-sm font-semibold text-white truncate"><?= e($i['user_name']) ?></div>
                     <div class="text-[11px] text-white/50 truncate"><?= e($i['user_email']) ?></div>
                 </div>
-                <a href="<?= url('/instituicao/logout') ?>" class="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition" title="Sair"><i data-lucide="log-out" class="w-4 h-4"></i></a>
+                <a href="<?= url('/parceiro/logout') ?>" class="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition" title="Sair"><i data-lucide="log-out" class="w-4 h-4"></i></a>
             </div>
         </div>
     </aside>
@@ -73,8 +77,8 @@ tailwind.config = { theme: { extend: { colors: {
                 <div class="flex-1">
                     <h1 class="font-display text-xl font-bold" style="color:var(--sepia)"><?= e($pageTitle) ?></h1>
                 </div>
-                <?php if (!empty($i['discount']) && $i['discount']>0): ?>
-                <span class="hidden md:inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full" style="background:rgba(122,157,110,0.12);color:var(--maresia-dark)"><i data-lucide="badge-percent" class="w-3.5 h-3.5"></i>Desconto parceiro <?= number_format($i['discount'],0) ?>%</span>
+                <?php if (!empty($_curPartner['referral_code'])): ?>
+                <span class="hidden md:inline-flex items-center gap-1 text-xs font-mono font-bold px-3 py-1.5 rounded-full" style="background:rgba(201,107,74,0.12);color:var(--terracota)" title="Seu código de indicação"><i data-lucide="hash" class="w-3.5 h-3.5"></i><?= e($_curPartner['referral_code']) ?></span>
                 <?php endif; ?>
                 <a href="<?= url('/') ?>" target="_blank" class="p-2 rounded-lg hover:bg-gray-100 transition" style="color:var(--text-secondary)" title="Ver site"><i data-lucide="external-link" class="w-5 h-5"></i></a>
             </div>

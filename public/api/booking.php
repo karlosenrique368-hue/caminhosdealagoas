@@ -8,6 +8,8 @@ $name  = trim($_POST['name'] ?? '');
 $email = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL);
 $phone = trim($_POST['phone'] ?? '');
 $doc   = preg_replace('/\D/', '', $_POST['cpf'] ?? $_POST['document'] ?? '');
+$rg    = trim($_POST['rg'] ?? '');
+$birth = trim($_POST['birth_date'] ?? '');
 
 $entityType = $_POST['entity_type'] ?? '';
 $entityId   = (int) ($_POST['entity_id'] ?? 0);
@@ -18,6 +20,23 @@ $notes      = trim($_POST['notes'] ?? '');
 $couponCode = strtoupper(trim($_POST['coupon_code'] ?? ''));
 $pm         = $_POST['payment_method'] ?? 'pix';
 
+// Campos tipo Google Forms
+$comorbidity   = trim($_POST['comorbidity'] ?? '');
+$hasComorbid   = ($_POST['has_comorbidity'] ?? 'nao') === 'sim';
+$source        = in_array($_POST['source'] ?? '', ['instagram','whatsapp','indicacao','google','outro']) ? $_POST['source'] : null;
+$sourceDetail  = trim($_POST['source_detail'] ?? '');
+$acceptTerms   = !empty($_POST['accept_terms']);
+$priceOption   = $_POST['price_option'] ?? null; // ex: "pix_normal","pix_promo","card_normal","card_promo"
+
+// Resposta completa do formulario (para guardar como evidencia)
+$answers = [
+    'nome' => $name, 'cpf' => $doc, 'rg' => $rg, 'birth' => $birth, 'telefone' => $phone,
+    'comorbidade' => $hasComorbid ? $comorbidity : null,
+    'como_conheceu' => $source, 'indicado_por' => $sourceDetail,
+    'opcao_preco' => $priceOption, 'aceite_desistencia' => $acceptTerms,
+    'submitted_at' => date('c'),
+];
+
 $pmMap = ['pix' => 'pix', 'card' => 'credit_card', 'credit_card' => 'credit_card', 'boleto' => 'boleto'];
 $paymentMethod = $pmMap[$pm] ?? null;
 
@@ -25,6 +44,7 @@ if (!$name || !$email || !$phone) jsonResponse(['ok' => false, 'msg' => 'Preench
 if (!in_array($entityType, ['roteiro','pacote'])) jsonResponse(['ok' => false, 'msg' => 'Produto inválido.']);
 if (!$entityId) jsonResponse(['ok' => false, 'msg' => 'Produto não informado.']);
 if (!$paymentMethod) jsonResponse(['ok' => false, 'msg' => 'Método de pagamento inválido.']);
+if (!$acceptTerms) jsonResponse(['ok' => false, 'msg' => 'É preciso concordar com a política de desistência.']);
 
 $table = $entityType === 'roteiro' ? 'roteiros' : 'pacotes';
 $entity = dbOne("SELECT * FROM {$table} WHERE id = ? AND status = 'published'", [$entityId]);
@@ -56,10 +76,27 @@ $total = max(0, $subtotal - $discount);
 
 $customer = dbOne("SELECT * FROM customers WHERE email = ?", [$email]);
 if ($customer) {
-    dbExec("UPDATE customers SET name = ?, phone = ?, document = ? WHERE id = ?", [$name, $phone, $doc ?: $customer['document'], $customer['id']]);
+    dbExec("UPDATE customers SET name = ?, phone = ?, document = ?, rg = COALESCE(?, rg), birth_date = COALESCE(?, birth_date) WHERE id = ?",
+        [$name, $phone, $doc ?: $customer['document'], $rg ?: null, $birth ?: null, $customer['id']]);
     $customerId = (int)$customer['id'];
 } else {
-    $customerId = dbInsert("INSERT INTO customers (name, email, phone, document) VALUES (?, ?, ?, ?)", [$name, $email, $phone, $doc ?: null]);
+    $customerId = dbInsert("INSERT INTO customers (name, email, phone, document, rg, birth_date) VALUES (?, ?, ?, ?, ?, ?)",
+        [$name, $email, $phone, $doc ?: null, $rg ?: null, $birth ?: null]);
+}
+
+// Codigo de indicacao: parametro explicito (source=indicacao + source_detail=codigo) OU cookie/session
+$refCode = null; $partnerId = null;
+$refFromForm = strtoupper(preg_replace('/[^A-Z0-9]/', '', $_POST['ref_code'] ?? ''));
+if ($refFromForm) {
+    $refPartner = partnerByCode($refFromForm);
+    if ($refPartner) { $refCode = $refPartner['referral_code']; $partnerId = (int)$refPartner['id']; }
+}
+if (!$refCode) {
+    $tracked = currentReferralCode();
+    if ($tracked) {
+        $rp = partnerByCode($tracked);
+        if ($rp) { $refCode = $rp['referral_code']; $partnerId = (int)$rp['id']; }
+    }
 }
 
 $year = date('Y');
@@ -72,9 +109,10 @@ for ($i = 0; $i < 5; $i++) {
 if (!$code) $code = "CA-{$year}-" . strtoupper(uniqid());
 
 $bookingId = dbInsert(
-    "INSERT INTO bookings (code, customer_id, entity_type, entity_id, entity_title, adults, children, travel_date, subtotal, discount, total, payment_method, payment_status, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
-    [$code, $customerId, $entityType, $entityId, $entity['title'], $adults, $children, $travelDate ?: null, $subtotal, $discount, $total, $paymentMethod, $notes ?: null]
+    "INSERT INTO bookings (code, customer_id, entity_type, entity_id, entity_title, adults, children, travel_date, subtotal, discount, total, payment_method, payment_status, notes, institution_id, referral_code, source, source_detail, comorbidity, booking_answers)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)",
+    [$code, $customerId, $entityType, $entityId, $entity['title'], $adults, $children, $travelDate ?: null, $subtotal, $discount, $total, $paymentMethod, $notes ?: null,
+     $partnerId, $refCode, $source, $sourceDetail ?: null, $hasComorbid ? $comorbidity : null, json_encode($answers, JSON_UNESCAPED_UNICODE)]
 );
 
 if ($couponIdToIncrement) dbExec("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [$couponIdToIncrement]);

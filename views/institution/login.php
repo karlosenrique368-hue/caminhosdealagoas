@@ -1,5 +1,5 @@
 <?php
-if (isInstitutionUser()) redirect('/instituicao/dashboard');
+if (isInstitutionUser()) redirect('/parceiro/dashboard');
 $error = null;
 
 if (isPost()) {
@@ -8,12 +8,12 @@ if (isPost()) {
         $email = trim($_POST['email'] ?? '');
         $pass  = $_POST['password'] ?? '';
         if (institutionLogin($email, $pass)) {
-            redirect('/instituicao/dashboard');
+            redirect('/parceiro/dashboard');
         }
         $error = 'E-mail ou senha inválidos.';
     }
 }
-$pageTitle = 'Entrar · Portal Parceiro';
+$pageTitle = 'Entrar · Área do Parceiro';
 ?><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -30,10 +30,10 @@ $pageTitle = 'Entrar · Portal Parceiro';
 <div class="w-full max-w-md">
     <div class="text-center mb-8">
         <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.15)">
-            <i data-lucide="building-2" class="w-8 h-8 text-white"></i>
+            <i data-lucide="handshake" class="w-8 h-8 text-white"></i>
         </div>
-        <h1 class="font-display text-3xl font-bold text-white">Portal Parceiro</h1>
-        <p class="text-white/70 text-sm mt-2">Acesso exclusivo para instituições cadastradas</p>
+        <h1 class="font-display text-3xl font-bold text-white">Área do Parceiro</h1>
+        <p class="text-white/70 text-sm mt-2">Acesso para parceiros cadastrados</p>
     </div>
 
     <div class="rounded-2xl p-8" style="background:var(--bg-card);box-shadow:0 20px 60px rgba(0,0,0,0.3)">
@@ -46,7 +46,7 @@ $pageTitle = 'Entrar · Portal Parceiro';
             <?= csrfField() ?>
             <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted)">E-mail</label>
-                <input type="email" name="email" required class="admin-input w-full" placeholder="voce@instituicao.com">
+                <input type="email" name="email" required class="admin-input w-full" placeholder="voce@email.com">
             </div>
             <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted)">Senha</label>
@@ -55,7 +55,7 @@ $pageTitle = 'Entrar · Portal Parceiro';
             <button type="submit" class="admin-btn admin-btn-primary w-full justify-center"><i data-lucide="log-in" class="w-4 h-4"></i>Entrar</button>
         </form>
         <p class="text-center text-xs mt-6" style="color:var(--text-muted)">
-            Sem acesso? <a href="<?= url('/contato') ?>" class="font-semibold" style="color:var(--terracota)">Fale com nossa equipe</a>
+            Ainda não é parceiro? <a href="<?= url('/parceiro/cadastro') ?>" class="font-semibold" style="color:var(--terracota)">Criar parceria grátis</a>
         </p>
     </div>
     <p class="text-center text-xs mt-6 text-white/50">

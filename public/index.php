@@ -120,6 +120,43 @@ switch (true) {
         require VIEWS_DIR . '/institution/perfil.php';
         break;
 
+    // ============== PARCEIRO (alias publico + cadastro aberto) ==============
+    case $path === '/parceiro' || $path === '/parceiro/' || $path === '/parceiros':
+        require VIEWS_DIR . '/public/parceiro-landing.php';
+        break;
+
+    case $path === '/parceiro/cadastro':
+        require VIEWS_DIR . '/public/parceiro-cadastro.php';
+        break;
+
+    case $path === '/parceiro/login':
+        require VIEWS_DIR . '/institution/login.php';
+        break;
+
+    case $path === '/parceiro/logout':
+        institutionLogout();
+        redirect('/parceiro/login');
+
+    case $path === '/parceiro/dashboard':
+        require VIEWS_DIR . '/institution/dashboard.php';
+        break;
+
+    case $path === '/parceiro/reservas':
+        require VIEWS_DIR . '/institution/reservas.php';
+        break;
+
+    case $path === '/parceiro/link':
+        require VIEWS_DIR . '/institution/link-share.php';
+        break;
+
+    case $path === '/parceiro/perfil':
+        require VIEWS_DIR . '/institution/perfil.php';
+        break;
+
+    case $path === '/parceiro/catalogo':
+        require VIEWS_DIR . '/institution/catalogo.php';
+        break;
+
     // ============== ADMIN ==============
     case $path === '/admin' || $path === '/admin/':
         redirect('/admin/dashboard');

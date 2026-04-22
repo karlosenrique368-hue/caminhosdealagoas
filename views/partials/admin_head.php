@@ -66,7 +66,7 @@ body { background: var(--bg-surface); }
                 ['path' => '/admin/reviews', 'icon' => 'star', 'label' => 'Avaliações'],
                 ['heading' => 'Comunicação'],
                 ['path' => '/admin/mensagens', 'icon' => 'mail', 'label' => 'Mensagens'],
-                ['path' => '/admin/instituicoes', 'icon' => 'building-2', 'label' => 'Instituições'],
+                ['path' => '/admin/instituicoes', 'icon' => 'handshake', 'label' => 'Parceiros'],
                 ['heading' => 'Sistema'],
                 ['path' => '/admin/traducoes', 'icon' => 'languages', 'label' => 'Idiomas & Moedas'],
                 ['path' => '/admin/configuracoes', 'icon' => 'settings', 'label' => 'Configurações'],

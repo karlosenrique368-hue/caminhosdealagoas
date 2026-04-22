@@ -2,78 +2,97 @@
 requireInstitution();
 $i = currentInstitution();
 $pageTitle = 'Visão geral';
+$stats = partnerStats($i['id']);
+$partner = $stats['partner'] ?? null;
 
-$bookings = dbAll("SELECT b.*, c.name AS customer_name FROM bookings b LEFT JOIN customers c ON c.id=b.customer_id WHERE b.institution_id=? ORDER BY b.created_at DESC LIMIT 50", [$i['id']]);
-$totalBookings = dbOne("SELECT COUNT(*) AS c FROM bookings WHERE institution_id=?", [$i['id']])['c'] ?? 0;
-$paidRevenue = (float) (dbOne("SELECT COALESCE(SUM(total),0) AS t FROM bookings WHERE institution_id=? AND payment_status='paid'", [$i['id']])['t'] ?? 0);
-$pendingCount = (int) (dbOne("SELECT COUNT(*) AS c FROM bookings WHERE institution_id=? AND payment_status='pending'", [$i['id']])['c'] ?? 0);
-$peopleTraveled = (int) (dbOne("SELECT COALESCE(SUM(adults+children),0) AS p FROM bookings WHERE institution_id=? AND payment_status='paid'", [$i['id']])['p'] ?? 0);
-$commission = $paidRevenue * ((float)(dbOne("SELECT commission_percent FROM institutions WHERE id=?", [$i['id']])['commission_percent'] ?? 0) / 100);
-
-$groupRequests = dbAll("SELECT * FROM group_requests WHERE institution_id=? ORDER BY created_at DESC LIMIT 5", [$i['id']]);
+$recent = dbAll("SELECT b.*, c.name AS customer_name FROM bookings b LEFT JOIN customers c ON c.id=b.customer_id WHERE b.institution_id=? OR b.referral_code=? ORDER BY b.created_at DESC LIMIT 8", [$i['id'], $partner['referral_code'] ?? '']);
+$peopleTraveled = (int) (dbOne("SELECT COALESCE(SUM(adults+children),0) AS p FROM bookings WHERE (institution_id=? OR referral_code=?) AND payment_status='paid'", [$i['id'], $partner['referral_code'] ?? ''])['p'] ?? 0);
+$shareUrl = referralShareUrl($partner['referral_code'] ?? '', '/');
 
 include VIEWS_DIR . '/partials/institution_head.php';
 ?>
-<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-    <div class="admin-card p-6">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Reservas totais</span>
-            <i data-lucide="calendar-check" class="w-5 h-5" style="color:var(--horizonte)"></i>
+
+<!-- HERO DE BOAS VINDAS + LINK -->
+<div class="mb-6 p-6 sm:p-8 rounded-2xl relative overflow-hidden" style="background:linear-gradient(135deg,var(--sepia),var(--terracota-dark));color:#fff">
+    <div class="absolute -top-10 -right-10 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.08)"></div>
+    <div class="relative grid lg:grid-cols-[1fr_auto] gap-6 items-center">
+        <div>
+            <div class="text-[11px] uppercase tracking-widest font-bold mb-2 text-white/80"><i data-lucide="handshake" class="w-3.5 h-3.5 inline -mt-0.5"></i> Olá, parceiro(a)</div>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold mb-2">Oi, <?= e(explode(' ', $i['user_name'])[0]) ?>! 👋</h1>
+            <p class="text-sm sm:text-base text-white/90 max-w-xl">Seu código de indicação está ativo. Compartilhe com quem você ama viajar junto.</p>
         </div>
-        <div class="font-display text-3xl font-bold" style="color:var(--sepia)"><?= $totalBookings ?></div>
-    </div>
-    <div class="admin-card p-6">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Receita paga</span>
-            <i data-lucide="trending-up" class="w-5 h-5" style="color:var(--maresia-dark)"></i>
+        <div class="bg-white/10 backdrop-blur p-4 rounded-xl border border-white/20">
+            <div class="text-[10px] uppercase tracking-widest font-bold text-white/70 mb-1">Seu código</div>
+            <div class="font-mono font-bold text-3xl tracking-wider"><?= e($partner['referral_code'] ?? '—') ?></div>
         </div>
-        <div class="font-display text-3xl font-bold" style="color:var(--sepia)"><?= formatBRL($paidRevenue) ?></div>
-    </div>
-    <div class="admin-card p-6">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Pendentes</span>
-            <i data-lucide="clock" class="w-5 h-5" style="color:#F59E0B"></i>
-        </div>
-        <div class="font-display text-3xl font-bold" style="color:var(--sepia)"><?= $pendingCount ?></div>
-    </div>
-    <div class="admin-card p-6">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted)">Comissão acumulada</span>
-            <i data-lucide="badge-percent" class="w-5 h-5" style="color:var(--terracota)"></i>
-        </div>
-        <div class="font-display text-3xl font-bold" style="color:var(--terracota)"><?= formatBRL($commission) ?></div>
-        <p class="text-xs mt-1" style="color:var(--text-muted)"><?= $peopleTraveled ?> pessoas já viajaram</p>
     </div>
 </div>
 
-<div class="grid lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 admin-card p-6">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="font-display text-lg font-bold" style="color:var(--sepia)">Reservas recentes</h2>
-            <a href="<?= url('/instituicao/reservas') ?>" class="text-sm font-semibold" style="color:var(--horizonte)">Ver todas →</a>
+<!-- KPIS -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
+    <div class="admin-card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Indicações</span>
+            <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5" style="color:var(--horizonte)"></i>
         </div>
-        <?php if (!$bookings): ?>
-            <div class="py-8 text-center">
+        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--sepia)"><?= (int)$stats['total_bookings'] ?></div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)">no total</div>
+    </div>
+    <div class="admin-card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Confirmadas</span>
+            <i data-lucide="check-circle-2" class="w-4 h-4 sm:w-5 sm:h-5" style="color:var(--maresia-dark)"></i>
+        </div>
+        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--maresia-dark)"><?= (int)$stats['paid_bookings'] ?></div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)"><?= $peopleTraveled ?> pessoas já foram</div>
+    </div>
+    <div class="admin-card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Bônus disponível</span>
+            <i data-lucide="wallet" class="w-4 h-4 sm:w-5 sm:h-5" style="color:var(--terracota)"></i>
+        </div>
+        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--terracota)"><?= formatBRL($stats['commission_pending']) ?></div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)">a receber</div>
+    </div>
+    <div class="admin-card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Vagas-cortesia</span>
+            <i data-lucide="ticket" class="w-4 h-4 sm:w-5 sm:h-5" style="color:#F59E0B"></i>
+        </div>
+        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:#F59E0B"><?= (int)$stats['free_available'] ?></div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)">para usar</div>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-[1fr_380px] gap-5 sm:gap-6">
+    <!-- RESERVAS RECENTES -->
+    <div class="admin-card p-5 sm:p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-display text-lg font-bold" style="color:var(--sepia)">Reservas via seu link</h2>
+            <a href="<?= url('/parceiro/reservas') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Ver todas →</a>
+        </div>
+        <?php if (!$recent): ?>
+            <div class="py-10 text-center">
                 <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted)"></i>
-                <p class="text-sm" style="color:var(--text-muted)">Ainda sem reservas. Envie o link da sua página parceira para começar.</p>
+                <p class="text-sm font-semibold mb-1" style="color:var(--sepia)">Ainda sem indicações confirmadas</p>
+                <p class="text-xs max-w-sm mx-auto" style="color:var(--text-muted)">Copie o link ao lado e compartilhe nas suas redes, grupos ou no WhatsApp.</p>
             </div>
         <?php else: ?>
         <div class="overflow-x-auto">
             <table class="admin-table">
-                <thead><tr><th>Código</th><th>Produto</th><th>Cliente</th><th>Data</th><th>Pessoas</th><th>Total</th><th>Status</th></tr></thead>
+                <thead><tr><th>Código</th><th>Produto</th><th>Cliente</th><th>Pessoas</th><th>Total</th><th>Status</th></tr></thead>
                 <tbody>
-                <?php foreach (array_slice($bookings, 0, 10) as $b): ?>
+                <?php foreach ($recent as $b):
+                    $badgeMap = ['paid'=>['success','Pago'],'pending'=>['warning','Pendente'],'cancelled'=>['danger','Cancelada'],'refunded'=>['info','Reembolsada'],'failed'=>['danger','Falhou']];
+                    $bm = $badgeMap[$b['payment_status']] ?? ['muted', $b['payment_status']];
+                ?>
                 <tr>
-                    <td class="font-mono text-xs"><?= e($b['code']) ?></td>
-                    <td><span class="text-xs uppercase font-semibold" style="color:var(--terracota)"><?= e($b['entity_type']) ?></span><br><span class="text-sm"><?= e($b['entity_title']) ?></span></td>
-                    <td class="text-sm"><?= e($b['customer_name'] ?? '—') ?></td>
-                    <td class="text-sm"><?= $b['travel_date'] ? formatDate($b['travel_date'], 'd/m/Y') : '—' ?></td>
-                    <td class="text-sm"><?= (int)$b['adults'] + (int)$b['children'] ?></td>
-                    <td class="text-sm font-semibold" style="color:var(--sepia)"><?= formatBRL($b['total']) ?></td>
-                    <td><?php
-                        $badgeMap = ['paid'=>['success','Pago'],'pending'=>['warning','Pendente'],'cancelled'=>['danger','Cancelada'],'refunded'=>['info','Reembolsada'],'failed'=>['danger','Falhou']];
-                        $bm = $badgeMap[$b['payment_status']] ?? ['muted', $b['payment_status']];
-                    ?><span class="badge badge-<?= $bm[0] ?>"><?= $bm[1] ?></span></td>
+                    <td data-label="Código" class="font-mono text-xs"><?= e($b['code']) ?></td>
+                    <td data-label="Produto"><div class="text-xs uppercase font-semibold" style="color:var(--terracota)"><?= e($b['entity_type']) ?></div><div class="text-sm" style="color:var(--sepia)"><?= e($b['entity_title']) ?></div></td>
+                    <td data-label="Cliente" class="text-sm"><?= e($b['customer_name'] ?? '—') ?></td>
+                    <td data-label="Pessoas" class="text-sm"><?= (int)$b['adults'] + (int)$b['children'] ?></td>
+                    <td data-label="Total" class="text-sm font-semibold" style="color:var(--sepia)"><?= formatBRL($b['total']) ?></td>
+                    <td data-label="Status"><span class="badge badge-<?= $bm[0] ?>"><?= $bm[1] ?></span></td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -82,42 +101,61 @@ include VIEWS_DIR . '/partials/institution_head.php';
         <?php endif; ?>
     </div>
 
+    <!-- SIDEBAR: LINK + PROGRESSO -->
     <div class="space-y-5">
-        <div class="admin-card p-6">
-            <h3 class="font-display text-base font-bold mb-3" style="color:var(--sepia)">Pedidos de cotação</h3>
-            <?php if (!$groupRequests): ?>
-                <p class="text-sm" style="color:var(--text-muted)">Nenhum pedido ainda.</p>
-                <a href="<?= url('/instituicao/cotacao') ?>" class="admin-btn admin-btn-primary w-full justify-center mt-4"><i data-lucide="file-plus" class="w-4 h-4"></i>Pedir cotação em grupo</a>
-            <?php else: ?>
-                <div class="space-y-2">
-                    <?php foreach ($groupRequests as $gr): ?>
-                    <div class="p-3 rounded-lg" style="background:var(--bg-surface)">
-                        <div class="text-sm font-semibold" style="color:var(--sepia)"><?= e($gr['title']) ?></div>
-                        <div class="text-xs" style="color:var(--text-muted)"><?= (int)$gr['people'] ?> pessoas · <span class="badge badge-info"><?= e($gr['status']) ?></span></div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <a href="<?= url('/instituicao/cotacao') ?>" class="admin-btn admin-btn-secondary w-full justify-center mt-4"><i data-lucide="plus" class="w-4 h-4"></i>Novo pedido</a>
-            <?php endif; ?>
+        <!-- Link de indicação -->
+        <div class="admin-card p-5" x-data="{copied:false}">
+            <h3 class="font-display text-base font-bold mb-3 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="link-2" class="w-5 h-5" style="color:var(--terracota)"></i> Seu link</h3>
+            <div class="p-3 rounded-lg font-mono text-[11px] break-all mb-3" style="background:var(--bg-surface);color:var(--text-primary)"><?= e($shareUrl) ?></div>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" @click="navigator.clipboard.writeText('<?= e(addslashes($shareUrl)) ?>'); copied=true; setTimeout(()=>copied=false,2000)" class="admin-btn admin-btn-primary justify-center">
+                    <i data-lucide="copy" class="w-4 h-4" x-show="!copied"></i>
+                    <i data-lucide="check" class="w-4 h-4" x-show="copied" x-cloak></i>
+                    <span x-text="copied?'Copiado!':'Copiar'"></span>
+                </button>
+                <a href="https://wa.me/?text=<?= urlencode('Vem viver Alagoas com a Caminhos de Alagoas! '.$shareUrl) ?>" target="_blank" class="admin-btn admin-btn-secondary justify-center">
+                    <i data-lucide="send" class="w-4 h-4"></i>WhatsApp
+                </a>
+            </div>
         </div>
 
-        <div class="admin-card p-6">
-            <h3 class="font-display text-base font-bold mb-3" style="color:var(--sepia)">Seu link parceiro</h3>
-            <?php
-            $slug = dbOne("SELECT slug FROM institutions WHERE id=?", [$i['id']])['slug'] ?? null;
-            $link = $slug ? (($_SERVER['HTTPS'] ?? 'off') === 'on' ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . url('/?parceiro='.$slug) : null;
-            ?>
-            <?php if ($link): ?>
-                <div class="flex gap-2">
-                    <input type="text" readonly value="<?= e($link) ?>" class="admin-input flex-1 text-xs font-mono" onclick="this.select()">
-                    <button onclick="navigator.clipboard.writeText('<?= e($link) ?>');this.innerHTML='<i data-lucide=&quot;check&quot; class=&quot;w-4 h-4&quot;></i>';window.lucide&&window.lucide.createIcons()" class="admin-btn admin-btn-secondary"><i data-lucide="copy" class="w-4 h-4"></i></button>
+        <!-- Progresso gratuidade -->
+        <?php if ($stats['threshold'] > 0): ?>
+        <div class="admin-card p-5">
+            <h3 class="font-display text-base font-bold mb-1" style="color:var(--sepia)">Próxima vaga-cortesia</h3>
+            <p class="text-xs mb-4" style="color:var(--text-muted)">A cada <?= (int)$stats['threshold'] ?> indicações confirmadas, 1 vaga fica disponível pra você viajar.</p>
+            <div class="flex items-baseline justify-between mb-2">
+                <span class="font-display text-2xl font-bold" style="color:var(--terracota)"><?= $stats['paid_bookings'] % $stats['threshold'] ?> / <?= (int)$stats['threshold'] ?></span>
+                <span class="text-xs" style="color:var(--text-muted)"><?= (int)$stats['to_next_free'] ?> restantes</span>
+            </div>
+            <div class="h-3 rounded-full overflow-hidden" style="background:var(--border-default)">
+                <div class="h-full rounded-full transition-all" style="width:<?= (int)$stats['progress_pct'] ?>%;background:linear-gradient(90deg,var(--terracota),var(--horizonte))"></div>
+            </div>
+            <?php if ($stats['free_available'] > 0): ?>
+                <div class="mt-4 p-3 rounded-lg flex items-start gap-2" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3)">
+                    <i data-lucide="gift" class="w-4 h-4 mt-0.5" style="color:#D97706"></i>
+                    <div class="text-xs" style="color:#92400E"><b><?= (int)$stats['free_available'] ?> vaga(s)-cortesia</b> disponíveis! Fale conosco no WhatsApp pra resgatar.</div>
                 </div>
-                <p class="text-xs mt-2" style="color:var(--text-muted)">Quem comprar por este link ganha <?= number_format($i['discount'],0) ?>% de desconto automático.</p>
-            <?php else: ?>
-                <p class="text-sm" style="color:var(--text-muted)">Solicite seu slug exclusivo em <a href="<?= url('/instituicao/perfil') ?>" class="font-semibold" style="color:var(--horizonte)">Conta</a>.</p>
             <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Tipo de parceria -->
+        <?php
+        $typeLabels = ['individual'=>'Parceria individual','familia'=>'Família & amigos','grupo'=>'Grupo / comunidade','instituicao'=>'Instituição','revendedor'=>'Revenda / agência'];
+        $typeIcons  = ['individual'=>'user','familia'=>'users','grupo'=>'users-round','instituicao'=>'building-2','revendedor'=>'store'];
+        $pt = $partner['partner_type'] ?? 'individual';
+        ?>
+        <div class="admin-card p-5 flex items-start gap-3">
+            <div class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center" style="background:var(--bg-surface);color:var(--horizonte)">
+                <i data-lucide="<?= $typeIcons[$pt] ?? 'user' ?>" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Tipo de parceria</div>
+                <div class="font-semibold text-sm" style="color:var(--sepia)"><?= e($typeLabels[$pt] ?? 'Parceiro') ?></div>
+            </div>
         </div>
     </div>
 </div>
 
-<?php include VIEWS_DIR . '/partials/institution_foot.php';
+<?php include VIEWS_DIR . '/partials/institution_foot.php';

@@ -8,8 +8,15 @@ if (isPost() && csrfVerify()) {
     if ($action === 'update_payment' && $id) {
         $ps = $_POST['payment_status'] ?? '';
         if (in_array($ps, ['pending','paid','failed','refunded','cancelled'])) {
+            $prev = dbOne('SELECT payment_status FROM bookings WHERE id=?', [$id]);
             $extra = $ps==='paid' ? ", paid_at = NOW()" : "";
             dbExec("UPDATE bookings SET payment_status=? $extra WHERE id=?", [$ps, $id]);
+            // Hook de comissao
+            if ($ps === 'paid' && ($prev['payment_status'] ?? '') !== 'paid') {
+                creditCommissionOnPaid($id);
+            } elseif (in_array($ps, ['refunded','cancelled','failed']) && ($prev['payment_status'] ?? '') === 'paid') {
+                revokeCommissionOnUnpaid($id);
+            }
             flash('success', 'Pagamento atualizado.');
         }
     }
