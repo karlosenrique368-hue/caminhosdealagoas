@@ -46,6 +46,13 @@ tailwind.config = { theme: { extend: { colors: {
                 ['path'=>'/parceiro/catalogo','icon'=>'compass','label'=>'Catálogo'],
                 ['path'=>'/parceiro/perfil','icon'=>'settings','label'=>'Minha conta'],
             ];
+            // Parceiros com modo grupo habilitado ganham atalho para reservar um grupo inteiro
+            try {
+                $_partnerRow = dbOne('SELECT allow_group_checkout FROM institutions WHERE id=?', [$i['id']]);
+                if (!empty($_partnerRow['allow_group_checkout'])) {
+                    array_splice($menu, 2, 0, [['path'=>'/checkout/grupo','icon'=>'users','label'=>'Reservar grupo']]);
+                }
+            } catch (\Throwable $e) {}
             $cur = currentPath();
             foreach ($menu as $m):
                 // compat: reconhece /instituicao/... como ativo na entrada correspondente

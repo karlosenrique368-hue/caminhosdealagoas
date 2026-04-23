@@ -37,6 +37,8 @@ if (isPost() && csrfVerify()) {
         'duration_nights'  => (int)($_POST['duration_nights'] ?? 0),
         'price'            => parseBRL($_POST['price'] ?? '0'),
         'price_pix'        => parseBRL($_POST['price_pix'] ?? '0') ?: null,
+        'commission_percent'=> $_POST['commission_percent'] !== '' && is_numeric($_POST['commission_percent'] ?? '') ? (float)$_POST['commission_percent'] : null,
+        'bookings_threshold'=> (int)($_POST['bookings_threshold'] ?? 0) ?: null,
         'installments'     => (int)($_POST['installments'] ?? 1),
         'availability_mode'=> in_array($_POST['availability_mode'] ?? 'fixed', $availModes, true) ? $_POST['availability_mode'] : 'fixed',
         'status'           => $_POST['status'] ?? 'draft',
@@ -192,6 +194,14 @@ $msg = flash('success');
                 <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Preço cartão *</label><input name="price" required value="<?= $pacote?formatBRL($pacote['price']):'' ?>" class="admin-input brl-mask" placeholder="R$ 0,00"></div>
                 <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Preço PIX</label><input name="price_pix" value="<?= $pacote && $pacote['price_pix']?formatBRL($pacote['price_pix']):'' ?>" class="admin-input brl-mask"></div>
                 <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Parcelas</label><input type="number" name="installments" min="1" max="12" value="<?= e($pacote['installments'] ?? 1) ?>" class="admin-input"></div>
+            </div>
+            <div class="admin-card p-6 space-y-4">
+                <div>
+                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Programa de parceria</h3>
+                    <p class="text-[11px] mt-0.5" style="color:var(--text-muted)">Sobrescreve valores padrão do parceiro para este pacote.</p>
+                </div>
+                <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Comissão % <span class="text-xs font-normal" style="color:var(--text-muted)">(em branco = padrão)</span></label><input type="number" step="0.01" min="0" max="100" name="commission_percent" value="<?= $pacote && $pacote['commission_percent'] !== null ? e($pacote['commission_percent']) : '' ?>" class="admin-input" placeholder="ex: 10.00"></div>
+                <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Meta p/ gratuidade</label><input type="number" step="1" min="0" name="bookings_threshold" value="<?= $pacote && $pacote['bookings_threshold'] ? e($pacote['bookings_threshold']) : '' ?>" class="admin-input" placeholder="ex: 10"></div>
             </div>
             <div class="admin-card p-6 space-y-3">
                 <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>

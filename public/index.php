@@ -58,6 +58,10 @@ switch (true) {
         require VIEWS_DIR . '/public/checkout.php';
         break;
 
+    case $path === '/checkout/grupo':
+        require VIEWS_DIR . '/public/checkout-grupo.php';
+        break;
+
     // ============== CUSTOMER ACCOUNT ==============
     case $path === '/conta/login':
         require VIEWS_DIR . '/public/account/login.php';

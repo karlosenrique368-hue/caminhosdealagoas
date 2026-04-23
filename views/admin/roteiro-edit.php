@@ -46,6 +46,8 @@ if (isPost()) {
             'max_people'        => (int) ($_POST['max_people'] ?? 50),
             'price'             => parseBRL($_POST['price'] ?? '0'),
             'price_pix'         => parseBRL($_POST['price_pix'] ?? '0') ?: null,
+            'commission_percent'=> $_POST['commission_percent'] !== '' && is_numeric($_POST['commission_percent'] ?? '') ? (float)$_POST['commission_percent'] : null,
+            'bookings_threshold'=> (int)($_POST['bookings_threshold'] ?? 0) ?: null,
             'location'          => trim($_POST['location'] ?? ''),
             'meeting_point'     => trim($_POST['meeting_point'] ?? ''),
             'availability_mode' => in_array($_POST['availability_mode'] ?? 'fixed', $availModes, true) ? $_POST['availability_mode'] : 'fixed',
@@ -279,6 +281,22 @@ $msg = flash('success');
                 <div>
                     <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Preço PIX <span class="text-xs font-normal" style="color:var(--text-muted)">(desconto)</span></label>
                     <input name="price_pix" value="<?= $roteiro && $roteiro['price_pix'] ? formatBRL($roteiro['price_pix']) : '' ?>" class="admin-input brl-mask" placeholder="R$ 0,00">
+                </div>
+            </div>
+
+            <!-- Programa de parceria -->
+            <div class="admin-card p-6 space-y-4">
+                <div>
+                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Programa de parceria</h3>
+                    <p class="text-[11px] mt-0.5" style="color:var(--text-muted)">Sobrescreve os valores padrão do parceiro para este passeio.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Comissão % <span class="text-xs font-normal" style="color:var(--text-muted)">(deixe em branco p/ usar padrão)</span></label>
+                    <input type="number" step="0.01" min="0" max="100" name="commission_percent" value="<?= $roteiro && $roteiro['commission_percent'] !== null ? e($roteiro['commission_percent']) : '' ?>" class="admin-input" placeholder="ex: 10.00">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Meta p/ gratuidade <span class="text-xs font-normal" style="color:var(--text-muted)">(reservas pagas)</span></label>
+                    <input type="number" step="1" min="0" name="bookings_threshold" value="<?= $roteiro && $roteiro['bookings_threshold'] ? e($roteiro['bookings_threshold']) : '' ?>" class="admin-input" placeholder="ex: 10">
                 </div>
             </div>
 

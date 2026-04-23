@@ -26,7 +26,25 @@ $hasComorbid   = ($_POST['has_comorbidity'] ?? 'nao') === 'sim';
 $source        = in_array($_POST['source'] ?? '', ['instagram','whatsapp','indicacao','google','outro']) ? $_POST['source'] : null;
 $sourceDetail  = trim($_POST['source_detail'] ?? '');
 $acceptTerms   = !empty($_POST['accept_terms']);
-$priceOption   = $_POST['price_option'] ?? null; // ex: "pix_normal","pix_promo","card_normal","card_promo"
+$priceOption   = $_POST['price_option'] ?? null;
+
+// Modo grupo (checkout institucional)
+$bookingMode   = $_POST['booking_mode'] ?? 'individual';
+if (!in_array($bookingMode, ['individual','grupo_instituicao'], true)) $bookingMode = 'individual';
+$participantsRaw = $_POST['participants'] ?? null;
+$participants  = null;
+if ($bookingMode === 'grupo_instituicao' && $participantsRaw) {
+    $dec = json_decode($participantsRaw, true);
+    if (is_array($dec) && count($dec) > 0) {
+        $participants = $dec;
+        $adults = count($dec);
+        $children = 0;
+    }
+}
+$respName  = trim($_POST['responsible_name'] ?? '');
+$respCpf   = preg_replace('/\D/', '', $_POST['responsible_cpf'] ?? '');
+$respPhone = trim($_POST['responsible_phone'] ?? '');
+$instPartnerId = (int)($_POST['institution_partner_id'] ?? 0) ?: null;
 
 // Resposta completa do formulario (para guardar como evidencia)
 $answers = [
@@ -109,10 +127,12 @@ for ($i = 0; $i < 5; $i++) {
 if (!$code) $code = "CA-{$year}-" . strtoupper(uniqid());
 
 $bookingId = dbInsert(
-    "INSERT INTO bookings (code, customer_id, entity_type, entity_id, entity_title, adults, children, travel_date, subtotal, discount, total, payment_method, payment_status, notes, institution_id, referral_code, source, source_detail, comorbidity, booking_answers)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)",
-    [$code, $customerId, $entityType, $entityId, $entity['title'], $adults, $children, $travelDate ?: null, $subtotal, $discount, $total, $paymentMethod, $notes ?: null,
-     $partnerId, $refCode, $source, $sourceDetail ?: null, $hasComorbid ? $comorbidity : null, json_encode($answers, JSON_UNESCAPED_UNICODE)]
+    "INSERT INTO bookings (code, customer_id, entity_type, entity_id, booking_mode, entity_title, adults, children, travel_date, subtotal, discount, total, payment_method, payment_status, notes, institution_id, referral_code, source, source_detail, comorbidity, booking_answers, participants, responsible_name, responsible_cpf, responsible_phone)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [$code, $customerId, $entityType, $entityId, $bookingMode, $entity['title'], $adults, $children, $travelDate ?: null, $subtotal, $discount, $total, $paymentMethod, $notes ?: null,
+     $instPartnerId ?: $partnerId, $refCode, $source, $sourceDetail ?: null, $hasComorbid ? $comorbidity : null, json_encode($answers, JSON_UNESCAPED_UNICODE),
+     $participants ? json_encode($participants, JSON_UNESCAPED_UNICODE) : null,
+     $respName ?: null, $respCpf ?: null, $respPhone ?: null]
 );
 
 if ($couponIdToIncrement) dbExec("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [$couponIdToIncrement]);

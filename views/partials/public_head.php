@@ -159,32 +159,44 @@ tailwind.config = {
         <div class="flex items-center gap-3">
             <!-- Language switcher -->
             <div class="relative hidden md:block" x-data="{open:false}" @click.away="open=false">
+                <?php
+                    $flags = ['pt-BR'=>'🇧🇷','en'=>'🇺🇸','es'=>'🇪🇸','fr'=>'🇫🇷','de'=>'🇩🇪','it'=>'🇮🇹','zh'=>'🇨🇳'];
+                    $siglas = ['pt-BR'=>'PT','en'=>'EN','es'=>'ES','fr'=>'FR','de'=>'DE','it'=>'IT','zh'=>'ZH'];
+                ?>
                 <button @click="open=!open" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-semibold" aria-label="Idioma">
-                    <span style="font-size:18px;line-height:1"><?php
-                        $flags = ['pt-BR'=>'🇧🇷','en'=>'🇺🇸','es'=>'🇪🇸','fr'=>'🇫🇷','de'=>'🇩🇪','it'=>'🇮🇹','zh'=>'🇨🇳'];
-                        echo $flags[$currentLang] ?? '🇧🇷';
-                    ?></span>
+                    <span style="font-size:16px;line-height:1"><?= $flags[$currentLang] ?? '🇧🇷' ?></span>
+                    <span class="text-xs font-bold tracking-wide"><?= e($siglas[$currentLang] ?? 'PT') ?></span>
                     <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
                 </button>
-                <div x-show="open" x-transition class="absolute right-0 mt-2 w-44 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
+                <div x-show="open" x-transition class="absolute right-0 mt-2 w-52 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
                     <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                    <a href="?lang=<?= e($code) ?>" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
-                        <span style="font-size:18px"><?= $flags[$code] ?></span> <?= e($name) ?>
+                    <a href="?lang=<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
+                        <span style="font-size:16px"><?= $flags[$code] ?></span>
+                        <span class="font-bold text-xs w-6"><?= e($siglas[$code]) ?></span>
+                        <span class="flex-1"><?= e($name) ?></span>
+                        <?php if ($currentLang===$code): ?><i data-lucide="check" class="w-4 h-4" style="color:var(--terracota)"></i><?php endif; ?>
                     </a>
                     <?php endforeach; ?>
                 </div>
             </div>
             <!-- Currency switcher -->
             <div class="relative hidden md:block" x-data="{open:false}" @click.away="open=false">
-                <button @click="open=!open" class="flex items-center gap-1 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-bold" aria-label="Moeda">
-                    <?= e($currentCurrency) ?>
+                <?php
+                    $currencySymbols = ['BRL'=>'R$','USD'=>'US$','EUR'=>'€','GBP'=>'£','ARS'=>'AR$'];
+                    $currencyNames   = ['BRL'=>'Real','USD'=>'Dólar','EUR'=>'Euro','GBP'=>'Libra','ARS'=>'Peso Arg.'];
+                ?>
+                <button @click="open=!open" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-bold" aria-label="Moeda">
+                    <span style="color:var(--terracota)"><?= e($currencySymbols[$currentCurrency] ?? 'R$') ?></span>
+                    <span class="text-xs tracking-wide"><?= e($currentCurrency) ?></span>
                     <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
                 </button>
-                <div x-show="open" x-transition class="absolute right-0 mt-2 w-36 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
-                    <?php foreach (['BRL'=>'R$ Real','USD'=>'US$ Dólar','EUR'=>'€ Euro','GBP'=>'£ Libra','ARS'=>'AR$ Peso'] as $code=>$name): ?>
-                    <a href="?currency=<?= e($code) ?>" class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
-                        <span><?= e($name) ?></span>
-                        <?php if ($currentCurrency===$code): ?><i data-lucide="check" class="w-4 h-4" style="color:var(--terracota)"></i><?php endif; ?>
+                <div x-show="open" x-transition class="absolute right-0 mt-2 w-48 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
+                    <?php foreach ($currencyNames as $code=>$name): ?>
+                    <a href="?currency=<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
+                        <span class="font-bold w-9" style="color:var(--terracota)"><?= e($currencySymbols[$code]) ?></span>
+                        <span class="flex-1"><?= e($name) ?></span>
+                        <span class="text-[11px] font-bold" style="color:var(--text-muted)"><?= e($code) ?></span>
+                        <?php if ($currentCurrency===$code): ?><i data-lucide="check" class="w-4 h-4 ml-1" style="color:var(--terracota)"></i><?php endif; ?>
                     </a>
                     <?php endforeach; ?>
                 </div>

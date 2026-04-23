@@ -38,61 +38,59 @@ include VIEWS_DIR . '/partials/public_head.php';
         <!-- Small badge -->
         <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass-premium mb-8 fade-in-up">
             <span class="w-2 h-2 rounded-full animate-pulse" style="background:var(--terracota-light)"></span>
-            <span class="text-xs font-bold tracking-[0.2em] uppercase">Turismo Premium em Alagoas</span>
+            <span class="text-xs font-bold tracking-[0.2em] uppercase"><?= e(t('home.hero.badge')) ?></span>
         </div>
 
         <!-- Main title -->
         <h1 class="font-brand text-5xl md:text-7xl lg:text-[7rem] mb-8 leading-[0.95] fade-in-up delay-100" style="text-shadow:0 4px 40px rgba(0,0,0,0.4)">
-            Chegue como
-            <span class="font-display italic font-normal" style="color:var(--areia-light)">visitante</span>.<br>
-            Volte se sentindo
-            <span class="font-display italic font-normal" style="color:var(--terracota-light)">de casa</span>.
+            <?= e(t('home.hero.t1')) ?>
+            <span class="font-display italic font-normal" style="color:var(--areia-light)"><?= e(t('home.hero.visitor')) ?></span>.<br>
+            <?= e(t('home.hero.t2')) ?>
+            <span class="font-display italic font-normal" style="color:var(--terracota-light)"><?= e(t('home.hero.athome')) ?></span>.
         </h1>
 
         <p class="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-12 leading-relaxed fade-in-up delay-200" style="text-shadow:0 2px 20px rgba(0,0,0,0.3)">
-            Deixe a gente cuidar do seu roteiro enquanto você vive o melhor de Alagoas —
-            hospedagem, transporte e passeios criados por quem é daqui.
+            <?= e(t('home.hero.sub')) ?>
         </p>
 
         <!-- CTA buttons -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16 fade-in-up delay-300">
             <a href="<?= url('/roteiros') ?>" class="btn-hero-primary animate-glow">
                 <i data-lucide="compass" class="w-5 h-5"></i>
-                Explorar Passeios
+                <?= e(t('home.hero.cta1')) ?>
             </a>
             <a href="#destaques" class="btn-hero-ghost">
                 <i data-lucide="arrow-down" class="w-5 h-5"></i>
-                Ver Destaques
+                <?= e(t('home.hero.cta2')) ?>
             </a>
         </div>
 
         <!-- Search bar (premium glass) -->
         <div class="max-w-4xl mx-auto glass-premium rounded-2xl p-4 md:p-5 fade-in-up delay-400">
             <div class="text-left mb-3 px-2">
-                <span class="font-script text-sm tracking-widest uppercase" style="color:var(--areia-light)">Seu destino é aqui</span>
+                <span class="font-script text-sm tracking-widest uppercase" style="color:var(--areia-light)"><?= e(t('home.search.title')) ?></span>
             </div>
             <form method="GET" action="<?= url('/roteiros') ?>" class="grid md:grid-cols-4 gap-3">
                 <div>
-                    <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left">Data</label>
+                    <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left"><?= e(t('home.search.date')) ?></label>
                     <input type="date" name="data" class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left">Procurar</label>
-                    <input type="text" name="q" placeholder="Ex: Maragogi, trilha..." class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)">
+                    <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left"><?= e(t('home.search.find')) ?></label>
+                    <input type="text" name="q" placeholder="<?= e(t('home.search.ph')) ?>" class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left">Tipo</label>
+                    <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left"><?= e(t('home.search.type')) ?></label>
                     <select name="tipo" class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)">
-                        <option value="">Todos</option>
-                        <option value="roteiro">Passeios</option>
-                        <option value="pacote">Pacotes</option>
-                        <option value="transfer">Transfers</option>
+                        <option value=""><?= e(t('home.search.all')) ?></option>
+                        <option value="roteiro"><?= e(t('nav.tours')) ?></option>
+                        <option value="pacote"><?= e(t('nav.packages')) ?></option>
                     </select>
                 </div>
                 <div class="flex items-end">
                     <button type="submit" class="w-full px-5 py-3 rounded-xl font-semibold text-white transition hover:opacity-90"
                             style="background:linear-gradient(135deg,var(--terracota),var(--terracota-dark));box-shadow:0 6px 18px rgba(201,107,74,0.4)">
-                        <i data-lucide="search" class="w-4 h-4 inline"></i> Procurar
+                        <i data-lucide="search" class="w-4 h-4 inline"></i> <?= e(t('home.search.find')) ?>
                     </button>
                 </div>
             </form>
