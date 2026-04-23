@@ -12,6 +12,10 @@ $departuresAll = dbAll("SELECT * FROM departures WHERE entity_type='roteiro' AND
 $departures = array_values(array_filter($departuresAll, fn($d) => $d['status'] === 'open'));
 $related = dbAll("SELECT * FROM roteiros WHERE status='published' AND id<>? ORDER BY RAND() LIMIT 4", [$r['id']]);
 
+// Avaliacoes deste passeio (e tambem destacados se tiver poucos)
+$reviews = dbAll("SELECT * FROM testimonials WHERE active=1 AND roteiro_id=? ORDER BY featured DESC, created_at DESC LIMIT 12", [$r['id']]);
+$reviewsAvg = $reviews ? round(array_sum(array_column($reviews,'rating')) / count($reviews), 1) : 0;
+
 // Mapa de datas para o JS do calendario: { '2026-05-10': {status,seats,price}, ... }
 $availabilityMap = [];
 foreach ($departuresAll as $d) {
@@ -235,7 +239,7 @@ function galleryLightbox(images) {
                 <?php endif; ?>
 
                 <!-- Calendário de disponibilidade -->
-                <div class="admin-card p-8" x-data="availabilityCalendar(<?= htmlspecialchars(json_encode([
+                <div id="calendario" class="admin-card p-8" x-data="availabilityCalendar(<?= htmlspecialchars(json_encode([
                     'mode' => $r['availability_mode'] ?? 'fixed',
                     'map' => $availabilityMap,
                     'basePrice' => (float)($r['price_pix'] ?: $r['price']),
@@ -326,20 +330,26 @@ function galleryLightbox(images) {
 
                     <?php if ($departures): ?>
                         <div class="text-sm font-semibold mb-3" style="color:var(--sepia)">Próximas saídas</div>
-                        <div class="space-y-2 mb-5">
-                            <?php foreach ($departures as $d): ?>
-                                <div class="flex items-center justify-between p-3 rounded-lg" style="background:var(--bg-surface)">
+                        <div class="space-y-2 mb-5" x-data="{ open:false, max:4 }">
+                            <?php foreach ($departures as $i => $d): ?>
+                                <div class="flex items-center justify-between p-3 rounded-lg" style="background:var(--bg-surface)" <?= $i >= 4 ? 'x-show="open" x-collapse' : '' ?>>
                                     <div>
-                                        <div class="text-sm font-semibold" style="color:var(--sepia)"><?= formatDate($d['departure_date'], 'd \d\e F') ?></div>
+                                        <div class="text-sm font-semibold" style="color:var(--sepia)"><?= e(dateBR($d['departure_date'], 'dayMonth')) ?></div>
                                         <?php if ($d['departure_time']): ?><div class="text-xs" style="color:var(--text-muted)">Saída às <?= date('H:i', strtotime($d['departure_time'])) ?></div><?php endif; ?>
                                     </div>
                                     <div class="text-xs font-semibold" style="color:var(--maresia-dark)"><?= max(0, $d['seats_total']-$d['seats_sold']) ?> vagas</div>
                                 </div>
                             <?php endforeach; ?>
+                            <?php if (count($departures) > 4): ?>
+                                <button type="button" @click="open=!open" class="w-full text-center text-xs font-semibold py-2 rounded-lg transition" style="color:var(--horizonte);background:rgba(58,107,138,0.06)">
+                                    <span x-show="!open">Ver mais <?= count($departures) - 4 ?> datas</span>
+                                    <span x-show="open" x-cloak>Ver menos</span>
+                                </button>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
-                    <a href="<?= url('/checkout?roteiro=' . $r['id']) ?>" class="btn-primary w-full">
+                    <a href="#calendario" @click.prevent="document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary w-full">
                         <i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar agora
                     </a>
                     <button type="button" onclick="window.cart.add('roteiro', <?= (int)$r['id'] ?>)" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition hover:scale-[1.02]" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)">
@@ -359,6 +369,48 @@ function galleryLightbox(images) {
                 </div>
             </aside>
         </div>
+
+        <!-- Avaliações deste passeio -->
+        <?php if ($reviews): ?>
+        <div class="mt-20" x-data="{ open:false }">
+            <div class="flex items-end justify-between flex-wrap gap-4 mb-8">
+                <div>
+                    <h2 class="font-display text-3xl font-bold mb-1" style="color:var(--sepia)">Avaliações de quem foi</h2>
+                    <div class="flex items-center gap-2 text-sm" style="color:var(--text-muted)">
+                        <span class="inline-flex items-center gap-1 font-display font-bold text-lg" style="color:var(--terracota)"><?= number_format($reviewsAvg,1,',','.') ?><i data-lucide="star" class="w-4 h-4 fill-current"></i></span>
+                        · <?= count($reviews) ?> avaliações
+                    </div>
+                </div>
+                <a href="<?= url('/depoimentos') ?>" class="text-sm font-semibold inline-flex items-center gap-1" style="color:var(--horizonte)">Ver todas <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <?php foreach ($reviews as $i => $rv): ?>
+                <div class="admin-card p-6" <?= $i >= 3 ? 'x-show="open" x-collapse' : '' ?>>
+                    <div class="flex items-center gap-1 mb-3">
+                        <?php for ($s=0;$s<(int)$rv['rating'];$s++): ?><i data-lucide="star" class="w-3.5 h-3.5 fill-current" style="color:#F59E0B"></i><?php endfor; ?>
+                    </div>
+                    <p class="text-sm leading-relaxed mb-4 italic" style="color:var(--text-secondary)">“<?= e(tAuto($rv['content'])) ?>”</p>
+                    <div class="flex items-center gap-3 pt-4 border-t" style="border-color:var(--border-default)">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))"><?= e(mb_substr($rv['name'],0,1)) ?></div>
+                        <div>
+                            <div class="font-bold text-sm" style="color:var(--sepia)"><?= e($rv['name']) ?></div>
+                            <?php if (!empty($rv['location'])): ?><div class="text-xs" style="color:var(--text-muted)"><?= e(tAuto($rv['location'])) ?></div><?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php if (count($reviews) > 3): ?>
+                <div class="text-center mt-6">
+                    <button type="button" @click="open=!open" class="btn-secondary">
+                        <span x-show="!open">Ver mais <?= count($reviews) - 3 ?> avaliações</span>
+                        <span x-show="open" x-cloak>Ver menos</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4" :style="open ? 'transform:rotate(180deg)' : ''"></i>
+                    </button>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
 
         <!-- Related -->
         <?php if ($related): ?>
@@ -419,7 +471,7 @@ function availabilityCalendar(config) {
         },
         get monthLabel() {
             const names = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-            return names[this.viewMonth] + ' ' + this.viewYear;
+            return names[this.viewMonth] + ' de ' + this.viewYear;
         },
         pad(n){ return n < 10 ? '0'+n : ''+n; },
         iso(y,m,d){ return y + '-' + this.pad(m+1) + '-' + this.pad(d); },
@@ -476,7 +528,7 @@ function availabilityCalendar(config) {
         get selectedLabel() {
             if (!this.selectedIso) return '';
             const [y,m,d] = this.selectedIso.split('-').map(Number);
-            const names = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            const names = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
             return d + ' de ' + names[m-1] + ' de ' + y;
         },
         get selectedDetail() {
@@ -493,5 +545,21 @@ function availabilityCalendar(config) {
     };
 }
 </script>
+
+<!-- Sticky bottom bar mobile -->
+<div class="mobile-book-bar md:hidden">
+    <div class="flex-1 min-w-0">
+        <div class="text-[10px] uppercase tracking-wider font-bold opacity-70">A partir de</div>
+        <div class="font-display text-xl font-bold leading-none" style="color:var(--terracota)"><?= formatPrice($r['price_pix'] ?: $r['price']) ?></div>
+    </div>
+    <a href="#calendario" onclick="event.preventDefault();document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary" style="white-space:nowrap">
+        <i data-lucide="calendar-check" class="w-4 h-4"></i> Reservar
+    </a>
+</div>
+<style>
+.mobile-book-bar{position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--bg-card);border-top:1px solid var(--border-default);padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 -8px 24px -8px rgba(0,0,0,.15);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+@media(min-width:768px){.mobile-book-bar{display:none !important}}
+@media(max-width:767px){body{padding-bottom:88px}}
+</style>
 
 <?php include VIEWS_DIR . '/partials/public_foot.php'; ?>

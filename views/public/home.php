@@ -446,9 +446,12 @@ include VIEWS_DIR . '/partials/public_head.php';
             <p class="section-subtitle">Histórias reais de quem viveu Alagoas com a gente.</p>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-6" x-data="{idx:0}">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5" x-data="{idx:0}">
             <?php foreach ($testimonials as $i => $t): ?>
-            <div class="testimonial-card" data-reveal style="animation-delay: <?= $i * 100 ?>ms">
+            <div class="testimonial-card relative" data-reveal style="animation-delay: <?= $i * 100 ?>ms">
+                <?php if (!empty($t['featured'])): ?>
+                    <span class="absolute -top-2 left-4 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" style="background:var(--terracota);color:#fff;z-index:2"><i data-lucide="sparkles" class="w-3 h-3"></i>Destaque</span>
+                <?php endif; ?>
                 <div class="flex items-center gap-3 mb-4">
                     <?php if (!empty($t['avatar'])): ?>
                         <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="w-12 h-12 rounded-full object-cover" style="border:2px solid rgba(58,107,138,0.15)">

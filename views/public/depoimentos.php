@@ -21,11 +21,12 @@ include VIEWS_DIR . '/partials/public_head.php';
 .testi-hero{position:relative;padding:110px 0 60px;background:linear-gradient(135deg,var(--horizonte) 0%,var(--horizonte-dark) 55%,var(--terracota) 100%);color:#fff;overflow:hidden}
 .testi-hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 15% 30%, rgba(255,255,255,.1) 0, transparent 55%),radial-gradient(circle at 85% 70%, rgba(201,107,74,.35) 0, transparent 55%)}
 .testi-kpi{background:rgba(255,255,255,.08);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:22px 24px}
-.testi-card{background:var(--bg-card);border:1px solid var(--border-default);border-radius:22px;padding:30px;transition:all .3s;position:relative;overflow:hidden}
+.testi-card{background:var(--bg-card);border:1px solid var(--border-default);border-radius:22px;padding:30px;padding-top:46px;transition:all .3s;position:relative;overflow:hidden}
 .testi-card:hover{transform:translateY(-4px);box-shadow:0 20px 45px -15px rgba(0,0,0,.15);border-color:var(--terracota-light)}
-.testi-card::before{content:'"';position:absolute;top:-16px;right:20px;font-family:Georgia,serif;font-size:150px;color:var(--terracota);opacity:.1;line-height:1}
+.testi-card::before{content:'"';position:absolute;top:-16px;right:20px;font-family:Georgia,serif;font-size:150px;color:var(--terracota);opacity:.1;line-height:1;z-index:0;pointer-events:none}
+.testi-card>*{position:relative;z-index:1}
 .testi-stars{display:inline-flex;gap:2px}
-.testi-featured{position:absolute;top:18px;left:18px;background:var(--terracota);color:#fff;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.testi-featured{position:absolute;top:14px;left:14px;background:var(--terracota);color:#fff;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;z-index:2}
 .testi-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 .testi-avatar-fallback{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:22px;color:#fff;background:linear-gradient(135deg,var(--horizonte),var(--terracota))}
 </style>
@@ -92,7 +93,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <?php endif; ?>
                         </div>
                         <?php if (!empty($t['created_at'])): ?>
-                            <div class="text-[10px] font-semibold uppercase tracking-widest" style="color:var(--text-muted)"><?= e(date('M · Y', strtotime($t['created_at']))) ?></div>
+                            <div class="text-[10px] font-semibold uppercase tracking-widest" style="color:var(--text-muted)"><?= e(dateBR($t['created_at'], 'monthYear')) ?></div>
                         <?php endif; ?>
                     </div>
                 </article>
@@ -110,8 +111,8 @@ include VIEWS_DIR . '/partials/public_head.php';
         <h2 class="font-brand text-4xl md:text-5xl mb-4"><?= e(t('depoimentos.cta_title')) ?></h2>
         <p class="text-lg text-white/80 mb-8 max-w-xl mx-auto"><?= e(t('depoimentos.cta_sub')) ?></p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="<?= url('/roteiros') ?>" class="btn-primary"><i data-lucide="compass" class="w-5 h-5"></i><?= e(t('home.hero.cta1')) ?></a>
-            <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="btn-secondary" style="color:#fff;border-color:rgba(255,255,255,.3)"><i data-lucide="message-circle" class="w-5 h-5"></i>WhatsApp</a>
+            <a href="<?= url('/roteiros') ?>" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition" style="background:var(--terracota);color:#fff"><i data-lucide="compass" class="w-5 h-5"></i><?= e(t('home.hero.cta1')) ?></a>
+            <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)"><i data-lucide="message-circle" class="w-5 h-5"></i>WhatsApp</a>
         </div>
     </div>
 </section>

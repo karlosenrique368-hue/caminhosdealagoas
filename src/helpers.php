@@ -92,6 +92,38 @@ function formatDate(?string $date, string $fmt = 'd/m/Y'): string {
     return $ts ? date($fmt, $ts) : '';
 }
 
+/** Formata datas em PT-BR sem depender de locale do servidor. */
+function dateBR(?string $date, string $style = 'long'): string {
+    if (!$date) return '';
+    $ts = strtotime($date);
+    if (!$ts) return '';
+    static $months = [1=>'janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    static $monthsShort = [1=>'jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    $d = (int)date('j', $ts);
+    $m = (int)date('n', $ts);
+    $y = date('Y', $ts);
+    switch ($style) {
+        case 'short':       return sprintf('%02d/%02d/%s', $d, $m, $y);                       // 24/04/2026
+        case 'shortMonth':  return sprintf('%02d %s · %s', $d, $monthsShort[$m], $y);          // 24 abr · 2026
+        case 'monthYear':   return ucfirst($monthsShort[$m]) . ' · ' . $y;                     // Abr · 2026
+        case 'dayMonth':    return sprintf('%02d de %s', $d, $months[$m]);                     // 24 de abril
+        case 'dayMonthY':   return sprintf('%02d de %s de %s', $d, $months[$m], $y);           // 24 de abril de 2026
+        case 'long':
+        default:            return sprintf('%02d de %s de %s', $d, $months[$m], $y);
+    }
+}
+
+/** Dia da semana em PT-BR. */
+function weekdayBR(?string $date, bool $short = false): string {
+    if (!$date) return '';
+    $ts = strtotime($date);
+    if (!$ts) return '';
+    $w = (int)date('w', $ts);
+    $full  = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    $shortW = ['dom','seg','ter','qua','qui','sex','sáb'];
+    return $short ? $shortW[$w] : $full[$w];
+}
+
 function slugify(string $text): string {
     $text = preg_replace('~[^\pL\d]+~u', '-', $text);
     $text = iconv('utf-8', 'ASCII//TRANSLIT//IGNORE', $text);

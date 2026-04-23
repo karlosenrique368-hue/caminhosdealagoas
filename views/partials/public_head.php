@@ -147,6 +147,7 @@ tailwind.config = {
             <a href="<?= url('/') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.home')) ?></a>
             <a href="<?= url('/passeios') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.tours')) ?></a>
             <a href="<?= url('/pacotes') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.packages')) ?></a>
+            <a href="<?= url('/transfers') ?>" class="nav-link nav-link-tr text-sm">Transfers</a>
             <a href="<?= url('/sobre') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.about')) ?></a>
             <a href="<?= url('/contato') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.contact')) ?></a>
             <?php if (isCustomerLoggedIn()): ?>
@@ -244,6 +245,7 @@ tailwind.config = {
             <a href="<?= url('/') ?>" class="menu-drawer-link"><i data-lucide="home" class="w-4 h-4"></i>Home</a>
             <a href="<?= url('/passeios') ?>" class="menu-drawer-link"><i data-lucide="compass" class="w-4 h-4"></i>Passeios</a>
             <a href="<?= url('/pacotes') ?>" class="menu-drawer-link"><i data-lucide="package" class="w-4 h-4"></i>Pacotes</a>
+            <a href="<?= url('/transfers') ?>" class="menu-drawer-link"><i data-lucide="car" class="w-4 h-4"></i>Transfers</a>
             <a href="<?= url('/sobre') ?>" class="menu-drawer-link"><i data-lucide="book-open" class="w-4 h-4"></i>Sobre nós</a>
             <a href="<?= url('/contato') ?>" class="menu-drawer-link"><i data-lucide="mail" class="w-4 h-4"></i>Contato</a>
 

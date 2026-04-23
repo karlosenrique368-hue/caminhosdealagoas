@@ -55,6 +55,7 @@ body { background: var(--bg-surface); }
                 ['heading' => 'Conteúdo'],
                 ['path' => '/admin/roteiros', 'icon' => 'compass', 'label' => 'Passeios'],
                 ['path' => '/admin/pacotes', 'icon' => 'package', 'label' => 'Pacotes'],
+                ['path' => '/admin/transfers', 'icon' => 'car', 'label' => 'Transfers'],
                 ['path' => '/admin/depoimentos', 'icon' => 'message-square-quote', 'label' => 'Depoimentos'],
                 ['heading' => 'Vendas'],
                 ['path' => '/admin/reservas', 'icon' => 'calendar-check', 'label' => 'Reservas'],

@@ -58,6 +58,15 @@ switch (true) {
         require VIEWS_DIR . '/public/depoimentos.php';
         break;
 
+    case $path === '/transfers':
+        require VIEWS_DIR . '/public/transfers.php';
+        break;
+
+    case preg_match('#^/transfers/([a-z0-9-]+)$#', $path, $m):
+        $_GET['slug'] = $m[1];
+        require VIEWS_DIR . '/public/transfer-detail.php';
+        break;
+
     case $path === '/checkout':
         require VIEWS_DIR . '/public/checkout.php';
         break;
@@ -199,6 +208,16 @@ switch (true) {
     case preg_match('#^/admin/pacotes/(\d+)$#', $path, $m):
         if (isset($m[1])) $_GET['id'] = $m[1];
         require VIEWS_DIR . '/admin/pacote-edit.php';
+        break;
+
+    case $path === '/admin/transfers':
+        require VIEWS_DIR . '/admin/transfers.php';
+        break;
+
+    case $path === '/admin/transfers/novo':
+    case preg_match('#^/admin/transfers/(\d+)$#', $path, $m):
+        if (isset($m[1])) $_GET['id'] = $m[1];
+        require VIEWS_DIR . '/admin/transfer-edit.php';
         break;
 
     case $path === '/admin/reservas':
