@@ -38,15 +38,28 @@ if (isPost() && csrfVerify()) {
 $filterLang = $_GET['lang'] ?? '';
 $filterQ    = trim($_GET['q'] ?? '');
 
+// WHERE aplicado sobre a tabela translations
 $where = []; $params = [];
 if ($filterLang) { $where[] = 'lang=?'; $params[] = $filterLang; }
 if ($filterQ)    { $where[] = '(tkey LIKE ? OR value LIKE ?)'; $params[] = "%$filterQ%"; $params[] = "%$filterQ%"; }
 $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-$rows = dbAll("SELECT * FROM translations$whereSql ORDER BY tkey, lang", $params);
 
-// agrupa por chave → { key: { lang => value } }
+// Pagina por CHAVE distinta
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM (SELECT tkey FROM translations$whereSql GROUP BY tkey) t",
+    "SELECT tkey FROM translations$whereSql GROUP BY tkey ORDER BY tkey",
+    $params,
+    ['allowed'=>[20,50,100,200], 'default'=>20]
+);
+$pageKeys = array_column($pag['rows'], 'tkey');
+
+// Carrega todas as linhas das chaves desta pagina (em todos os idiomas — para preview completo)
 $grouped = [];
-foreach ($rows as $r) { $grouped[$r['tkey']][$r['lang']] = $r; }
+if ($pageKeys) {
+    $in = implode(',', array_fill(0, count($pageKeys), '?'));
+    $rows = dbAll("SELECT * FROM translations WHERE tkey IN ($in) ORDER BY tkey, lang", $pageKeys);
+    foreach ($rows as $r) { $grouped[$r['tkey']][$r['lang']] = $r; }
+}
 
 // completude por idioma
 $stats = [];
@@ -162,11 +175,42 @@ require VIEWS_DIR . '/partials/admin_head.php';
                         </div>
                     <?php endforeach; endif; ?>
                 </div>
+
+                <!-- Paginacao -->
+                <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
+
+                <!-- Auto-traducao desta pagina -->
+                <div class="admin-card p-4 flex flex-wrap items-center gap-3">
+                    <div class="flex-1 min-w-[240px]">
+                        <div class="font-bold text-sm" style="color:var(--sepia)"><i data-lucide="sparkles" class="w-4 h-4 inline"></i> Tradução automática</div>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted)">Preenche as lacunas desta página usando tradução gratuita (MyMemory). O idioma origem é <b>pt-BR</b>.</p>
+                    </div>
+                    <button type="button" onclick="autoTranslatePage()" id="auto-tr-btn" class="admin-btn admin-btn-primary"><i data-lucide="wand-2" class="w-4 h-4"></i>Traduzir página</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ================= MOEDAS ================= -->
+    <script>
+    const __pageKeys = <?= json_encode($pageKeys) ?>;
+    async function autoTranslatePage(){
+        const btn = document.getElementById('auto-tr-btn');
+        if (!__pageKeys.length) { alert('Nenhuma chave para traduzir nesta página.'); return; }
+        if (!confirm('Traduzir automaticamente '+__pageKeys.length+' chaves para todos os idiomas faltantes?')) return;
+        btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>Traduzindo...';
+        try {
+            const res = await fetch('<?= url('/api/autotranslate') ?>', {
+                method:'POST',
+                headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':'<?= csrfToken() ?>'},
+                body:'csrf_token=<?= csrfToken() ?>&keys='+encodeURIComponent(JSON.stringify(__pageKeys))
+            });
+            const j = await res.json();
+            if (j.ok) { alert('Pronto! '+j.filled+' traduções geradas.'); location.reload(); }
+            else alert('Erro: '+(j.msg||'desconhecido'));
+        } catch(e){ alert('Falha de rede: '+e.message); }
+        finally { btn.disabled = false; }
+    }
+    </script>
     <div x-show="tab==='currencies'" x-cloak class="space-y-4">
         <div class="admin-card p-6">
             <div class="flex items-start justify-between gap-4 mb-5">

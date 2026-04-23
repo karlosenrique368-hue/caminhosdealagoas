@@ -160,18 +160,19 @@ tailwind.config = {
             <!-- Language switcher -->
             <div class="relative hidden md:block" x-data="{open:false}" @click.away="open=false">
                 <?php
-                    $flags = ['pt-BR'=>'🇧🇷','en'=>'🇺🇸','es'=>'🇪🇸','fr'=>'🇫🇷','de'=>'🇩🇪','it'=>'🇮🇹','zh'=>'🇨🇳'];
+                    $flagFiles = ['pt-BR'=>'pt_BR.png','en'=>'en_US.png','es'=>'es_ES.png','fr'=>'fr_FR.png','de'=>'de_DE.png','it'=>'it_IT.png','zh'=>'zh_CN.png'];
                     $siglas = ['pt-BR'=>'PT','en'=>'EN','es'=>'ES','fr'=>'FR','de'=>'DE','it'=>'IT','zh'=>'ZH'];
+                    $flagUrl = fn($code) => storageUrl('uploads/img/bandeiras/' . ($flagFiles[$code] ?? 'pt_BR.png'));
                 ?>
-                <button @click="open=!open" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-semibold" aria-label="Idioma">
-                    <span style="font-size:16px;line-height:1"><?= $flags[$currentLang] ?? '🇧🇷' ?></span>
-                    <span class="text-xs font-bold tracking-wide"><?= e($siglas[$currentLang] ?? 'PT') ?></span>
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                <button @click="open=!open" class="inline-flex items-center gap-2 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-semibold" style="line-height:1" aria-label="Idioma">
+                    <img src="<?= $flagUrl($currentLang) ?>" alt="" style="width:22px;height:16px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
+                    <span class="text-xs font-bold tracking-wide" style="line-height:1"><?= e($siglas[$currentLang] ?? 'PT') ?></span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5" style="display:block"></i>
                 </button>
-                <div x-show="open" x-transition class="absolute right-0 mt-2 w-52 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
+                <div x-show="open" x-transition class="absolute right-0 mt-2 w-56 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
                     <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
                     <a href="?lang=<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
-                        <span style="font-size:16px"><?= $flags[$code] ?></span>
+                        <img src="<?= $flagUrl($code) ?>" alt="" style="width:24px;height:18px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
                         <span class="font-bold text-xs w-6"><?= e($siglas[$code]) ?></span>
                         <span class="flex-1"><?= e($name) ?></span>
                         <?php if ($currentLang===$code): ?><i data-lucide="check" class="w-4 h-4" style="color:var(--terracota)"></i><?php endif; ?>
@@ -261,12 +262,12 @@ tailwind.config = {
             <div class="menu-drawer-prefs">
                 <div class="menu-drawer-pref" x-data="{open:false}" @click.away="open=false">
                     <button type="button" @click="open=!open" class="menu-drawer-pref-btn">
-                        <span><span style="font-size:16px"><?= $flags[$currentLang] ?? '🇧🇷' ?></span> Idioma</span>
+                        <span class="inline-flex items-center gap-2"><img src="<?= $flagUrl($currentLang) ?>" alt="" style="width:22px;height:16px;object-fit:cover;border-radius:2px;display:block"> Idioma</span>
                         <i data-lucide="chevron-down" class="w-4 h-4" :class="open?'rotate-180':''"></i>
                     </button>
                     <div x-show="open" x-transition x-cloak class="menu-drawer-pref-list">
                         <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                            <a href="?lang=<?= e($code) ?>"><span><?= $flags[$code] ?? '🌐' ?></span> <?= e($name) ?></a>
+                            <a href="?lang=<?= e($code) ?>" class="inline-flex items-center gap-2"><img src="<?= $flagUrl($code) ?>" alt="" style="width:20px;height:14px;object-fit:cover;border-radius:2px;display:block"> <?= e($name) ?></a>
                         <?php endforeach; ?>
                     </div>
                 </div>

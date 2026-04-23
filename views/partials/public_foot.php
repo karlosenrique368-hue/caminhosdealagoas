@@ -13,19 +13,19 @@
                     <img src="<?= asset('brand/logo-areia.png') ?>" alt="Caminhos de Alagoas" style="height:46px;width:auto">
                 </div>
                 <p class="text-sm text-white/60 leading-relaxed mb-4">
-                    Roteiros, passeios e pacotes autênticos para quem quer viver Alagoas de verdade.
+                    <?= e(t('foot.tagline')) ?>
                 </p>
                 <p class="text-xs text-white/40">CNPJ <?= e(getSetting('cnpj', '50.770.482/0001-37')) ?></p>
             </div>
 
             <!-- SAC -->
             <div>
-                <h4 class="font-display text-lg font-semibold text-white mb-5">Atendimento</h4>
+                <h4 class="font-display text-lg font-semibold text-white mb-5"><?= e(t('foot.support')) ?></h4>
                 <ul class="space-y-3 text-sm">
                     <li class="flex items-start gap-2">
                         <i data-lucide="mail" class="w-4 h-4 mt-0.5 text-terracota-light"></i>
                         <div>
-                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5">E-mail</div>
+                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5"><?= e(t('foot.email')) ?></div>
                             <a href="mailto:<?= e(getSetting('contact_email', APP_EMAIL)) ?>"><?= e(getSetting('contact_email', APP_EMAIL)) ?></a>
                         </div>
                     </li>
@@ -39,8 +39,8 @@
                     <li class="flex items-start gap-2">
                         <i data-lucide="clock" class="w-4 h-4 mt-0.5 text-terracota-light"></i>
                         <div>
-                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5">Horário</div>
-                            <div>Seg a Sex · 08h30 às 18h</div>
+                            <div class="text-xs uppercase tracking-wider text-white/50 mb-0.5"><?= e(t('foot.hours')) ?></div>
+                            <div><?= e(t('foot.hours_value')) ?></div>
                         </div>
                     </li>
                 </ul>
@@ -48,20 +48,20 @@
 
             <!-- Navegue -->
             <div>
-                <h4 class="font-display text-lg font-semibold text-white mb-5">Navegue</h4>
+                <h4 class="font-display text-lg font-semibold text-white mb-5"><?= e(t('foot.browse')) ?></h4>
                 <ul class="space-y-2 text-sm">
-                    <li><a href="<?= url('/') ?>">Home</a></li>
-                    <li><a href="<?= url('/roteiros') ?>">Passeios</a></li>
-                    <li><a href="<?= url('/pacotes') ?>">Pacotes</a></li>
-                    <li><a href="<?= url('/sobre') ?>">Sobre nós</a></li>
-                    <li><a href="<?= url('/contato') ?>">Contato</a></li>
+                    <li><a href="<?= url('/') ?>"><?= e(t('nav.home')) ?></a></li>
+                    <li><a href="<?= url('/roteiros') ?>"><?= e(t('nav.tours')) ?></a></li>
+                    <li><a href="<?= url('/pacotes') ?>"><?= e(t('nav.packages')) ?></a></li>
+                    <li><a href="<?= url('/sobre') ?>"><?= e(t('nav.about')) ?></a></li>
+                    <li><a href="<?= url('/contato') ?>"><?= e(t('nav.contact')) ?></a></li>
                 </ul>
             </div>
 
             <!-- Newsletter -->
             <div>
-                <h4 class="font-display text-lg font-semibold text-white mb-3">Receba inspiração</h4>
-                <p class="text-sm text-white/60 mb-4">Roteiros exclusivos, ofertas e dicas de Alagoas.</p>
+                <h4 class="font-display text-lg font-semibold text-white mb-3"><?= e(t('foot.newsletter_title')) ?></h4>
+                <p class="text-sm text-white/60 mb-4"><?= e(t('foot.newsletter_sub')) ?></p>
                 <form class="flex gap-2" onsubmit="event.preventDefault();caminhosApi('<?= url('/api/newsletter') ?>',{method:'POST',data:new FormData(this)}).then(r=>showToast(r.msg||'Inscrito!',r.ok?'success':'error'));this.reset();">
                     <input type="email" name="email" required placeholder="seu@email.com"
                            class="flex-1 px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/50 border outline-none"
@@ -85,10 +85,10 @@
         </div>
 
         <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/50">
-            <p>© <?= date('Y') ?> Caminhos de Alagoas · Todos os direitos reservados.</p>
+            <p>© <?= date('Y') ?> <?= e(t('foot.copyright')) ?></p>
             <div class="flex gap-6">
-                <a href="#" class="hover:text-white">Política de Privacidade</a>
-                <a href="#" class="hover:text-white">Termos de Uso</a>
+                <a href="#" class="hover:text-white"><?= e(t('foot.privacy')) ?></a>
+                <a href="#" class="hover:text-white"><?= e(t('foot.terms')) ?></a>
             </div>
         </div>
     </div>
