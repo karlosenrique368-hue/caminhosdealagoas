@@ -84,12 +84,9 @@ function createPartner(array $data, string $password): array {
 
     $pid = dbInsert(
         "INSERT INTO institutions (name, type, partner_type, cpf, contact_name, contact_email, contact_phone, whatsapp, referral_code, slug, address, active, discount_percent, commission_percent, bookings_threshold, allow_group_checkout)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)",
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, ?)",
         [
             $name, $typeMap[$type], $type, $cpf ?: null, $name, $email, $phone, $phone, $code, $slug, $cidade ?: null,
-            (float) getSetting('partner_default_discount', 0),
-            (float) getSetting('partner_default_commission', 10),
-            (int) getSetting('partner_bookings_threshold', 10),
             $type === 'instituicao' ? 1 : 0,
         ]
     );
@@ -122,7 +119,7 @@ function creditCommissionOnPaid(int $bookingId): void {
     }
     if (!$partner) return;
 
-    // Comissao: prefere valor definido no passeio/pacote; fallback ao % do parceiro
+    // Comissao: PADRAO = regra do passeio/pacote. SE o parceiro tiver valor definido (>0), o parceiro SOBREPOE.
     $itemPct = null;
     $itemThreshold = null;
     if ($b['entity_type'] === 'roteiro') {
@@ -132,9 +129,11 @@ function creditCommissionOnPaid(int $bookingId): void {
     } else { $it = null; }
     if ($it) {
         if ($it['commission_percent'] !== null && $it['commission_percent'] !== '') $itemPct = (float)$it['commission_percent'];
-        if (!empty($it['bookings_threshold'])) $itemThreshold = (int)$it['bookings_threshold'];
+        if ($it['bookings_threshold'] !== null && $it['bookings_threshold'] !== '') $itemThreshold = (int)$it['bookings_threshold'];
     }
-    $pctToUse = $itemPct !== null ? $itemPct : (float)$partner['commission_percent'];
+    $partnerPct       = (float)($partner['commission_percent'] ?? 0);
+    $partnerThreshold = (int)($partner['bookings_threshold'] ?? 0);
+    $pctToUse   = $partnerPct > 0 ? $partnerPct : (float)($itemPct ?? 0);
     $commission = round((float)$b['total'] * ($pctToUse / 100), 2);
 
     // Atualiza booking
@@ -145,11 +144,15 @@ function creditCommissionOnPaid(int $bookingId): void {
     $newCount = (int)$partner['bookings_count_paid'] + 1;
     $newPending = (float)$partner['commission_pending'] + $commission;
 
-    // Gratuidade: meta do item tem prioridade sobre a do parceiro
-    $threshold = max(1, $itemThreshold ?? (int)$partner['bookings_threshold']);
-    $priorBlocks = intdiv((int)$partner['bookings_count_paid'], $threshold);
-    $newBlocks   = intdiv($newCount, $threshold);
-    $newFree     = (int)$partner['free_spots_earned'] + max(0, $newBlocks - $priorBlocks);
+    // Gratuidade: parceiro sobrepoe item se tiver meta definida (>0). Se nenhum dos dois, gratuidade desabilitada.
+    $thresholdUse = $partnerThreshold > 0 ? $partnerThreshold : (int)($itemThreshold ?? 0);
+    if ($thresholdUse > 0) {
+        $priorBlocks = intdiv((int)$partner['bookings_count_paid'], $thresholdUse);
+        $newBlocks   = intdiv($newCount, $thresholdUse);
+        $newFree     = (int)$partner['free_spots_earned'] + max(0, $newBlocks - $priorBlocks);
+    } else {
+        $newFree = (int)$partner['free_spots_earned'];
+    }
 
     dbExec('UPDATE institutions SET commission_pending=?, bookings_count_paid=?, free_spots_earned=? WHERE id=?',
         [$newPending, $newCount, $newFree, $partner['id']]);

@@ -118,11 +118,11 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <div class="p-5">
                     <?php if ($r['location']): ?>
                     <div class="flex items-center gap-1.5 text-xs font-semibold mb-2" style="color:var(--horizonte)">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($r['location']) ?>
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e(tAuto($r['location'])) ?>
                     </div>
                     <?php endif; ?>
-                    <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e($r['title']) ?></h3>
-                    <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary)"><?= e($r['short_desc'] ?? '') ?></p>
+                    <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e(tAuto($r['title'])) ?></h3>
+                    <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary)"><?= e(tAuto($r['short_desc'] ?? '')) ?></p>
                     <div class="flex items-end justify-between pt-3 border-t" style="border-color:var(--border-default)">
                         <div>
                             <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">A partir de</div>

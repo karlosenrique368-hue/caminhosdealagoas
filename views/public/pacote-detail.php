@@ -56,10 +56,10 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <span class="inline-block text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full" style="background:var(--terracota);color:white">Destaque</span>
                 <?php endif; ?>
             </div>
-            <h1 class="font-display text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e($p['title']) ?></h1>
+            <h1 class="font-display text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($p['title'])) ?></h1>
             <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/90">
                 <?php if ($p['destination']): ?>
-                    <div class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e($p['destination']) ?></div>
+                    <div class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e(tAuto($p['destination'])) ?></div>
                 <?php endif; ?>
                 <div class="flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4"></i><?= (int)$p['duration_days'] ?> dias de viagem</div>
                 <?php if (!empty($p['min_people'])): ?>
@@ -115,7 +115,7 @@ if (typeof galleryLightbox === 'undefined') {
                 <!-- Sobre -->
                 <div class="admin-card p-6 sm:p-8">
                     <h2 class="font-display text-2xl font-bold mb-4" style="color:var(--sepia)"><?= t('detail.about') ?></h2>
-                    <div class="text-[15px] leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e($p['description'] ?? $p['short_desc'] ?? '')) ?></div>
+                    <div class="text-[15px] leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e(tAuto($p['description'] ?? $p['short_desc'] ?? ''))) ?></div>
                 </div>
 
                 <?php
@@ -438,8 +438,8 @@ include VIEWS_DIR . '/partials/public_head.php';
         <div class="max-w-7xl mx-auto px-6 w-full text-white">
             <a href="<?= url('/pacotes') ?>" class="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white mb-4"><i data-lucide="arrow-left" class="w-4 h-4"></i>Todos os pacotes</a>
             <span class="inline-block text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full mb-3 bg-white" style="color:var(--terracota)"><?= $p['duration_days'] ?> dias / <?= $p['duration_nights'] ?> noites</span>
-            <h1 class="font-display text-4xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e($p['title']) ?></h1>
-            <div class="flex items-center gap-2 text-sm text-white/85"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e($p['destination']) ?></div>
+            <h1 class="font-display text-4xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($p['title'])) ?></h1>
+            <div class="flex items-center gap-2 text-sm text-white/85"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e(tAuto($p['destination'])) ?></div>
         </div>
     </div>
 </section>
@@ -488,7 +488,7 @@ if (typeof galleryLightbox === 'undefined') {
             <div class="lg:col-span-2 space-y-8">
                 <div class="admin-card p-8">
                     <h2 class="font-display text-2xl font-bold mb-5" style="color:var(--sepia)">Sobre o pacote</h2>
-                    <div class="text-[15px] leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e($p['description'] ?? $p['short_desc'] ?? '')) ?></div>
+                    <div class="text-[15px] leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e(tAuto($p['description'] ?? $p['short_desc'] ?? ''))) ?></div>
                 </div>
             </div>
             <aside class="lg:sticky lg:top-28 lg:self-start">

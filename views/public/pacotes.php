@@ -118,11 +118,11 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <div class="p-5">
                     <?php if (!empty($p['destination'])): ?>
                     <div class="flex items-center gap-1.5 text-xs font-semibold mb-2" style="color:var(--horizonte)">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e($p['destination']) ?>
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i><?= e(tAuto($p['destination'])) ?>
                     </div>
                     <?php endif; ?>
-                    <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e($p['title']) ?></h3>
-                    <p class="text-sm line-clamp-2 mb-3" style="color:var(--text-secondary)"><?= e($p['short_desc'] ?? '') ?></p>
+                    <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e(tAuto($p['title'])) ?></h3>
+                    <p class="text-sm line-clamp-2 mb-3" style="color:var(--text-secondary)"><?= e(tAuto($p['short_desc'] ?? '')) ?></p>
                     <div class="flex items-center gap-3 text-[11px] font-semibold mb-3" style="color:var(--text-muted)">
                         <span class="inline-flex items-center gap-1"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i><?= (int)$p['duration_days'] ?>D / <?= (int)$p['duration_nights'] ?>N</span>
                     </div>

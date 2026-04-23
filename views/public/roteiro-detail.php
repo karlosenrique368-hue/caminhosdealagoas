@@ -54,12 +54,12 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <i data-lucide="arrow-left" class="w-4 h-4"></i> Todos os passeios
             </a>
             <?php if ($r['category_name']): ?>
-                <span class="inline-block text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full mb-3" style="background:var(--terracota);color:white"><?= e($r['category_name']) ?></span>
+                <span class="inline-block text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full mb-3" style="background:var(--terracota);color:white"><?= e(tAuto($r['category_name'])) ?></span>
             <?php endif; ?>
-            <h1 class="font-display text-4xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e($r['title']) ?></h1>
+            <h1 class="font-display text-4xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($r['title'])) ?></h1>
             <div class="flex flex-wrap gap-5 text-sm text-white/85">
                 <?php if ($r['location']): ?>
-                <div class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e($r['location']) ?></div>
+                <div class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e(tAuto($r['location'])) ?></div>
                 <?php endif; ?>
                 <?php if ($r['duration_hours']): ?>
                 <div class="flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i><?= $r['duration_hours'] ?>h de duração</div>
@@ -122,7 +122,7 @@ function galleryLightbox(images) {
                 <div class="admin-card p-8">
                     <h2 class="font-display text-2xl font-bold mb-5" style="color:var(--sepia)">Sobre o passeio</h2>
                     <div class="prose max-w-none text-[15px] leading-relaxed" style="color:var(--text-secondary)">
-                        <?= nl2br(e($r['description'] ?? $r['short_desc'] ?? '')) ?>
+                        <?= nl2br(e(tAuto($r['description'] ?? $r['short_desc'] ?? ''))) ?>
                     </div>
                 </div>
 

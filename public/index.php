@@ -54,6 +54,10 @@ switch (true) {
         require VIEWS_DIR . '/public/contato.php';
         break;
 
+    case $path === '/depoimentos':
+        require VIEWS_DIR . '/public/depoimentos.php';
+        break;
+
     case $path === '/checkout':
         require VIEWS_DIR . '/public/checkout.php';
         break;

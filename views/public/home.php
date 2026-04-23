@@ -462,7 +462,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <?= e($t['name']) ?>
                             <?php if (!empty($t['author_url'])): ?><a href="<?= e($t['author_url']) ?>" target="_blank" rel="noopener" title="Ver perfil" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a><?php endif; ?>
                         </div>
-                        <div class="text-xs" style="color:var(--text-muted)"><?= e($t['location'] ?? '') ?></div>
+                        <div class="text-xs" style="color:var(--text-muted)"><?= e(tAuto($t['location'] ?? '')) ?></div>
                     </div>
                     <div class="ml-auto flex gap-0.5">
                         <?php for ($s = 0; $s < (int)$t['rating']; $s++): ?>
@@ -471,10 +471,17 @@ include VIEWS_DIR . '/partials/public_head.php';
                     </div>
                 </div>
                 <p class="text-sm leading-relaxed italic" style="color:var(--text-secondary)">
-                    "<?= e(truncate($t['content'], 280)) ?>"
+                    "<?= e(tAuto(truncate($t['content'], 280))) ?>"
                 </p>
             </div>
             <?php endforeach; ?>
+        </div>
+
+        <div class="text-center mt-12" data-reveal>
+            <a href="<?= url('/depoimentos') ?>" class="btn-secondary">
+                <?= e(t('home.testimonials.see_all')) ?>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
         </div>
     </div>
 </section>

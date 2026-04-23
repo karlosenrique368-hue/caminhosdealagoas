@@ -149,5 +149,28 @@
 </aside>
 
 <script src="<?= asset('js/app.js') ?>"></script>
+
+<?php $__pending = autotrPending(); if ($__pending): ?>
+<script>
+/* Auto-translate flush: envia ao /api/autotranslate-flush os textos que não couberam no budget deste request.
+   Na próxima navegação, a pagina abre ja traduzida. */
+(function(){
+    var items = <?= json_encode(array_map(fn($h,$d)=>['hash'=>$h,'text'=>$d['text'],'lang'=>$d['lang']], array_keys($__pending), $__pending), JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
+    if (!items.length) return;
+    // Roda depois que a pagina carrega para não concorrer com o resto
+    function flushBatch(batch) {
+        return fetch('<?= url('/api/autotranslate-flush') ?>', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({items: batch}), keepalive: true
+        }).catch(()=>{});
+    }
+    window.addEventListener('load', function(){
+        setTimeout(async function(){
+            for (var i=0; i<items.length; i+=20) await flushBatch(items.slice(i,i+20));
+        }, 800);
+    });
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
