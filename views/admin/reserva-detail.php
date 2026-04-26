@@ -14,8 +14,7 @@ if (isPost() && csrfVerify()) {
             $prev = $b['payment_status'];
             $extra = $ps === 'paid' ? ", paid_at = NOW()" : "";
             dbExec("UPDATE bookings SET payment_status=? $extra WHERE id=?", [$ps, $id]);
-            if ($ps === 'paid' && $prev !== 'paid')                 creditCommissionOnPaid($id);
-            elseif (in_array($ps, ['refunded','cancelled','failed']) && $prev === 'paid') revokeCommissionOnUnpaid($id);
+            handleBookingPaymentStatusChanged($id, $prev, $ps, 'admin_reserva_detail');
             flash('success', 'Pagamento atualizado.');
         }
     } elseif ($action === 'update_notes') {

@@ -75,6 +75,7 @@ body { background: var(--bg-surface); }
                 ['path' => '/admin/instituicoes', 'icon' => 'handshake', 'label' => 'Parceiros'],
                 ['heading' => 'Sistema'],
                 ['path' => '/admin/traducoes', 'icon' => 'languages', 'label' => 'Idiomas & Moedas'],
+                ['path' => '/admin/integracoes', 'icon' => 'plug-zap', 'label' => 'Integrações'],
                 ['path' => '/admin/configuracoes', 'icon' => 'settings', 'label' => 'Configurações'],
             ];
             $cur = currentPath();

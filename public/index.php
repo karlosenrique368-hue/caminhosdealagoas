@@ -266,6 +266,10 @@ switch (true) {
         require VIEWS_DIR . '/admin/traducoes.php';
         break;
 
+    case $path === '/admin/integracoes':
+        require VIEWS_DIR . '/admin/integracoes.php';
+        break;
+
     case $path === '/admin/configuracoes':
         require VIEWS_DIR . '/admin/configuracoes.php';
         break;

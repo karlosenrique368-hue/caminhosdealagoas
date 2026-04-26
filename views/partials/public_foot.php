@@ -87,8 +87,8 @@
         <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/50">
             <p>© <?= date('Y') ?> <?= e(t('foot.copyright')) ?></p>
             <div class="flex gap-6">
-                <a href="#" class="hover:text-white"><?= e(t('foot.privacy')) ?></a>
-                <a href="#" class="hover:text-white"><?= e(t('foot.terms')) ?></a>
+                <a href="<?= e(getSetting('legal_privacy_url', '#') ?: '#') ?>" class="hover:text-white"><?= e(t('foot.privacy')) ?></a>
+                <a href="<?= e(getSetting('legal_terms_url', '#') ?: '#') ?>" class="hover:text-white"><?= e(t('foot.terms')) ?></a>
             </div>
         </div>
     </div>
@@ -527,6 +527,8 @@ function reviewSection(opts){
     else start();
 })();
 </script>
+
+<?= renderAnalyticsConversion() ?>
 
 </body>
 </html>

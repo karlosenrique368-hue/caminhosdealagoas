@@ -221,9 +221,14 @@ if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
     unset($_SESSION['cart'][$cartKey]);
 }
 
+$payment = prepareBookingPayment($bookingId);
+sendBookingEmail($bookingId, 'booking_created');
+notifyBookingEvent($bookingId, 'booking_created', ['source' => 'checkout']);
+
 jsonResponse([
     'ok' => true,
     'msg' => 'Reserva criada com sucesso!',
     'booking' => ['id' => $bookingId, 'code' => $code, 'total' => $total],
+    'payment' => $payment,
     'redirect' => url('/?booking=' . urlencode($code)),
 ]);

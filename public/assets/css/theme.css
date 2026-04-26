@@ -425,6 +425,14 @@ body {
     box-shadow: 0 0 0 3px rgba(58,107,138,0.12);
 }
 
+.admin-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--sepia);
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .admin-btn {
     display: inline-flex;
     align-items: center;

@@ -4,8 +4,6 @@ $pageDesc = $pageDesc ?? 'Descubra as belezas de Alagoas com passeios e pacotes 
 $pageImage = $pageImage ?? asset('brand/logo-azul.png');
 $pageSchema = $pageSchema ?? null; // optional JSON-LD injected by child page
 $currentUrl = 'http' . (!empty($_SERVER['HTTPS'])?'s':'') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/');
-$gaId = getSetting('ga_id', '');
-$fbPixelId = getSetting('fb_pixel_id', '');
 $currentLang = currentLang();
 $currentCurrency = currentCurrency();
 ?><!DOCTYPE html>
@@ -68,29 +66,7 @@ $currentCurrency = currentCurrency();
 <script type="application/ld+json"><?= $pageSchema ?></script>
 <?php endif; ?>
 
-<?php if ($gaId): ?>
-<!-- Google Analytics (GA4) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($gaId) ?>"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', '<?= e($gaId) ?>');
-</script>
-<?php endif; ?>
-
-<?php if ($fbPixelId): ?>
-<!-- Meta Pixel -->
-<script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '<?= e($fbPixelId) ?>');
-fbq('track', 'PageView');
-</script>
-<?php endif; ?>
+<?= renderAnalyticsHead() ?>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
