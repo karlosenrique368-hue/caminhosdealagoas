@@ -224,6 +224,11 @@ switch (true) {
         require VIEWS_DIR . '/admin/reservas.php';
         break;
 
+    case preg_match('#^/admin/reservas/(\d+)$#', $path, $m):
+        $_GET['id'] = $m[1];
+        require VIEWS_DIR . '/admin/reserva-detail.php';
+        break;
+
     case $path === '/admin/departures':
     case $path === '/admin/datas':
         require VIEWS_DIR . '/admin/departures.php';

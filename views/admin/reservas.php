@@ -66,7 +66,7 @@ $msg = flash('success');
     <?php else: ?>
     <div class="overflow-x-auto">
         <table class="admin-table">
-            <thead><tr><th>Código</th><th>Cliente</th><th>Passeio/Pacote</th><th>Data</th><th>Pessoas</th><th>Total</th><th>Pagamento</th></tr></thead>
+            <thead><tr><th>Código</th><th>Cliente</th><th>Passeio/Pacote</th><th>Data</th><th>Pessoas</th><th>Total</th><th>Pagamento</th><th></th></tr></thead>
             <tbody>
                 <?php foreach ($bookings as $b): ?>
                 <tr>
@@ -74,7 +74,7 @@ $msg = flash('success');
                     <td data-label="Cliente"><div class="font-semibold text-sm"><?= e($b['customer_name']) ?></div><div class="text-xs" style="color:var(--text-muted)"><?= e($b['customer_email']) ?></div></td>
                     <td data-label="Passeio"><div class="text-sm"><?= e($b['entity_title']) ?></div><div class="text-[10px] uppercase tracking-wider" style="color:var(--text-muted)"><?= e($b['entity_type']) ?></div></td>
                     <td data-label="Data"><span class="text-sm"><?= $b['travel_date'] ? date('d/m/Y', strtotime($b['travel_date'])) : '—' ?></span></td>
-                    <td data-label="Pessoas"><span class="text-sm"><?= (int)($b['adults'] + $b['children']) ?></span></td>
+                    <td data-label="Pessoas"><span class="text-sm"><?= (int)($b['adults'] + $b['children'] + ($b['infants'] ?? 0)) ?></span></td>
                     <td data-label="Total" class="font-semibold"><?= formatBRL($b['total']) ?></td>
                     <td data-label="Pagamento">
                         <form method="post" class="inline">
@@ -86,6 +86,7 @@ $msg = flash('success');
                             </select>
                         </form>
                     </td>
+                    <td data-label="Ações"><a href="<?= url('/admin/reservas/' . $b['id']) ?>" class="admin-btn admin-btn-secondary admin-btn-sm" title="Ver detalhes"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

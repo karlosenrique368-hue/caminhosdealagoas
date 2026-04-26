@@ -352,7 +352,7 @@ function galleryLightbox(images) {
                     <a href="#calendario" @click.prevent="document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary w-full">
                         <i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar agora
                     </a>
-                    <button type="button" onclick="window.cart.add('roteiro', <?= (int)$r['id'] ?>)" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition hover:scale-[1.02]" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)">
+                    <button type="button" onclick="window.cart.askDate('roteiro', <?= (int)$r['id'] ?>, '<?= e(addslashes($r['title'])) ?>')" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition hover:scale-[1.02]" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)">
                         <i data-lucide="shopping-bag" class="w-4 h-4"></i> Adicionar ao carrinho
                     </button>
                     <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Tenho%20interesse%20no%20passeio%20<?= urlencode($r['title']) ?>" target="_blank" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm" style="color:var(--maresia-dark);border-color:var(--maresia)">

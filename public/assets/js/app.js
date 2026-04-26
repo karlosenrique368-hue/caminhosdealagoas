@@ -336,6 +336,7 @@ window.cart = (function () {
                     <div style="min-width:0">
                         <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--terracota);font-weight:700">${it.type}</div>
                         <div style="font-weight:600;color:var(--sepia);font-size:14px;line-height:1.3;margin:2px 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.title}</div>
+                        ${it.travel_date ? `<div style="font-size:11px;color:var(--horizonte);font-weight:600;margin-bottom:4px"><i data-lucide="calendar" style="width:11px;height:11px;display:inline;vertical-align:-1px"></i> ${new Date(it.travel_date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})}</div>` : ''}
                         <div style="display:flex;align-items:center;gap:8px">
                             <div style="display:inline-flex;align-items:center;border:1px solid var(--border-default);border-radius:8px;overflow:hidden">
                                 <button onclick="window.cart.update('${it.key}', ${it.qty - 1})" style="width:26px;height:26px;font-size:14px;color:var(--text-secondary)">−</button>
@@ -383,14 +384,18 @@ window.cart = (function () {
         document.getElementById('cart-backdrop')?.classList.remove('open');
         document.body.style.overflow = '';
     }
-    async function add(type, id) {
-        const r = await apiCall('add', { type, id });
+    async function add(type, id, travelDate) {
+        const r = await apiCall('add', { type, id, travel_date: travelDate || '' });
         if (r.ok) {
             window.showToast && window.showToast('Adicionado ao carrinho!', 'success');
             open();
         } else {
             window.showToast && window.showToast(r.msg || 'Erro ao adicionar.', 'error');
         }
+    }
+    function askDate(type, id, title) {
+        const ev = new CustomEvent('cart:ask-date', { detail: { type, id, title: title || '' } });
+        window.dispatchEvent(ev);
     }
     async function remove(key) { await apiCall('remove', { key }); }
     async function update(key, qty) {
@@ -403,7 +408,7 @@ window.cart = (function () {
     document.addEventListener('DOMContentLoaded', refresh);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
-    return { open, close, add, remove, update, clear, refresh, get state() { return state; } };
+    return { open, close, add, askDate, remove, update, clear, refresh, get state() { return state; } };
 })();
 
 

@@ -172,5 +172,41 @@
 })();
 </script>
 <?php endif; ?>
+
+<!-- Modal: escolher data antes de adicionar ao carrinho -->
+<div x-data="cartDateModal()" x-init="init()" @cart:ask-date.window="open($event.detail)" x-cloak>
+    <div x-show="visible" x-transition.opacity class="fixed inset-0 z-[100]" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(4px)" @click="close"></div>
+    <div x-show="visible" x-transition class="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+        <div class="admin-card max-w-md w-full p-6 pointer-events-auto" @click.stop style="box-shadow:0 24px 60px rgba(0,0,0,0.25)">
+            <div class="flex items-start gap-3 mb-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background:rgba(201,107,74,0.1);color:var(--terracota)"><i data-lucide="calendar-days" class="w-6 h-6"></i></div>
+                <div class="flex-1">
+                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Escolha a data</h3>
+                    <p class="text-xs" style="color:var(--text-muted)" x-text="title || 'Para qual dia você quer reservar?'"></p>
+                </div>
+                <button @click="close" class="text-2xl leading-none" style="color:var(--text-muted)">&times;</button>
+            </div>
+            <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Data preferida *</label>
+            <input type="date" x-model="travelDate" :min="today" class="admin-input w-full">
+            <p class="text-[11px] mt-2" style="color:var(--text-muted)"><i data-lucide="info" class="w-3 h-3 inline -mt-0.5"></i> Você pode alterar no checkout. Itens com datas diferentes ficam separados no carrinho.</p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" @click="close" class="admin-btn admin-btn-secondary">Cancelar</button>
+                <button type="button" @click="confirm()" class="btn-primary" :disabled="!travelDate" :class="!travelDate && 'opacity-60 cursor-not-allowed'"><i data-lucide="check" class="w-4 h-4"></i>Adicionar ao carrinho</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function cartDateModal(){
+    return {
+        visible:false, type:null, id:null, title:'', travelDate:'',
+        today: new Date().toISOString().split('T')[0],
+        init(){},
+        open(d){ this.type=d.type; this.id=d.id; this.title=d.title; this.travelDate=''; this.visible=true; document.body.style.overflow='hidden'; this.$nextTick(()=>window.lucide && window.lucide.createIcons()); },
+        close(){ this.visible=false; document.body.style.overflow=''; },
+        async confirm(){ if(!this.travelDate) return; await window.cart.add(this.type, this.id, this.travelDate); this.close(); }
+    }
+}
+</script>
 </body>
 </html>

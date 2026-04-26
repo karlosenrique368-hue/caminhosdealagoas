@@ -215,7 +215,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     </div>
                 </a>
                 <div class="px-5 pb-5">
-                    <button type="button" onclick="window.cart.add('roteiro', <?= (int)$r['id'] ?>)"
+                    <button type="button" onclick="window.cart.askDate('roteiro', <?= (int)$r['id'] ?>, '<?= e(addslashes($r['title'])) ?>')"
                             class="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition hover:scale-[1.02]"
                             style="background:rgba(58,107,138,0.08);color:var(--horizonte);border:1px solid rgba(58,107,138,0.15)">
                         <i data-lucide="shopping-bag" class="w-4 h-4"></i> Adicionar ao carrinho

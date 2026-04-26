@@ -1,23 +1,59 @@
 <?php
-$pageTitle = 'Reserva segura';
-$solidNav = true;
+$pageTitle = 'Reserva segura · Caminhos de Alagoas';
+$solidNav  = true;
 
 $roteiroId = (int)($_GET['roteiro'] ?? 0);
 $pacoteId  = (int)($_GET['pacote'] ?? 0);
-$item = null;
-$type = null;
+$item = null; $type = null;
 
+// Fallback: pega o primeiro item do carrinho
 if (!$roteiroId && !$pacoteId && !empty($_SESSION['cart'])) {
     $first = reset($_SESSION['cart']);
     if ($first['type'] === 'roteiro') $roteiroId = (int)$first['id'];
     elseif ($first['type'] === 'pacote') $pacoteId = (int)$first['id'];
 }
-if ($roteiroId) { $item = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published'", [$roteiroId]); $type = 'roteiro'; }
-elseif ($pacoteId) { $item = dbOne("SELECT * FROM pacotes WHERE id=? AND status='published'", [$pacoteId]); $type = 'pacote'; }
-if (!$item) { redirect('/roteiros'); }
+if ($roteiroId)      { $item = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published'", [$roteiroId]); $type = 'roteiro'; }
+elseif ($pacoteId)   { $item = dbOne("SELECT * FROM pacotes  WHERE id=? AND status='published'", [$pacoteId]);   $type = 'pacote';  }
+if (!$item) { redirect('/passeios'); }
 
-$refCode = currentReferralCode();
+$refCode    = currentReferralCode();
 $refPartner = $refCode ? partnerByCode($refCode) : null;
+
+// Pré-seleção (vem do calendário ou do carrinho)
+$preDate     = $_GET['date']     ?? '';
+$preAdults   = max(1, (int)($_GET['adults']   ?? 1));
+$preChildren = max(0, (int)($_GET['children'] ?? 0));
+$preInfants  = max(0, (int)($_GET['infants']  ?? 0));
+
+// Se não veio data via GET, tenta puxar do carrinho
+if (!$preDate && !empty($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $ci) {
+        if (!empty($ci['travel_date'])) { $preDate = $ci['travel_date']; break; }
+    }
+}
+
+// Configurações de moeda + faixas etárias
+$currencyCode   = getSetting('currency_code',   'BRL');
+$currencySymbol = getSetting('currency_symbol', 'R$');
+$currencyLocale = getSetting('currency_locale', 'pt-BR');
+$factorChild    = (float) getSetting('price_factor_child',  '0.5');
+$factorInfant   = (float) getSetting('price_factor_infant', '0');
+
+// Preço cheio + PIX + faixas
+$priceAdult  = (float)$item['price'];
+$pricePix    = (float)($item['price_pix'] ?? $item['price']);
+$priceChild  = isset($item['price_children']) && $item['price_children'] !== null
+                ? (float)$item['price_children'] : round($priceAdult * $factorChild, 2);
+$priceInfant = isset($item['price_infant']) && $item['price_infant'] !== null
+                ? (float)$item['price_infant']   : round($priceAdult * $factorInfant, 2);
+
+$priceChildPix  = $pricePix > 0 && $priceAdult > 0 ? round($priceChild  * ($pricePix / $priceAdult), 2) : $priceChild;
+$priceInfantPix = $pricePix > 0 && $priceAdult > 0 ? round($priceInfant * ($pricePix / $priceAdult), 2) : $priceInfant;
+
+// PIX parcelado: calcular meses entre hoje e (viagem - 7 dias)
+$pixInstallEnabled = getSetting('pix_installments_enabled', '1') === '1';
+$pixInstallMinDays = (int) getSetting('pix_installments_min_days', '7');
+$pixInstallMax     = max(1, (int) getSetting('pix_installments_max', '12'));
 
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
@@ -39,10 +75,19 @@ include VIEWS_DIR . '/partials/public_head.php';
 .wiz-chip:hover{border-color:var(--text-muted)}
 .wiz-card{animation:wizFade .4s ease}
 @keyframes wizFade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.lot-card{position:relative;padding:20px;border-radius:16px;border:2px solid var(--border-default);background:var(--bg-card);cursor:pointer;transition:all .25s}
-.lot-card:hover{border-color:var(--text-muted)}
+.qty-stepper{display:flex;align-items:center;gap:0;border:1.5px solid var(--border-default);border-radius:12px;background:var(--bg-card);overflow:hidden}
+.qty-stepper button{width:42px;height:42px;font-size:18px;font-weight:700;color:var(--terracota);transition:all .15s}
+.qty-stepper button:hover:not(:disabled){background:rgba(201,107,74,.08)}
+.qty-stepper button:disabled{opacity:.3;cursor:not-allowed}
+.qty-stepper input{flex:1;text-align:center;border:0;background:transparent;font-weight:700;font-size:15px;color:var(--sepia);outline:none;min-width:42px}
+.tier-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-radius:12px;border:1.5px solid var(--border-default);background:var(--bg-card)}
+.lot-card{position:relative;padding:18px;border-radius:14px;border:2px solid var(--border-default);background:var(--bg-card);cursor:pointer;transition:all .25s}
 .lot-card.active{border-color:var(--terracota);background:linear-gradient(135deg,#fff,rgba(201,107,74,.04));box-shadow:0 10px 30px rgba(201,107,74,.15)}
-.lot-ribbon{position:absolute;top:-10px;right:16px;background:linear-gradient(135deg,var(--maresia),var(--maresia-dark));color:#fff;padding:4px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.lot-ribbon{position:absolute;top:-10px;right:14px;background:linear-gradient(135deg,var(--maresia),var(--maresia-dark));color:#fff;padding:4px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.installment-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:14px}
+.installment-pill{padding:10px 12px;border-radius:10px;border:2px solid var(--border-default);background:var(--bg-card);cursor:pointer;text-align:center;transition:all .2s;font-size:12px;color:var(--text-secondary);font-weight:600}
+.installment-pill.active{border-color:var(--terracota);background:rgba(201,107,74,.08);color:var(--terracota)}
+.installment-pill .ip-num{font-family:var(--font-display);font-size:16px;font-weight:800;display:block;color:inherit}
 .summary-drawer{transition:all .3s}
 @media (max-width:1023px){.summary-drawer{position:fixed;bottom:0;left:0;right:0;z-index:30;border-radius:20px 20px 0 0;max-height:80vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,.15)}}
 </style>
@@ -50,18 +95,15 @@ include VIEWS_DIR . '/partials/public_head.php';
 <section class="pt-28 pb-16" style="background:linear-gradient(180deg,var(--bg-surface) 0%,var(--bg-page) 100%);min-height:100vh">
 <div class="max-w-6xl mx-auto px-4 sm:px-6" x-data="checkoutWizard()" x-init="init()">
 
-    <!-- Back -->
     <a href="<?= url($type==='roteiro' ? '/passeios' : '/pacotes') ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao catálogo
     </a>
 
-    <!-- Header -->
     <div class="mb-8">
         <h1 class="font-display text-3xl sm:text-4xl font-bold" style="color:var(--sepia)">Vamos garantir sua vaga</h1>
         <p class="text-sm sm:text-base mt-1" style="color:var(--text-secondary)">Em <b>4 passos</b> você finaliza sua reserva. Seus dados ficam seguros.</p>
     </div>
 
-    <!-- Stepper -->
     <div class="flex items-center gap-2 sm:gap-3 mb-8">
         <template x-for="(s, idx) in steps" :key="idx">
             <div class="flex items-center flex-1 last:flex-initial gap-2 sm:gap-3">
@@ -79,23 +121,21 @@ include VIEWS_DIR . '/partials/public_head.php';
     </div>
 
     <div class="grid lg:grid-cols-[1fr_380px] gap-6">
-
-        <!-- ========== CARD ========== -->
         <div class="admin-card p-6 sm:p-8">
 
-            <!-- STEP 0: Dados pessoais -->
-            <div class="wiz-card" x-show="step === 0" x-cloak :key="'s0'+step">
+            <!-- STEP 0: Seus dados -->
+            <div class="wiz-card" x-show="step === 0" x-cloak>
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background:rgba(201,107,74,.1);color:var(--terracota)"><i data-lucide="user-circle-2" class="w-6 h-6"></i></div>
                     <div><div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--text-muted)">Passo 1 de 4</div><h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Seus dados</h2></div>
                 </div>
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2"><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Nome completo *</label><input x-model="form.name" class="admin-input w-full" placeholder="Como está no documento"></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">CPF *</label><input x-model="form.document" class="admin-input w-full cpf-mask" placeholder="000.000.000-00"></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">RG *</label><input x-model="form.rg" class="admin-input w-full" placeholder="00.000.000-0"></div>
+                    <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">CPF *</label><input x-model="form.document" @input="form.document = maskCPF($event.target.value)" maxlength="14" class="admin-input w-full" placeholder="000.000.000-00"></div>
+                    <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">RG *</label><input x-model="form.rg" @input="form.rg = maskRG($event.target.value)" maxlength="14" class="admin-input w-full" placeholder="00.000.000-0"></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Data de nascimento *</label><input type="date" x-model="form.birth_date" class="admin-input w-full"></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">E-mail *</label><input type="email" x-model="form.email" class="admin-input w-full" placeholder="voce@email.com"></div>
-                    <div class="sm:col-span-2"><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">WhatsApp *</label><input type="tel" x-model="form.phone" class="admin-input w-full phone-mask" placeholder="(00) 00000-0000"></div>
+                    <div class="sm:col-span-2"><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">WhatsApp *</label><input type="tel" x-model="form.phone" @input="form.phone = maskPhone($event.target.value)" maxlength="15" class="admin-input w-full" placeholder="(00) 00000-0000"></div>
                 </div>
                 <div class="mt-4 p-3 rounded-xl flex items-start gap-2" style="background:rgba(122,157,110,.08);border:1px solid rgba(122,157,110,.2)">
                     <i data-lucide="shield-check" class="w-4 h-4 mt-0.5" style="color:var(--maresia-dark)"></i>
@@ -103,27 +143,54 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
             </div>
 
-            <!-- STEP 1: Detalhes da viagem -->
-            <div class="wiz-card" x-show="step === 1" x-cloak :key="'s1'+step">
+            <!-- STEP 1: Sua viagem -->
+            <div class="wiz-card" x-show="step === 1" x-cloak>
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background:rgba(58,107,138,.1);color:var(--horizonte)"><i data-lucide="map-pin" class="w-6 h-6"></i></div>
                     <div><div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--text-muted)">Passo 2 de 4</div><h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Sua viagem</h2></div>
                 </div>
 
-                <div class="grid sm:grid-cols-3 gap-4 mb-6">
-                    <div class="sm:col-span-3"><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Data preferida *</label><input type="date" x-model="form.travel_date" :min="today" class="admin-input w-full"></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Adultos *</label>
-                        <div class="flex items-center gap-2 admin-input">
-                            <button type="button" @click="form.adults = Math.max(1, form.adults-1)" class="px-2 font-bold text-lg" style="color:var(--terracota)">−</button>
-                            <input type="number" min="1" x-model.number="form.adults" class="flex-1 text-center border-0 bg-transparent outline-none font-semibold">
-                            <button type="button" @click="form.adults++" class="px-2 font-bold text-lg" style="color:var(--terracota)">+</button>
+                <div class="mb-5">
+                    <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Data preferida *</label>
+                    <input type="date" x-model="form.travel_date" :min="today" class="admin-input w-full">
+                    <p class="text-[11px] mt-1.5" style="color:var(--text-muted)" x-show="form.travel_date">
+                        <i data-lucide="info" class="w-3 h-3 inline -mt-0.5"></i> <span x-text="datePreviewLabel()"></span>
+                    </p>
+                </div>
+
+                <label class="block text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--text-secondary)">Quantas pessoas? *</label>
+                <div class="space-y-3 mb-6">
+                    <div class="tier-row">
+                        <div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)">Adultos</div>
+                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="formatBRL(adultUnit()) + ' por pessoa'"></div>
+                        </div>
+                        <div class="qty-stepper">
+                            <button type="button" @click="form.adults = Math.max(1, form.adults-1)" :disabled="form.adults <= 1">−</button>
+                            <input type="number" min="1" max="20" x-model.number="form.adults">
+                            <button type="button" @click="form.adults = Math.min(20, form.adults+1)" :disabled="form.adults >= 20">+</button>
                         </div>
                     </div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Crianças</label>
-                        <div class="flex items-center gap-2 admin-input">
-                            <button type="button" @click="form.children = Math.max(0, form.children-1)" class="px-2 font-bold text-lg" style="color:var(--terracota)">−</button>
-                            <input type="number" min="0" x-model.number="form.children" class="flex-1 text-center border-0 bg-transparent outline-none font-semibold">
-                            <button type="button" @click="form.children++" class="px-2 font-bold text-lg" style="color:var(--terracota)">+</button>
+                    <div class="tier-row">
+                        <div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)">Crianças <span class="font-normal" style="color:var(--text-muted)">(6 a 12 anos)</span></div>
+                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="priceChild > 0 ? formatBRL(childUnit()) + ' por criança' : 'Cortesia'"></div>
+                        </div>
+                        <div class="qty-stepper">
+                            <button type="button" @click="form.children = Math.max(0, form.children-1)" :disabled="form.children <= 0">−</button>
+                            <input type="number" min="0" max="20" x-model.number="form.children">
+                            <button type="button" @click="form.children = Math.min(20, form.children+1)" :disabled="form.children >= 20">+</button>
+                        </div>
+                    </div>
+                    <div class="tier-row">
+                        <div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)">Bebês <span class="font-normal" style="color:var(--text-muted)">(0 a 5 anos)</span></div>
+                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="priceInfant > 0 ? formatBRL(infantUnit()) + ' por bebê' : 'Cortesia'"></div>
+                        </div>
+                        <div class="qty-stepper">
+                            <button type="button" @click="form.infants = Math.max(0, form.infants-1)" :disabled="form.infants <= 0">−</button>
+                            <input type="number" min="0" max="10" x-model.number="form.infants">
+                            <button type="button" @click="form.infants = Math.min(10, form.infants+1)" :disabled="form.infants >= 10">+</button>
                         </div>
                     </div>
                 </div>
@@ -149,9 +216,9 @@ include VIEWS_DIR . '/partials/public_head.php';
                             </button>
                         </template>
                     </div>
-                    <div x-show="form.source==='indicacao'" x-transition class="mt-3" x-cloak>
-                        <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Quem indicou? *</label>
-                        <input x-model="form.source_detail" class="admin-input w-full" placeholder="Nome de quem indicou">
+                    <div x-show="form.source" x-transition class="mt-3" x-cloak>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)" x-text="sourceDetailLabel()"></label>
+                        <input x-model="form.source_detail" class="admin-input w-full" :placeholder="sourceDetailPlaceholder()">
                         <?php if ($refPartner): ?>
                             <p class="text-xs mt-1 flex items-center gap-1" style="color:var(--maresia-dark)"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Indicação registrada automaticamente via <b><?= e($refPartner['name']) ?></b>.</p>
                         <?php endif; ?>
@@ -159,8 +226,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
             </div>
 
-            <!-- STEP 2: Forma de pagamento -->
-            <div class="wiz-card" x-show="step === 2" x-cloak :key="'s2'+step">
+            <!-- STEP 2: Pagamento -->
+            <div class="wiz-card" x-show="step === 2" x-cloak>
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background:rgba(122,157,110,.1);color:var(--maresia-dark)"><i data-lucide="wallet" class="w-6 h-6"></i></div>
                     <div><div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--text-muted)">Passo 3 de 4</div><h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Como prefere pagar?</h2></div>
@@ -168,51 +235,76 @@ include VIEWS_DIR . '/partials/public_head.php';
 
                 <div class="grid sm:grid-cols-2 gap-3 mb-4">
                     <template x-for="pm in paymentMethods" :key="pm.id">
-                        <label class="wiz-radio" :class="form.payment_method===pm.id?'active':''">
+                        <label class="wiz-radio" :class="form.payment_method===pm.id?'active':''" x-show="!pm.requiresInstallment || canInstallment()">
                             <input type="radio" x-model="form.payment_method" :value="pm.id" class="sr-only">
                             <div class="wiz-radio-inner">
                                 <div class="wiz-radio-icon"><i :data-lucide="pm.icon" class="w-5 h-5"></i></div>
-                                <div class="flex-1">
-                                    <div class="font-semibold text-sm" style="color:var(--sepia)" x-text="pm.label"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-semibold text-sm flex items-center gap-2" style="color:var(--sepia)"><span x-text="pm.label"></span><span x-show="pm.badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:var(--maresia);color:#fff" x-text="pm.badge"></span></div>
                                     <div class="text-[11px]" style="color:var(--text-muted)" x-text="pm.hint"></div>
                                 </div>
-                                <div x-show="pm.badge" class="text-[10px] font-bold px-2 py-1 rounded-full" style="background:var(--maresia);color:#fff" x-text="pm.badge"></div>
                             </div>
                         </label>
                     </template>
                 </div>
 
-                <!-- Lotes promocionais (quando PIX disponível) -->
+                <!-- PIX à vista: lotes -->
                 <div x-show="form.payment_method==='pix'" x-transition>
                     <div class="text-[10px] uppercase tracking-widest font-bold mt-5 mb-3" style="color:var(--terracota)">Selecione o lote</div>
                     <div class="grid gap-3">
-                        <label class="lot-card" :class="form.price_option==='promo'?'active':''" x-show="pricePix > 0 && pricePix < price">
+                        <label class="lot-card" :class="form.price_option==='promo'?'active':''" x-show="pricePix > 0 && pricePix < priceAdult">
                             <span class="lot-ribbon">Econômico · PIX</span>
                             <input type="radio" x-model="form.price_option" value="promo" class="sr-only">
                             <div class="flex items-center justify-between gap-3">
-                                <div>
-                                    <div class="font-semibold" style="color:var(--sepia)">Lote promocional</div>
-                                    <div class="text-xs mt-1" style="color:var(--text-muted)">Pagamento via PIX instantâneo.</div>
-                                </div>
-                                <div class="text-right"><div class="font-display text-2xl font-bold" style="color:var(--terracota)" x-text="'R$ ' + pricePix.toFixed(2).replace('.',',')"></div><div class="text-[10px]" style="color:var(--text-muted)">por adulto</div></div>
+                                <div><div class="font-semibold" style="color:var(--sepia)">Lote promocional</div><div class="text-xs mt-1" style="color:var(--text-muted)">Pagamento PIX instantâneo, hoje.</div></div>
+                                <div class="text-right"><div class="font-display text-2xl font-bold" style="color:var(--terracota)" x-text="formatBRL(pricePix)"></div><div class="text-[10px]" style="color:var(--text-muted)">por adulto</div></div>
                             </div>
                         </label>
                         <label class="lot-card" :class="form.price_option==='regular'?'active':''">
                             <input type="radio" x-model="form.price_option" value="regular" class="sr-only">
                             <div class="flex items-center justify-between gap-3">
-                                <div>
-                                    <div class="font-semibold" style="color:var(--sepia)">Lote regular</div>
-                                    <div class="text-xs mt-1" style="color:var(--text-muted)">Preço padrão sem desconto.</div>
-                                </div>
-                                <div class="text-right"><div class="font-display text-2xl font-bold" style="color:var(--sepia)" x-text="'R$ ' + price.toFixed(2).replace('.',',')"></div><div class="text-[10px]" style="color:var(--text-muted)">por adulto</div></div>
+                                <div><div class="font-semibold" style="color:var(--sepia)">Lote regular</div><div class="text-xs mt-1" style="color:var(--text-muted)">Preço cheio sem desconto.</div></div>
+                                <div class="text-right"><div class="font-display text-2xl font-bold" style="color:var(--sepia)" x-text="formatBRL(priceAdult)"></div><div class="text-[10px]" style="color:var(--text-muted)">por adulto</div></div>
                             </div>
                         </label>
+                    </div>
+                </div>
+
+                <!-- PIX parcelado -->
+                <div x-show="form.payment_method==='pix_installments'" x-transition>
+                    <div class="mt-5 p-4 rounded-xl" style="background:rgba(58,107,138,.06);border:1px solid rgba(58,107,138,.18)">
+                        <div class="flex items-start gap-3 mb-3">
+                            <i data-lucide="calendar-clock" class="w-5 h-5 mt-0.5" style="color:var(--horizonte)"></i>
+                            <div>
+                                <div class="font-semibold text-sm" style="color:var(--horizonte)">PIX parcelado mensal</div>
+                                <div class="text-[12px]" style="color:var(--text-secondary)">Quitação total <b>até <?= (int)$pixInstallMinDays ?> dias antes</b> da viagem. Parcelamos conforme a margem disponível.</div>
+                            </div>
+                        </div>
+                        <div x-show="canInstallment()">
+                            <div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--terracota)" x-text="'Quantas parcelas? (até ' + maxInstallments() + 'x disponíveis)'"></div>
+                            <div class="installment-grid">
+                                <template x-for="n in installmentOptions()" :key="n">
+                                    <button type="button" @click="form.installments=n" class="installment-pill" :class="form.installments===n?'active':''">
+                                        <span class="ip-num" x-text="n + 'x'"></span>
+                                        <span x-text="formatBRL(installmentValue(n))"></span>
+                                    </button>
+                                </template>
+                            </div>
+                            <div class="mt-3 text-[11px] flex items-center gap-1.5" style="color:var(--text-muted)">
+                                <i data-lucide="info" class="w-3 h-3"></i>
+                                <span>Sem juros · primeira parcela hoje · próximas no mesmo dia de cada mês até <span x-text="installmentDeadlineLabel()"></span>.</span>
+                            </div>
+                        </div>
+                        <div x-show="!canInstallment()" class="text-xs p-3 rounded-lg" style="background:#FEF3C7;color:#92400E">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 inline -mt-0.5"></i>
+                            Sua viagem está muito próxima. Para parcelar precisamos de pelo menos 1 mês de margem antes do limite de quitação. Escolha PIX à vista ou cartão.
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- STEP 3: Revisão -->
-            <div class="wiz-card" x-show="step === 3" x-cloak :key="'s3'+step">
+            <div class="wiz-card" x-show="step === 3" x-cloak>
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background:rgba(201,107,74,.1);color:var(--terracota)"><i data-lucide="clipboard-check" class="w-6 h-6"></i></div>
                     <div><div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--text-muted)">Passo 4 de 4</div><h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Revisar e confirmar</h2></div>
@@ -220,15 +312,30 @@ include VIEWS_DIR . '/partials/public_head.php';
 
                 <div class="space-y-3 mb-5">
                     <div class="p-4 rounded-xl flex justify-between items-start gap-3" style="background:var(--bg-surface)">
-                        <div><div class="text-[10px] uppercase tracking-wider font-bold mb-1" style="color:var(--text-muted)">Titular</div><div class="font-semibold text-sm" style="color:var(--sepia)" x-text="form.name"></div><div class="text-xs" style="color:var(--text-secondary)" x-text="form.email + ' · ' + form.phone"></div></div>
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider font-bold mb-1" style="color:var(--text-muted)">Titular</div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)" x-text="form.name || '—'"></div>
+                            <div class="text-xs" style="color:var(--text-secondary)" x-text="(form.email || '—') + ' · ' + (form.phone || '—')"></div>
+                            <div class="text-[11px] mt-1" style="color:var(--text-muted)" x-text="'CPF ' + (form.document || '—') + ' · RG ' + (form.rg || '—')"></div>
+                        </div>
                         <button type="button" @click="step=0" class="text-xs font-semibold" style="color:var(--horizonte)">Editar</button>
                     </div>
                     <div class="p-4 rounded-xl flex justify-between items-start gap-3" style="background:var(--bg-surface)">
-                        <div><div class="text-[10px] uppercase tracking-wider font-bold mb-1" style="color:var(--text-muted)">Viagem</div><div class="font-semibold text-sm" style="color:var(--sepia)" x-text="formatDate(form.travel_date) + ' · ' + form.adults + ' adulto(s)' + (form.children>0 ? ' + ' + form.children + ' criança(s)' : '')"></div></div>
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider font-bold mb-1" style="color:var(--text-muted)">Viagem</div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)" x-text="formatDate(form.travel_date)"></div>
+                            <div class="text-xs" style="color:var(--text-secondary)" x-text="peopleSummary()"></div>
+                            <div class="text-[11px] mt-1" style="color:var(--text-muted)" x-show="form.has_comorbidity==='sim'" x-text="'Comorbidade: ' + form.comorbidity"></div>
+                            <div class="text-[11px] mt-1" style="color:var(--text-muted)" x-show="form.source" x-text="'Conheceu via: ' + sourceLabelById(form.source) + (form.source_detail ? ' — ' + form.source_detail : '')"></div>
+                        </div>
                         <button type="button" @click="step=1" class="text-xs font-semibold" style="color:var(--horizonte)">Editar</button>
                     </div>
                     <div class="p-4 rounded-xl flex justify-between items-start gap-3" style="background:var(--bg-surface)">
-                        <div><div class="text-[10px] uppercase tracking-wider font-bold mb-1" style="color:var(--text-muted)">Pagamento</div><div class="font-semibold text-sm" style="color:var(--sepia)" x-text="labelPayment()"></div></div>
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider font-bold mb-1" style="color:var(--text-muted)">Pagamento</div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)" x-text="labelPayment()"></div>
+                            <div class="text-xs" style="color:var(--text-secondary)" x-show="form.payment_method==='pix_installments' && form.installments" x-text="form.installments + 'x de ' + formatBRL(installmentValue(form.installments))"></div>
+                        </div>
                         <button type="button" @click="step=2" class="text-xs font-semibold" style="color:var(--horizonte)">Editar</button>
                     </div>
                 </div>
@@ -236,7 +343,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <label class="flex items-start gap-3 p-4 rounded-xl cursor-pointer" :style="form.accept_terms ? 'background:rgba(122,157,110,.08);border:1.5px solid rgba(122,157,110,.4)' : 'background:var(--bg-surface);border:1.5px solid var(--border-default)'">
                     <input type="checkbox" x-model="form.accept_terms" class="mt-1 w-5 h-5" style="accent-color:var(--terracota)">
                     <span class="text-sm" style="color:var(--text-secondary)">
-                        Li e concordo com a <a href="<?= url('/politica-desistencia') ?>" target="_blank" class="font-bold underline" style="color:var(--sepia)">política de desistência</a>: em caso de cancelamento pelo passageiro, aplicam-se as condições previstas em contrato. *
+                        Li e concordo com a <a href="<?= url('/politica-desistencia') ?>" target="_blank" class="font-bold underline" style="color:var(--sepia)">política de desistência</a>: em caso de cancelamento, aplicam-se as condições de contrato. *
                     </span>
                 </label>
             </div>
@@ -269,14 +376,22 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <?php if (!empty($item['duration'])): ?><div class="text-xs flex items-center gap-1 mt-1" style="color:var(--text-muted)"><i data-lucide="clock" class="w-3 h-3"></i><?= e($item['duration']) ?></div><?php endif; ?>
                     </div>
                 </div>
+                <div class="text-xs mb-3 p-2 rounded-lg" style="background:var(--bg-surface);color:var(--text-secondary)" x-show="form.travel_date">
+                    <i data-lucide="calendar" class="w-3 h-3 inline -mt-0.5"></i>
+                    <span x-text="'Data: ' + formatDate(form.travel_date)"></span>
+                </div>
                 <div class="py-4 border-t border-b space-y-2" style="border-color:var(--border-default)">
-                    <div class="flex justify-between text-sm"><span style="color:var(--text-secondary)" x-text="'Adultos × ' + form.adults"></span><span style="color:var(--sepia)" x-text="formatBRL(effectivePrice() * form.adults)"></span></div>
-                    <div class="flex justify-between text-sm" x-show="form.children > 0"><span style="color:var(--text-secondary)" x-text="'Crianças × ' + form.children"></span><span style="color:var(--sepia)" x-text="formatBRL(effectivePrice() * 0.5 * form.children)"></span></div>
-                    <div class="flex justify-between text-sm" x-show="form.payment_method==='pix' && form.price_option==='promo'"><span style="color:var(--maresia-dark)"><i data-lucide="zap" class="w-3 h-3 inline"></i> Desconto PIX</span><span class="font-semibold" style="color:var(--maresia-dark)" x-text="'− ' + formatBRL(discount())"></span></div>
+                    <div class="flex justify-between text-sm"><span style="color:var(--text-secondary)" x-text="'Adultos × ' + form.adults"></span><span style="color:var(--sepia)" x-text="formatBRL(adultUnit() * form.adults)"></span></div>
+                    <div class="flex justify-between text-sm" x-show="form.children > 0"><span style="color:var(--text-secondary)" x-text="'Crianças × ' + form.children"></span><span style="color:var(--sepia)" x-text="formatBRL(childUnit() * form.children)"></span></div>
+                    <div class="flex justify-between text-sm" x-show="form.infants > 0"><span style="color:var(--text-secondary)" x-text="'Bebês × ' + form.infants"></span><span style="color:var(--sepia)" x-text="form.infants && infantUnit()===0 ? 'Cortesia' : formatBRL(infantUnit() * form.infants)"></span></div>
+                    <div class="flex justify-between text-sm" x-show="form.payment_method==='pix' && form.price_option==='promo' && pricePix < priceAdult"><span style="color:var(--maresia-dark)"><i data-lucide="zap" class="w-3 h-3 inline"></i> Desconto PIX</span><span class="font-semibold" style="color:var(--maresia-dark)" x-text="'− ' + formatBRL(discount())"></span></div>
                 </div>
                 <div class="flex justify-between items-end pt-4">
                     <span class="text-sm font-semibold" style="color:var(--text-secondary)">Total</span>
                     <span class="font-display text-3xl font-bold" style="color:var(--terracota)" x-text="formatBRL(total())"></span>
+                </div>
+                <div class="text-[11px] mt-1 text-right" style="color:var(--text-muted)" x-show="form.payment_method==='pix_installments' && form.installments && canInstallment()">
+                    <span x-text="form.installments + 'x de ' + formatBRL(installmentValue(form.installments)) + ' sem juros'"></span>
                 </div>
                 <?php if ($refPartner): ?>
                 <div class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style="background:rgba(201,107,74,.06);border:1px solid rgba(201,107,74,.2)">
@@ -300,267 +415,144 @@ function checkoutWizard() {
         loading: false,
         today: new Date().toISOString().split('T')[0],
         steps: ['Seus dados', 'Sua viagem', 'Pagamento', 'Revisão'],
+        priceAdult:  <?= json_encode($priceAdult) ?>,
+        pricePix:    <?= json_encode($pricePix) ?>,
+        priceChild:  <?= json_encode($priceChild) ?>,
+        priceInfant: <?= json_encode($priceInfant) ?>,
+        priceChildPix:  <?= json_encode($priceChildPix) ?>,
+        priceInfantPix: <?= json_encode($priceInfantPix) ?>,
+        currencySymbol: <?= json_encode($currencySymbol) ?>,
+        currencyLocale: <?= json_encode($currencyLocale) ?>,
+        currencyCode:   <?= json_encode($currencyCode) ?>,
+        installMinDays: <?= (int)$pixInstallMinDays ?>,
+        installMax:     <?= (int)$pixInstallMax ?>,
         form: {
-            name:'', document:'', rg:'', birth_date:'',
-            email:'', phone:'',
-            travel_date:'', adults:1, children:0,
+            name:'', document:'', rg:'', birth_date:'', email:'', phone:'',
+            travel_date: <?= json_encode($preDate) ?>,
+            adults:   <?= (int)$preAdults ?>,
+            children: <?= (int)$preChildren ?>,
+            infants:  <?= (int)$preInfants ?>,
             has_comorbidity:'nao', comorbidity:'',
-            source:'', source_detail:<?= json_encode($refPartner['name'] ?? '') ?>,
-            payment_method:'pix', price_option:'promo',
+            source:'', source_detail: <?= json_encode($refPartner['name'] ?? '') ?>,
+            payment_method:'pix', price_option:'promo', installments: 0,
             accept_terms:false,
-            ref_code:<?= json_encode($refCode ?? '') ?>,
-            entity_type:'<?= $type ?>', entity_id:<?= (int)$item['id'] ?>
+            ref_code:    <?= json_encode($refCode ?? '') ?>,
+            entity_type: <?= json_encode($type) ?>,
+            entity_id:   <?= (int)$item['id'] ?>,
+            currency:    <?= json_encode($currencyCode) ?>
         },
         sources: [
-            {id:'instagram', label:'Instagram', icon:'instagram'},
-            {id:'whatsapp', label:'WhatsApp', icon:'message-circle'},
-            {id:'indicacao', label:'Indicação', icon:'user-check'},
-            {id:'google', label:'Google', icon:'search'},
-            {id:'outro', label:'Outro', icon:'more-horizontal'}
+            {id:'instagram', label:'Instagram',  icon:'instagram',         detailLabel:'Qual perfil ou post?',     placeholder:'@perfil ou link do post'},
+            {id:'whatsapp',  label:'WhatsApp',   icon:'message-circle',    detailLabel:'Quem te encaminhou?',      placeholder:'Nome ou número'},
+            {id:'indicacao', label:'Indicação',  icon:'user-check',        detailLabel:'Quem indicou? *',          placeholder:'Nome de quem indicou'},
+            {id:'google',    label:'Google',     icon:'search',            detailLabel:'O que pesquisou?',         placeholder:'Termo da busca'},
+            {id:'outro',     label:'Outro',      icon:'more-horizontal',   detailLabel:'Conta pra gente:',         placeholder:'TikTok, blog, anúncio...'}
         ],
         paymentMethods: [
-            {id:'pix', label:'PIX', hint:'Confirmação em segundos', icon:'qr-code', badge:'Recomendado'},
-            {id:'credit_card', label:'Cartão de crédito', hint:'Parcele em até 12×', icon:'credit-card', badge:''},
-            {id:'boleto', label:'Boleto bancário', hint:'Compensação em 1-3 dias úteis', icon:'file-text', badge:''},
-            {id:'pix_caixinha', label:'Combinar no WhatsApp', hint:'Fale direto com nossa equipe', icon:'message-square-heart', badge:''}
+            {id:'pix',              label:'PIX à vista',          hint:'Confirmação em segundos',                icon:'qr-code',         badge:'Recomendado'},
+            {id:'pix_installments', label:'PIX parcelado',        hint:'Mensal sem juros, até a viagem',         icon:'calendar-clock',  badge:'Sem juros',  requiresInstallment:true},
+            {id:'credit_card',      label:'Cartão de crédito',    hint:'Parcele em até 12×',                     icon:'credit-card',     badge:''},
+            {id:'boleto',           label:'Boleto bancário',      hint:'Compensação em 1-3 dias úteis',          icon:'file-text',       badge:''}
         ],
-        price: <?= (float)$item['price'] ?>,
-        pricePix: <?= (float)($item['price_pix'] ?: $item['price']) ?>,
         init() { if (window.lucide) window.lucide.createIcons(); },
-        effectivePrice() { return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.pricePix : this.price; },
-        subtotal() { const p = this.effectivePrice(); return p * Math.max(1, this.form.adults) + p * 0.5 * Math.max(0, this.form.children); },
-        discount() { if (this.form.payment_method!=='pix' || this.form.price_option!=='promo') return 0; const delta = this.price - this.pricePix; return delta * this.form.adults + delta * 0.5 * this.form.children; },
-        total() { return this.subtotal(); },
-        formatBRL(v) { return 'R$ ' + (v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); },
-        formatDate(s) { if (!s) return '—'; const d = new Date(s+'T12:00:00'); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); },
-        labelPayment() {
+
+        // ===== Máscaras =====
+        maskCPF(v){ v=(v||'').replace(/\D/g,'').slice(0,11); return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); },
+        maskRG(v){ v=(v||'').replace(/[^\dXx]/g,'').toUpperCase().slice(0,9); return v.replace(/(\w{2})(\w)/,'$1.$2').replace(/(\w{2}\.\w{3})(\w)/,'$1.$2').replace(/(\w{2}\.\w{3}\.\w{3})(\w)/,'$1-$2'); },
+        maskPhone(v){ v=(v||'').replace(/\D/g,'').slice(0,11); if(v.length<=10) return v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2'); return v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2'); },
+
+        // ===== Preço =====
+        adultUnit(){  return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.pricePix       : this.priceAdult; },
+        childUnit(){  return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.priceChildPix  : this.priceChild; },
+        infantUnit(){ return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.priceInfantPix : this.priceInfant; },
+        subtotal(){ return this.adultUnit()*Math.max(1,this.form.adults) + this.childUnit()*Math.max(0,this.form.children) + this.infantUnit()*Math.max(0,this.form.infants); },
+        discount(){
+            if (this.form.payment_method!=='pix' || this.form.price_option!=='promo') return 0;
+            const da = (this.priceAdult - this.pricePix) * this.form.adults;
+            const dc = Math.max(0, this.priceChild - this.priceChildPix) * this.form.children;
+            const di = Math.max(0, this.priceInfant - this.priceInfantPix) * this.form.infants;
+            return da + dc + di;
+        },
+        total(){ return this.subtotal(); },
+        formatBRL(v){
+            const n = Number(v||0);
+            try { return new Intl.NumberFormat(this.currencyLocale,{style:'currency',currency:this.currencyCode}).format(n); }
+            catch(e){ return this.currencySymbol + ' ' + n.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+        },
+        formatDate(s){ if(!s) return '—'; const d=new Date(s+'T12:00:00'); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); },
+        datePreviewLabel(){
+            if(!this.form.travel_date) return '';
+            const d = new Date(this.form.travel_date+'T12:00:00');
+            const days = Math.ceil((d - new Date())/86400000);
+            if (days < 0) return 'Data no passado.';
+            if (days === 0) return 'Viagem é hoje!';
+            if (days === 1) return 'Viagem é amanhã.';
+            return 'Faltam ' + days + ' dias para a viagem.';
+        },
+
+        // ===== PIX parcelado =====
+        deadlineDate(){
+            if(!this.form.travel_date) return null;
+            const d = new Date(this.form.travel_date+'T12:00:00');
+            d.setDate(d.getDate() - this.installMinDays);
+            return d;
+        },
+        canInstallment(){
+            const dl = this.deadlineDate(); if(!dl) return false;
+            const months = (dl.getFullYear() - new Date().getFullYear())*12 + (dl.getMonth() - new Date().getMonth());
+            return months >= 1;
+        },
+        maxInstallments(){
+            const dl = this.deadlineDate(); if(!dl) return 1;
+            const today = new Date(); today.setHours(0,0,0,0);
+            let months = (dl.getFullYear() - today.getFullYear())*12 + (dl.getMonth() - today.getMonth());
+            if (dl.getDate() < today.getDate()) months--;
+            return Math.max(1, Math.min(this.installMax, months + 1));
+        },
+        installmentOptions(){ const max=this.maxInstallments(); return Array.from({length:max},(_,i)=>i+1).filter(n=>n>=1); },
+        installmentValue(n){ if(!n) return 0; return this.total() / n; },
+        installmentDeadlineLabel(){ const d=this.deadlineDate(); if(!d) return '—'; return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); },
+
+        // ===== Source =====
+        sourceLabelById(id){ const s=this.sources.find(x=>x.id===id); return s?s.label:'—'; },
+        sourceDetailLabel(){ const s=this.sources.find(x=>x.id===this.form.source); return s ? s.detailLabel : ''; },
+        sourceDetailPlaceholder(){ const s=this.sources.find(x=>x.id===this.form.source); return s ? s.placeholder : ''; },
+
+        // ===== Resumo =====
+        peopleSummary(){
+            const parts = [this.form.adults + ' adulto' + (this.form.adults>1?'s':'')];
+            if (this.form.children > 0) parts.push(this.form.children + ' criança' + (this.form.children>1?'s':''));
+            if (this.form.infants  > 0) parts.push(this.form.infants  + ' bebê'    + (this.form.infants>1?'s':''));
+            return parts.join(' · ');
+        },
+        labelPayment(){
             const m = this.paymentMethods.find(p=>p.id===this.form.payment_method);
             let s = m ? m.label : '—';
             if (this.form.payment_method==='pix') s += ' · ' + (this.form.price_option==='promo' ? 'Lote promocional' : 'Lote regular');
             return s;
         },
-        canProceed() {
-            if (this.step === 0) return this.form.name.trim() && this.form.document.trim() && this.form.rg.trim() && this.form.birth_date && this.form.email.includes('@') && this.form.phone.trim();
-            if (this.step === 1) return this.form.travel_date && this.form.adults >= 1 && this.form.source && (this.form.has_comorbidity!=='sim' || this.form.comorbidity.trim()) && (this.form.source!=='indicacao' || this.form.source_detail.trim());
-            if (this.step === 2) return this.form.payment_method;
+        canProceed(){
+            if (this.step === 0) return this.form.name.trim() && this.form.document.replace(/\D/g,'').length===11 && this.form.rg.trim() && this.form.birth_date && this.form.email.includes('@') && this.form.phone.replace(/\D/g,'').length>=10;
+            if (this.step === 1) {
+                const okSrc = this.form.source && (this.form.source!=='indicacao' || this.form.source_detail.trim());
+                const okCom = this.form.has_comorbidity!=='sim' || this.form.comorbidity.trim();
+                return this.form.travel_date && this.form.adults>=1 && okSrc && okCom;
+            }
+            if (this.step === 2) {
+                if (!this.form.payment_method) return false;
+                if (this.form.payment_method==='pix_installments') return this.canInstallment() && this.form.installments >= 1;
+                return true;
+            }
             return true;
         },
-        next() {
-            if (!this.canProceed()) { showToast('Complete os campos obrigatórios.', 'error'); return; }
-            if (this.step < this.steps.length - 1) { this.step++; window.scrollTo({top:0, behavior:'smooth'}); setTimeout(()=>window.lucide && window.lucide.createIcons(), 50); }
-        },
-        prev() { if (this.step > 0) { this.step--; window.scrollTo({top:0, behavior:'smooth'}); setTimeout(()=>window.lucide && window.lucide.createIcons(), 50); } },
-        async submit() {
-            if (!this.form.accept_terms) { showToast('Aceite a política de desistência.', 'error'); return; }
+        next(){ if(!this.canProceed()){ showToast('Complete os campos obrigatórios.', 'error'); return; } if(this.step<this.steps.length-1){ this.step++; window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>window.lucide && window.lucide.createIcons(), 50); } },
+        prev(){ if(this.step>0){ this.step--; window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>window.lucide && window.lucide.createIcons(), 50); } },
+        async submit(){
+            if(!this.form.accept_terms){ showToast('Aceite a política de desistência.', 'error'); return; }
             this.loading = true;
             const payload = { ...this.form, accept_terms:'1' };
             const res = await caminhosApi('<?= url('/api/booking') ?>', { method:'POST', data: payload });
             showToast(res.msg || (res.ok ? 'Reserva criada!' : 'Erro ao processar.'), res.ok ? 'success' : 'error');
-            if (res.ok && res.redirect) window.location = res.redirect;
-            this.loading = false;
-        }
-    }
-}
-</script>
-
-<?php include VIEWS_DIR . '/partials/public_foot.php'; ?>
-<?php
-$pageTitle = 'Checkout';
-$solidNav = true;
-
-$roteiroId = (int)($_GET['roteiro'] ?? 0);
-$pacoteId  = (int)($_GET['pacote'] ?? 0);
-$item = null;
-$type = null;
-
-// Fallback: use first cart item if no query params
-if (!$roteiroId && !$pacoteId && !empty($_SESSION['cart'])) {
-    $first = reset($_SESSION['cart']);
-    if ($first['type'] === 'roteiro') $roteiroId = (int)$first['id'];
-    elseif ($first['type'] === 'pacote') $pacoteId = (int)$first['id'];
-}
-
-if ($roteiroId) {
-    $item = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published'", [$roteiroId]);
-    $type = 'roteiro';
-} elseif ($pacoteId) {
-    $item = dbOne("SELECT * FROM pacotes WHERE id=? AND status='published'", [$pacoteId]);
-    $type = 'pacote';
-}
-
-if (!$item) { redirect('/roteiros'); }
-
-// Referral autofill
-$refCode = currentReferralCode();
-$refPartner = $refCode ? partnerByCode($refCode) : null;
-
-include VIEWS_DIR . '/partials/public_head.php';
-?>
-<section class="pt-32 pb-16" style="background:var(--bg-surface)">
-    <div class="max-w-6xl mx-auto px-6">
-        <h1 class="font-display text-3xl md:text-4xl font-bold mb-8 text-center" style="color:var(--sepia)">Finalizar reserva</h1>
-
-        <div class="grid lg:grid-cols-3 gap-8" x-data="checkoutApp()" @submit.prevent="submit">
-            <!-- Form -->
-            <form class="lg:col-span-2 space-y-6">
-                <div class="admin-card p-6">
-                    <h3 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Seus dados</h3>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Nome completo *</label><input x-model="form.name" required class="admin-input"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">CPF *</label><input x-model="form.document" required class="admin-input cpf-mask" placeholder="000.000.000-00"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">RG *</label><input x-model="form.rg" required class="admin-input" placeholder="00.000.000-0"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Data de nascimento *</label><input type="date" x-model="form.birth_date" required class="admin-input"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">E-mail *</label><input type="email" x-model="form.email" required class="admin-input"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">WhatsApp *</label><input type="tel" x-model="form.phone" required class="admin-input phone-mask" placeholder="(00) 00000-0000"></div>
-                    </div>
-                </div>
-
-                <div class="admin-card p-6">
-                    <h3 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Informações de saúde</h3>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-semibold mb-2" style="color:var(--sepia)">Possui alguma comorbidade? *</label>
-                            <div class="flex gap-2">
-                                <button type="button" @click="form.has_comorbidity='nao'; form.comorbidity=''" class="flex-1 p-3 rounded-xl border-2 text-center transition font-semibold text-sm" :style="form.has_comorbidity==='nao' ? 'border-color:var(--maresia);background:rgba(122,157,110,0.08);color:var(--maresia-dark)' : 'border-color:var(--border-default);color:var(--text-secondary)'">Não</button>
-                                <button type="button" @click="form.has_comorbidity='sim'" class="flex-1 p-3 rounded-xl border-2 text-center transition font-semibold text-sm" :style="form.has_comorbidity==='sim' ? 'border-color:var(--terracota);background:rgba(201,107,74,0.06);color:var(--terracota)' : 'border-color:var(--border-default);color:var(--text-secondary)'">Sim</button>
-                            </div>
-                        </div>
-                        <div x-show="form.has_comorbidity==='sim'" x-cloak x-transition>
-                            <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Qual? *</label>
-                            <textarea x-model="form.comorbidity" rows="2" :required="form.has_comorbidity==='sim'" class="admin-input" placeholder="Descreva a comorbidade para que possamos cuidar melhor de você."></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="admin-card p-6">
-                    <h3 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Como você chegou até a gente?</h3>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-semibold mb-2" style="color:var(--sepia)">Como teve ciência do passeio? *</label>
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-                                <template x-for="s in sources">
-                                    <button type="button" @click="form.source=s.id" class="p-3 rounded-xl border-2 transition flex flex-col items-center gap-1" :style="form.source===s.id ? 'border-color:var(--terracota);background:rgba(201,107,74,0.05)' : 'border-color:var(--border-default)'">
-                                        <i :data-lucide="s.icon" class="w-4 h-4" style="color:var(--terracota)"></i>
-                                        <span class="text-xs font-semibold" style="color:var(--sepia)" x-text="s.label"></span>
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
-                        <div x-show="form.source==='indicacao'" x-cloak x-transition>
-                            <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Quem indicou? *</label>
-                            <input x-model="form.source_detail" :required="form.source==='indicacao'" class="admin-input" placeholder="Nome de quem indicou">
-                            <?php if ($refPartner): ?>
-                                <p class="text-xs mt-1" style="color:var(--maresia-dark)"><i data-lucide="check-circle-2" class="w-3 h-3 inline -mt-0.5"></i> Indicação registrada automaticamente via <b><?= e($refPartner['name']) ?></b>.</p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="admin-card p-6">
-                    <h3 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Detalhes da viagem</h3>
-                    <div class="grid md:grid-cols-3 gap-4">
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Data</label><input type="date" x-model="form.travel_date" class="admin-input"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Adultos</label><input type="number" min="1" x-model.number="form.adults" class="admin-input"></div>
-                        <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Crianças</label><input type="number" min="0" x-model.number="form.children" class="admin-input"></div>
-                    </div>
-                </div>
-
-                <div class="admin-card p-6">
-                    <h3 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Forma de pagamento</h3>
-                    <div class="grid grid-cols-3 gap-3">
-                        <template x-for="pm in paymentMethods">
-                            <button type="button" @click="form.payment_method=pm.id" class="p-4 rounded-xl border-2 text-center transition" :style="form.payment_method===pm.id ? 'border-color:var(--terracota);background:rgba(201,107,74,0.05)' : 'border-color:var(--border-default)'">
-                                <i :data-lucide="pm.icon" class="w-6 h-6 mx-auto mb-2" style="color:var(--terracota)"></i>
-                                <div class="text-xs font-semibold" style="color:var(--sepia)" x-text="pm.label"></div>
-                            </button>
-                        </template>
-                    </div>
-                </div>
-
-                <div class="admin-card p-6">
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" x-model="form.accept_terms" required class="mt-1 w-5 h-5 rounded" style="accent-color:var(--terracota)">
-                        <span class="text-sm" style="color:var(--text-secondary)">
-                            Li e concordo com a <b style="color:var(--sepia)">política de desistência</b>: em caso de cancelamento pelo passageiro, aplicam-se as condições previstas em contrato e o valor poderá não ser reembolsável conforme o prazo. *
-                        </span>
-                    </label>
-                </div>
-
-                <button type="submit" :disabled="loading || !canSubmit()" class="btn-primary w-full" :class="(loading||!canSubmit())&&'opacity-60'">
-                    <i data-lucide="lock" class="w-5 h-5"></i>
-                    <span x-text="loading?'Processando...':'Finalizar reserva'">Finalizar reserva</span>
-                </button>
-            </form>
-
-            <!-- Summary -->
-            <aside>
-                <div class="admin-card p-6 lg:sticky lg:top-28">
-                    <h3 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Resumo</h3>
-                    <div class="flex gap-3 mb-4">
-                        <?php if ($item['cover_image']): ?>
-                            <img src="<?= storageUrl($item['cover_image']) ?>" class="w-20 h-20 rounded-lg object-cover">
-                        <?php else: ?>
-                            <div class="w-20 h-20 rounded-lg img-placeholder"><span class="text-xl"><?= e(mb_substr($item['title'],0,1)) ?></span></div>
-                        <?php endif; ?>
-                        <div class="flex-1">
-                            <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--terracota)"><?= e($type) ?></div>
-                            <div class="text-sm font-semibold leading-snug" style="color:var(--sepia)"><?= e($item['title']) ?></div>
-                        </div>
-                    </div>
-                    <div class="py-4 border-t border-b space-y-2" style="border-color:var(--border-default)">
-                        <div class="flex justify-between text-sm"><span style="color:var(--text-secondary)">Subtotal</span><span class="font-semibold" style="color:var(--sepia)" x-text="'R$ ' + subtotal().toFixed(2).replace('.',',')"></span></div>
-                        <div class="flex justify-between text-sm"><span style="color:var(--text-secondary)">Desconto PIX</span><span class="font-semibold" style="color:var(--maresia-dark)" x-text="form.payment_method==='pix' ? '- R$ ' + discount().toFixed(2).replace('.',','): 'R$ 0,00'"></span></div>
-                    </div>
-                    <div class="flex justify-between items-end pt-4">
-                        <span class="text-sm" style="color:var(--text-secondary)">Total</span>
-                        <span class="font-display text-3xl font-bold" style="color:var(--terracota)" x-text="'R$ ' + total().toFixed(2).replace('.',',')"></span>
-                    </div>
-                </div>
-            </aside>
-        </div>
-    </div>
-</section>
-
-<script>
-function checkoutApp() {
-    return {
-        loading: false,
-        form: {
-            name:'', document:'', rg:'', birth_date:'',
-            email:'', phone:'',
-            has_comorbidity:'nao', comorbidity:'',
-            source:'', source_detail:<?= json_encode($refPartner['name'] ?? '') ?>,
-            accept_terms:false,
-            ref_code:<?= json_encode($refCode ?? '') ?>,
-            travel_date:'', adults:1, children:0,
-            payment_method:'pix',
-            entity_type: '<?= $type ?>',
-            entity_id: <?= (int)$item['id'] ?>
-        },
-        sources: [
-            {id:'instagram', label:'Instagram', icon:'instagram'},
-            {id:'whatsapp', label:'WhatsApp', icon:'message-circle'},
-            {id:'indicacao', label:'Indicação', icon:'user-check'},
-            {id:'google', label:'Google', icon:'search'},
-            {id:'outro', label:'Outro', icon:'more-horizontal'}
-        ],
-        paymentMethods: [
-            {id:'pix', label:'PIX (desconto)', icon:'qr-code'},
-            {id:'credit_card', label:'Cartão', icon:'credit-card'},
-            {id:'boleto', label:'Boleto', icon:'file-text'}
-        ],
-        price: <?= (float)$item['price'] ?>,
-        pricePix: <?= (float)($item['price_pix'] ?: $item['price']) ?>,
-        subtotal() { return this.price * Math.max(1, this.form.adults) + this.price * 0.5 * Math.max(0, this.form.children); },
-        discount() { return this.form.payment_method === 'pix' ? this.subtotal() - (this.pricePix * this.form.adults + this.pricePix * 0.5 * this.form.children) : 0; },
-        total() { return this.subtotal() - this.discount(); },
-        canSubmit() { return this.form.accept_terms && this.form.source && (this.form.has_comorbidity !== 'sim' || this.form.comorbidity.trim().length > 0); },
-        async submit() {
-            if (!this.canSubmit()) { showToast('Preencha todos os campos obrigatórios.', 'error'); return; }
-            this.loading = true;
-            const payload = { ...this.form, accept_terms: this.form.accept_terms ? '1' : '0' };
-            const res = await caminhosApi('<?= url('/api/booking') ?>', { method:'POST', data: payload });
-            showToast(res.msg, res.ok ? 'success' : 'error');
             if (res.ok && res.redirect) window.location = res.redirect;
             this.loading = false;
         }

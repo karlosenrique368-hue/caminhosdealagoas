@@ -41,6 +41,7 @@ function cartResponse(): void {
             'location'   => $row['location'] ?? '',
             'price'      => $price,
             'qty'        => $qty,
+            'travel_date'=> $it['travel_date'] ?? null,
             'subtotal'   => $sub,
             'url'        => url('/' . ($it['type'] === 'roteiro' ? 'roteiros' : 'pacotes') . '/' . $row['slug']),
         ];
@@ -77,15 +78,18 @@ switch ($action) {
     case 'add':
         $type = $data['type'] ?? '';
         $id   = (int)($data['id'] ?? 0);
+        $travelDate = $data['travel_date'] ?? null;
+        if ($travelDate && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $travelDate)) $travelDate = null;
         if (!in_array($type, ['roteiro','pacote'], true) || $id <= 0) {
             echo json_encode(['ok' => false, 'msg' => 'Dados inválidos.']);
             exit;
         }
-        $key = $type . ':' . $id;
+        // Chave inclui data para permitir mesma viagem em dias diferentes
+        $key = $type . ':' . $id . ($travelDate ? ':' . $travelDate : '');
         if (isset($_SESSION['cart'][$key])) {
             $_SESSION['cart'][$key]['qty'] = ($_SESSION['cart'][$key]['qty'] ?? 1) + 1;
         } else {
-            $_SESSION['cart'][$key] = ['type' => $type, 'id' => $id, 'qty' => 1];
+            $_SESSION['cart'][$key] = ['type' => $type, 'id' => $id, 'qty' => 1, 'travel_date' => $travelDate];
         }
         cartResponse();
         break;
