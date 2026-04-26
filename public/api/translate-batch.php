@@ -74,11 +74,11 @@ foreach ($hashes as $h => $text) {
     }
 }
 
-// Cache miss: chama MyMemory em paralelo (limite 12 por request pra não estourar timeout)
+// Cache miss: chama MyMemory em paralelo para o lote atual; o frontend já limita o tamanho.
 if ($missing) {
     $map = ['en'=>'en-US','es'=>'es-ES','fr'=>'fr-FR','de'=>'de-DE','it'=>'it-IT','zh'=>'zh-CN'];
     $mm  = $map[$lang] ?? null;
-    $batch = array_slice($missing, 0, 12, true);
+    $batch = array_slice($missing, 0, 36, true);
     if ($mm && function_exists('curl_multi_init')) {
         $mh = curl_multi_init();
         $handles = [];

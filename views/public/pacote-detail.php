@@ -166,11 +166,11 @@ include VIEWS_DIR . '/partials/public_head.php';
                                 <?php if ($idx < count($itin) - 1): ?><div class="flex-1 w-0.5 mt-2" style="background:var(--border-default);min-height:32px"></div><?php endif; ?>
                             </div>
                             <div class="flex-1 pb-2">
-                                <button type="button" @click="open=!open" class="w-full text-left flex items-start justify-between gap-3">
-                                    <?php if ($title): ?><div class="font-display font-bold text-base" style="color:var(--sepia)"><?= e($title) ?></div><?php endif; ?>
-                                    <i data-lucide="chevron-down" class="w-4 h-4 transition-transform mt-1" :class="open && 'rotate-180'" style="color:var(--text-muted)"></i>
+                                <button type="button" @click.prevent.stop="open=!open" :aria-expanded="open ? 'true' : 'false'" class="itinerary-toggle w-full text-left flex items-start justify-between gap-3">
+                                    <?php if ($title): ?><div class="font-display font-bold text-base" style="color:var(--sepia)"><?= e(tAuto($title)) ?></div><?php endif; ?>
+                                    <i data-lucide="chevron-down" class="itinerary-chevron w-4 h-4 transition-transform mt-1" style="color:var(--text-muted)"></i>
                                 </button>
-                                <div x-show="open" x-collapse class="mt-2 text-sm leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e($desc)) ?></div>
+                                <div x-show="open" x-transition.opacity.duration.160ms class="mt-2 text-sm leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e(tAuto($desc))) ?></div>
                             </div>
                         </div>
                         <?php endforeach; ?>

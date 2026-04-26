@@ -351,15 +351,31 @@ function reviewSection(opts){
 })();
 </script>
 
-<!-- Tradução automática site-wide (client-side, multi-idioma) -->
-<?php $autoLang = $_SESSION['lang'] ?? 'pt-BR'; if ($autoLang !== 'pt-BR'): ?>
+<!-- Tradução automática site-wide: instantânea para UI comum + cache/API para conteúdo dinâmico -->
 <script>
 (function(){
-    var LANG = <?= json_encode($autoLang) ?>;
+    var INITIAL_LANG = <?= json_encode(currentLang()) ?>;
     var ENDPOINT = '<?= url('/api/translate-batch') ?>';
-    var BATCH = 40;
+    var BATCH = 36;
+    var current = readCookie('lang') || localStorage.getItem('caminhos_lang') || INITIAL_LANG || 'pt-BR';
     var SKIP_TAGS = {SCRIPT:1,STYLE:1,CODE:1,PRE:1,TEXTAREA:1,INPUT:1,SELECT:1,OPTION:1,NOSCRIPT:1,SVG:1,IFRAME:1};
-    var seen = new WeakSet();
+    var ORIGINAL_TEXT = new WeakMap();
+    var ATTR_PREFIX = 'i18nOriginal';
+    var DICT = {
+        en:{'Home':'Home','Passeios':'Tours','Pacotes':'Packages','Transfers':'Transfers','Sobre nós':'About us','Contato':'Contact','Entrar':'Sign in','Criar conta':'Create account','Minha conta':'My account','Minhas reservas':'My bookings','Favoritos':'Favorites','Sair':'Sign out','Navegação':'Navigation','Conta':'Account','Preferências':'Preferences','Idioma':'Language','Reservar via WhatsApp':'Book via WhatsApp','Reservar':'Book','Reservar agora':'Book now','Reservar datas':'Book dates','Reservar por data':'Book by date','Falar no WhatsApp':'Chat on WhatsApp','Buscar':'Search','Origem':'Origin','Destino':'Destination','Passageiros':'Passengers','Data':'Date','Ordenar':'Sort','Filtrar':'Filter','Limpar':'Clear','Todos':'All','Todas':'All','Qualquer':'Any','Em destaque':'Featured','Mais recentes':'Newest','Menor preço':'Lowest price','Maior preço':'Highest price','Maior capacidade':'Highest capacity','Transfers privativos':'Private transfers','Chegue tranquilo, viaje no conforto':'Arrive calmly, travel comfortably','A partir de':'From','Apenas ida':'One way','Ida e volta':'Round trip','Nenhum transfer disponível':'No transfer available','Tente outra busca ou fale com a gente no WhatsApp.':'Try another search or talk to us on WhatsApp.','Seu Carrinho':'Your cart','Carrinho vazio':'Your cart is empty','Explorar passeios':'Explore tours','Finalizar Reserva':'Complete booking','Limpar carrinho':'Clear cart','Total':'Total','Escolha a data':'Choose a date','Datas disponíveis *':'Available dates *','Carregando datas...':'Loading dates...','Adicionar ao carrinho':'Add to cart','Cancelar':'Cancel','Você pode escolher uma ou várias datas disponíveis. No checkout os valores atualizam automaticamente.':'You can choose one or more available dates. Prices update automatically at checkout.','Outros transfers':'Other transfers','Sobre o transfer':'About the transfer','Sobre o passeio':'About the tour','Destaques':'Highlights','Itinerário':'Itinerary','O que está incluso':'What is included','Não incluso':'Not included','Ponto de encontro':'Meeting point','Como chegar (Google Maps)':'Get directions (Google Maps)','Avaliações':'Reviews','Ver mais':'See more','Pagamento seguro':'Secure payment','Pix ou cartão até 12x':'Pix or card up to 12x','Curadoria local':'Local curation','Feito por alagoanos':'Made by locals','Suporte 24/7':'24/7 support','Durante sua viagem':'During your trip','Melhor preço':'Best price','Garantido ou devolvemos':'Guaranteed or your money back'},
+        es:{'Home':'Inicio','Passeios':'Paseos','Pacotes':'Paquetes','Transfers':'Traslados','Sobre nós':'Sobre nosotros','Contato':'Contacto','Entrar':'Ingresar','Criar conta':'Crear cuenta','Minha conta':'Mi cuenta','Minhas reservas':'Mis reservas','Favoritos':'Favoritos','Sair':'Salir','Navegação':'Navegación','Conta':'Cuenta','Preferências':'Preferencias','Idioma':'Idioma','Reservar via WhatsApp':'Reservar por WhatsApp','Reservar':'Reservar','Reservar agora':'Reservar ahora','Reservar datas':'Reservar fechas','Reservar por data':'Reservar por fecha','Falar no WhatsApp':'Hablar por WhatsApp','Buscar':'Buscar','Origem':'Origen','Destino':'Destino','Passageiros':'Pasajeros','Data':'Fecha','Ordenar':'Ordenar','Filtrar':'Filtrar','Limpar':'Limpiar','Todos':'Todos','Todas':'Todas','Qualquer':'Cualquiera','Em destaque':'Destacados','Mais recentes':'Más recientes','Menor preço':'Menor precio','Maior preço':'Mayor precio','Maior capacidade':'Mayor capacidad','Transfers privativos':'Traslados privados','Chegue tranquilo, viaje no conforto':'Llegue tranquilo, viaje cómodo','A partir de':'Desde','Apenas ida':'Solo ida','Ida e volta':'Ida y vuelta','Nenhum transfer disponível':'No hay traslados disponibles','Tente outra busca ou fale com a gente no WhatsApp.':'Pruebe otra búsqueda o hable con nosotros por WhatsApp.','Seu Carrinho':'Tu carrito','Carrinho vazio':'Carrito vacío','Explorar passeios':'Explorar paseos','Finalizar Reserva':'Finalizar reserva','Limpar carrinho':'Vaciar carrito','Total':'Total','Escolha a data':'Elige la fecha','Datas disponíveis *':'Fechas disponibles *','Carregando datas...':'Cargando fechas...','Adicionar ao carrinho':'Añadir al carrito','Cancelar':'Cancelar','Outros transfers':'Otros traslados','Sobre o transfer':'Sobre el traslado','Sobre o passeio':'Sobre el paseo','Destaques':'Destacados','Itinerário':'Itinerario','O que está incluso':'Qué está incluido','Não incluso':'No incluido','Ponto de encontro':'Punto de encuentro','Como chegar (Google Maps)':'Cómo llegar (Google Maps)','Avaliações':'Reseñas','Pagamento seguro':'Pago seguro','Curadoria local':'Curaduría local','Suporte 24/7':'Soporte 24/7','Melhor preço':'Mejor precio'},
+        fr:{'Home':'Accueil','Passeios':'Excursions','Pacotes':'Forfaits','Transfers':'Transferts','Sobre nós':'À propos','Contato':'Contact','Entrar':'Connexion','Criar conta':'Créer un compte','Minha conta':'Mon compte','Navegação':'Navigation','Preferências':'Préférences','Idioma':'Langue','Reservar':'Réserver','Buscar':'Rechercher','Origem':'Origine','Destino':'Destination','Passageiros':'Passagers','Data':'Date','Ordenar':'Trier','Filtrar':'Filtrer','Limpar':'Effacer','Todos':'Tous','Todas':'Toutes','Qualquer':'Tous','A partir de':'À partir de','Apenas ida':'Aller simple','Ida e volta':'Aller-retour','Seu Carrinho':'Votre panier','Carrinho vazio':'Panier vide','Finalizar Reserva':'Finaliser la réservation','Adicionar ao carrinho':'Ajouter au panier','Cancelar':'Annuler','Itinerário':'Itinéraire','Destaques':'Points forts','Avaliações':'Avis'},
+        de:{'Home':'Startseite','Passeios':'Touren','Pacotes':'Pakete','Transfers':'Transfers','Sobre nós':'Über uns','Contato':'Kontakt','Entrar':'Anmelden','Criar conta':'Konto erstellen','Minha conta':'Mein Konto','Navegação':'Navigation','Preferências':'Einstellungen','Idioma':'Sprache','Reservar':'Buchen','Buscar':'Suchen','Origem':'Abfahrt','Destino':'Ziel','Passageiros':'Passagiere','Data':'Datum','Ordenar':'Sortieren','Filtrar':'Filtern','Limpar':'Löschen','Todos':'Alle','Todas':'Alle','Qualquer':'Beliebig','A partir de':'Ab','Apenas ida':'Nur Hinfahrt','Ida e volta':'Hin und zurück','Seu Carrinho':'Ihr Warenkorb','Carrinho vazio':'Warenkorb leer','Finalizar Reserva':'Buchung abschließen','Adicionar ao carrinho':'In den Warenkorb','Cancelar':'Abbrechen','Itinerário':'Reiseplan','Destaques':'Highlights','Avaliações':'Bewertungen'},
+        it:{'Home':'Home','Passeios':'Tour','Pacotes':'Pacchetti','Transfers':'Transfer','Sobre nós':'Chi siamo','Contato':'Contatto','Entrar':'Accedi','Criar conta':'Crea account','Minha conta':'Il mio account','Navegação':'Navigazione','Preferências':'Preferenze','Idioma':'Lingua','Reservar':'Prenota','Buscar':'Cerca','Origem':'Origine','Destino':'Destinazione','Passageiros':'Passeggeri','Data':'Data','Ordenar':'Ordina','Filtrar':'Filtra','Limpar':'Pulisci','Todos':'Tutti','Todas':'Tutte','Qualquer':'Qualsiasi','A partir de':'Da','Apenas ida':'Solo andata','Ida e volta':'Andata e ritorno','Seu Carrinho':'Il tuo carrello','Carrinho vazio':'Carrello vuoto','Finalizar Reserva':'Completa prenotazione','Adicionar ao carrinho':'Aggiungi al carrello','Cancelar':'Annulla','Itinerário':'Itinerario','Destaques':'Highlights','Avaliações':'Recensioni'},
+        zh:{'Home':'首页','Passeios':'游览','Pacotes':'套餐','Transfers':'接送','Sobre nós':'关于我们','Contato':'联系','Entrar':'登录','Criar conta':'创建账户','Minha conta':'我的账户','Navegação':'导航','Preferências':'偏好','Idioma':'语言','Reservar':'预订','Buscar':'搜索','Origem':'出发地','Destino':'目的地','Passageiros':'乘客','Data':'日期','Ordenar':'排序','Filtrar':'筛选','Limpar':'清除','Todos':'全部','Todas':'全部','Qualquer':'任意','A partir de':'起价','Apenas ida':'单程','Ida e volta':'往返','Seu Carrinho':'购物车','Carrinho vazio':'购物车为空','Finalizar Reserva':'完成预订','Adicionar ao carrinho':'加入购物车','Cancelar':'取消','Itinerário':'行程','Destaques':'亮点','Avaliações':'评价'}
+    };
+
+    function readCookie(name){ var m = document.cookie.match(new RegExp('(?:^|; )'+name.replace(/[.$?*|{}()\[\]\\\/\+^]/g,'\\$&')+'=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; }
+    function setCookie(name, value){ document.cookie = name + '=' + encodeURIComponent(value) + '; path=/; max-age=31536000; samesite=Lax'; }
+    function normalize(s){ return (s || '').replace(/\s+/g,' ').trim(); }
+    function dict(text, lang){ return (DICT[lang] && DICT[lang][normalize(text)]) || null; }
+    function attrMark(attr){ return '__t_' + attr.replace(/[^a-z0-9]/gi, ''); }
+    function looksPortuguese(text){ return /[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(text) || /\b(de|da|do|das|dos|para|com|em|por|uma|você|seu|sua|passeio|pacote|reserva|reservar|carrinho|preço|maior|menor|origem|destino|disponível|avaliações|itinerário)\b/i.test(text); }
 
     function isTranslatable(node){
         if (!node || !node.parentElement) return false;
@@ -371,7 +387,8 @@ function reviewSection(opts){
         var s = v.trim();
         if (s.length < 2) return false;
         if (!/[\p{L}]/u.test(s)) return false; // só símbolos/números
-        if (seen.has(node)) return false;
+        if (node.__i18nLang === current) return false;
+        if (current !== 'pt-BR' && !dict(s, current) && !looksPortuguese(s)) return false;
         return true;
     }
 
@@ -391,7 +408,9 @@ function reviewSection(opts){
             if (el.closest('[data-no-translate],[translate="no"],.notranslate')) return;
             ['placeholder','title','alt','aria-label'].forEach(function(attr){
                 var v = el.getAttribute(attr);
-                if (!v || !v.trim() || !/[\p{L}]/u.test(v) || el.dataset['__t_'+attr]) return;
+                if (!v || !v.trim() || !/[\p{L}]/u.test(v)) return;
+                if (current !== 'pt-BR' && !dict(v, current) && !looksPortuguese(v)) return;
+                if (el.dataset[attrMark(attr)] === current) return;
                 out.push({el:el, attr:attr, original:v});
             });
         });
@@ -414,28 +433,76 @@ function reviewSection(opts){
         } catch(e) {}
     }
 
-    async function run(root){
+    function originalText(node){
+        if (!ORIGINAL_TEXT.has(node)) ORIGINAL_TEXT.set(node, node.nodeValue);
+        return ORIGINAL_TEXT.get(node);
+    }
+    function originalAttr(item){
+        var key = ATTR_PREFIX + item.attr.replace(/[^a-z0-9]/gi, '');
+        if (!item.el.dataset[key]) item.el.dataset[key] = item.el.getAttribute(item.attr) || '';
+        return item.el.dataset[key];
+    }
+    function applyText(item, tr){
+        var lead = (item.raw.match(/^\s*/) || [''])[0];
+        var tail = (item.raw.match(/\s*$/) || [''])[0];
+        item.node.nodeValue = lead + tr + tail;
+        item.node.__i18nLang = current;
+    }
+
+    async function run(root, lang){
+        current = lang || current || 'pt-BR';
+        document.documentElement.lang = current;
         var nodes = collectNodes(root);
-        var nodeItems = nodes.map(function(n){ seen.add(n); return {node:n, original:n.nodeValue.trim(), raw:n.nodeValue}; });
+        var nodeItems = [];
+        nodes.forEach(function(n){
+            var rawOriginal = originalText(n);
+            var clean = normalize(rawOriginal);
+            if (current === 'pt-BR') { n.nodeValue = rawOriginal; n.__i18nLang = current; return; }
+            var immediate = dict(clean, current);
+            if (immediate) { applyText({node:n, raw:rawOriginal}, immediate); return; }
+            nodeItems.push({node:n, original:clean, raw:rawOriginal});
+        });
         for (var i=0; i<nodeItems.length; i+=BATCH) {
             await translateChunk(nodeItems.slice(i, i+BATCH), function(it, tr){
-                // Preserva espaços iniciais/finais
-                var lead = (it.raw.match(/^\s*/) || [''])[0];
-                var tail = (it.raw.match(/\s*$/) || [''])[0];
-                it.node.nodeValue = lead + tr + tail;
+                applyText(it, tr);
             });
         }
         var attrItems = collectAttrs(root);
-        for (var i=0; i<attrItems.length; i+=BATCH) {
-            await translateChunk(attrItems.slice(i, i+BATCH), function(it, tr){
-                it.el.dataset['__t_'+it.attr] = '1';
+        var attrMiss = [];
+        attrItems.forEach(function(it){
+            var src = originalAttr(it), immediate = current === 'pt-BR' ? src : dict(src, current);
+            if (current === 'pt-BR' || immediate) {
+                it.el.setAttribute(it.attr, immediate || src);
+                it.el.dataset[attrMark(it.attr)] = current;
+            } else {
+                it.original = src;
+                attrMiss.push(it);
+            }
+        });
+        for (var i=0; i<attrMiss.length; i+=BATCH) {
+            await translateChunk(attrMiss.slice(i, i+BATCH), function(it, tr){
+                it.el.dataset[attrMark(it.attr)] = current;
                 it.el.setAttribute(it.attr, tr);
             });
         }
     }
 
+    function switchLang(lang, href){
+        current = lang || 'pt-BR';
+        setCookie('lang', current);
+        localStorage.setItem('caminhos_lang', current);
+        run(document.body, current);
+        if (href) fetch(href, {credentials:'same-origin', cache:'no-store'}).catch(function(){});
+    }
+
     function start(){
-        run(document.body);
+        run(document.body, current);
+        document.addEventListener('click', function(e){
+            var a = e.target.closest('[data-lang-switch]');
+            if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+            e.preventDefault();
+            switchLang(a.dataset.langSwitch || 'pt-BR', a.href);
+        }, true);
         // Observa mudanças (Alpine, fetch dinâmico, modais)
         var debounce = null;
         var pending = new Set();
@@ -448,18 +515,18 @@ function reviewSection(opts){
             if (pending.size === 0) return;
             clearTimeout(debounce);
             debounce = setTimeout(function(){
-                pending.forEach(function(n){ if (document.contains(n)) run(n); });
+                pending.forEach(function(n){ if (document.contains(n)) run(n, current); });
                 pending.clear();
-            }, 600);
+            }, 80);
         });
         mo.observe(document.body, {childList:true, subtree:true});
     }
 
-    if (document.readyState === 'complete') start();
-    else window.addEventListener('load', start);
+    window.CaminhosI18n = { run: run, switchLang: switchLang };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
 })();
 </script>
-<?php endif; ?>
 
 </body>
 </html>

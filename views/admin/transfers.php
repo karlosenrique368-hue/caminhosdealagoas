@@ -92,7 +92,7 @@ $successMsg = flash('success');
                                     <?= e($r['title']) ?>
                                     <?php if ($r['featured']): ?><i data-lucide="star" class="w-3.5 h-3.5" style="color:#F59E0B;fill:#F59E0B"></i><?php endif; ?>
                                 </div>
-                                <div class="text-xs" style="color:var(--text-muted)"><?= (int)$r['capacity'] ?> pax · <?= (int)$r['duration_minutes'] ?> min</div>
+                                <div class="text-xs" style="color:var(--text-muted)">max <?= (int)$r['capacity'] ?> · <?= (int)$r['duration_minutes'] ?> min</div>
                             </div>
                         </div>
                     </td>

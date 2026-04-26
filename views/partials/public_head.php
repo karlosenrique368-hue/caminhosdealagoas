@@ -6,8 +6,8 @@ $pageSchema = $pageSchema ?? null; // optional JSON-LD injected by child page
 $currentUrl = 'http' . (!empty($_SERVER['HTTPS'])?'s':'') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/');
 $gaId = getSetting('ga_id', '');
 $fbPixelId = getSetting('fb_pixel_id', '');
-$currentLang = $_SESSION['lang'] ?? 'pt-BR';
-$currentCurrency = $_SESSION['currency'] ?? 'BRL';
+$currentLang = currentLang();
+$currentCurrency = currentCurrency();
 ?><!DOCTYPE html>
 <html lang="<?= e($currentLang) ?>">
 <head>
@@ -182,7 +182,7 @@ tailwind.config = {
                 </button>
                 <div x-show="open" x-transition class="absolute right-0 mt-2 w-56 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
                     <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                    <a href="<?= e(urlWithParam('lang', $code)) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
+                    <a href="<?= e(urlWithParam('lang', $code)) ?>" data-lang-switch="<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
                         <img src="<?= $flagUrl($code) ?>" alt="" style="width:24px;height:18px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
                         <span class="font-bold text-xs w-6"><?= e($siglas[$code]) ?></span>
                         <span class="flex-1"><?= e($name) ?></span>
@@ -279,7 +279,7 @@ tailwind.config = {
                     </button>
                     <div x-show="open" x-transition x-cloak class="menu-drawer-pref-list">
                         <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                            <a href="?lang=<?= e($code) ?>" class="inline-flex items-center gap-2"><img src="<?= $flagUrl($code) ?>" alt="" style="width:20px;height:14px;object-fit:cover;border-radius:2px;display:block"> <?= e($name) ?></a>
+                            <a href="<?= e(urlWithParam('lang', $code)) ?>" data-lang-switch="<?= e($code) ?>" class="inline-flex items-center gap-2"><img src="<?= $flagUrl($code) ?>" alt="" style="width:20px;height:14px;object-fit:cover;border-radius:2px;display:block"> <?= e($name) ?></a>
                         <?php endforeach; ?>
                     </div>
                 </div>

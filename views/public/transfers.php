@@ -80,7 +80,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <label class="filter-label">Passageiros</label>
                 <select name="capacity" class="filter-input">
                     <option value="0">Qualquer</option>
-                    <?php foreach ([3,4,6,8,12] as $cap): ?><option value="<?= $cap ?>" <?= $capacity===$cap?'selected':'' ?>><?= $cap ?>+ pax</option><?php endforeach; ?>
+                    <?php foreach ([3,4,6,8,12] as $cap): ?><option value="<?= $cap ?>" <?= $capacity===$cap?'selected':'' ?>>max <?= $cap ?>+</option><?php endforeach; ?>
                 </select>
             </div>
             <div>
@@ -131,7 +131,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <?php endif; ?>
                         <h3 class="font-display text-lg font-bold leading-snug mb-2 line-clamp-2" style="color:var(--sepia)"><?= e(tAuto($r['title'])) ?></h3>
                         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold mb-3" style="color:var(--text-muted)">
-                            <span class="inline-flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i><?= (int)$r['capacity'] ?> pax</span>
+                            <span class="inline-flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i>max <?= (int)$r['capacity'] ?></span>
                             <span class="inline-flex items-center gap-1"><i data-lucide="repeat" class="w-3.5 h-3.5"></i><?= !empty($r['one_way']) ? 'Apenas ida' : 'Ida e volta' ?></span>
                             <?php if ($r['duration_minutes']): ?>
                             <span class="inline-flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i><?= (int)$r['duration_minutes'] ?> min</span>

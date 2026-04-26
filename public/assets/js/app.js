@@ -92,6 +92,22 @@ window.showToast = function (message, type = 'info') {
     items.forEach(i => io.observe(i));
 })();
 
+// Mobile trust strip: keeps the duplicated marquee loop exact on every viewport.
+(function initTrustStrip() {
+    const track = document.querySelector('.trust-track');
+    if (!track) return;
+    const setCycle = () => {
+        const items = [...track.querySelectorAll('.trust-item:not(.is-duplicate)')];
+        if (!items.length) return;
+        const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || '0') || 0;
+        const cycle = items.reduce((sum, item) => sum + item.getBoundingClientRect().width, 0) + (gap * items.length);
+        track.style.setProperty('--trust-cycle', cycle + 'px');
+    };
+    setCycle();
+    window.addEventListener('resize', window.debounce ? window.debounce(setCycle, 120) : setCycle, { passive: true });
+    window.addEventListener('load', setCycle, { once: true });
+})();
+
 // BRL mask
 document.addEventListener('input', (e) => {
     if (!e.target.classList.contains('brl-mask')) return;

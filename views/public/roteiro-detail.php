@@ -182,18 +182,18 @@ include VIEWS_DIR . '/partials/public_head.php';
                                     <?php endif; ?>
                                 </div>
                                 <div class="flex-1 pb-4">
-                                    <button type="button" @click="open = !open" class="w-full text-left flex items-start justify-between gap-3 group">
+                                    <button type="button" @click.prevent.stop="open = !open" :aria-expanded="open ? 'true' : 'false'" class="itinerary-toggle w-full text-left flex items-start justify-between gap-3 group">
                                         <div>
                                             <?php if ($title): ?>
-                                                <div class="font-display font-bold text-base mb-1" style="color:var(--sepia)"><?= e($title) ?></div>
+                                                <div class="font-display font-bold text-base mb-1" style="color:var(--sepia)"><?= e(tAuto($title)) ?></div>
                                             <?php endif; ?>
                                             <?php if ($time): ?>
                                                 <div class="text-xs font-semibold inline-flex items-center gap-1" style="color:var(--terracota)"><i data-lucide="clock" class="w-3 h-3"></i><?= e($time) ?></div>
                                             <?php endif; ?>
                                         </div>
-                                        <i data-lucide="chevron-down" class="w-4 h-4 transition-transform mt-1" :class="open && 'rotate-180'" style="color:var(--text-muted)"></i>
+                                        <i data-lucide="chevron-down" class="itinerary-chevron w-4 h-4 transition-transform mt-1" style="color:var(--text-muted)"></i>
                                     </button>
-                                    <div x-show="open" x-collapse class="mt-2 text-sm leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e($desc)) ?></div>
+                                    <div x-show="open" x-transition.opacity.duration.160ms class="mt-2 text-sm leading-relaxed" style="color:var(--text-secondary)"><?= nl2br(e(tAuto($desc))) ?></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
