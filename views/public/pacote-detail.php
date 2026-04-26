@@ -88,7 +88,21 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <?php if (count($gallery) > 1): ?>
-<section class="detail-gallery-section">
+<section class="detail-gallery-section hidden md:block">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="hero-gallery-grid">
+            <?php foreach (array_slice($gallery, 0, 5) as $idx => $img): ?>
+                <div>
+                    <img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($p['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>">
+                    <?php if ($idx === 4 && count($gallery) > 5): ?>
+                        <div class="hero-gallery-more"><i data-lucide="images" class="w-5 h-5"></i>+<?= count($gallery)-5 ?> fotos</div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<section class="detail-gallery-section md:hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="detail-slider" data-slider>
             <div class="detail-slider-main slider-wrap">
@@ -212,6 +226,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                     'map' => $availabilityMap,
                     'basePrice' => (float)($p['price_pix'] ?: $p['price']),
                     'checkoutBase' => url('/checkout?pacote=' . $p['id']),
+                    'cartType' => 'pacote',
+                    'cartId' => (int)$p['id'],
                 ]), ENT_QUOTES) ?>)">
                     <div class="flex items-start justify-between flex-wrap gap-4 mb-5">
                         <div>
@@ -307,7 +323,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <?php endif; ?>
 
                     <a href="#calendario" onclick="event.preventDefault();document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary w-full"><i data-lucide="calendar-check" class="w-5 h-5"></i> <?= t('nav.book_now') ?></a>
-                    <button type="button" onclick="window.cart.askDate('pacote', <?= (int)$p['id'] ?>, '<?= e(addslashes($p['title'])) ?>')" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition hover:scale-[1.02]" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Adicionar ao carrinho</button>
+                    <button type="button" onclick="window.cart.addSelectedOrAsk('pacote', <?= (int)$p['id'] ?>, '<?= e(addslashes($p['title'])) ?>')" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition hover:scale-[1.02]" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Adicionar ao carrinho</button>
                     <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Tenho%20interesse%20no%20pacote%20<?= urlencode($p['title']) ?>" target="_blank" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm" style="color:var(--maresia-dark);border-color:var(--maresia)"><i data-lucide="message-circle" class="w-4 h-4"></i> <?= t('book.whatsapp') ?></a>
                 </div>
 

@@ -68,7 +68,7 @@ include VIEWS_DIR . '/partials/public_head.php';
         <!-- Search bar (premium glass) -->
         <div class="max-w-4xl mx-auto glass-premium rounded-2xl p-4 md:p-5 fade-in-up delay-400">
             <div class="text-left mb-3 px-2">
-                <span class="font-script text-sm tracking-widest uppercase" style="color:var(--areia-light)"><?= e(t('home.search.title')) ?></span>
+                <span class="font-display text-lg sm:text-xl font-bold tracking-wide uppercase" style="color:var(--areia-light)"><?= e(t('home.search.title')) ?></span>
             </div>
             <form method="GET" action="<?= url('/passeios') ?>" class="grid md:grid-cols-4 gap-3">
                 <div>

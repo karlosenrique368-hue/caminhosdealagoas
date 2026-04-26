@@ -55,7 +55,21 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <?php if (count($gallery) > 1): ?>
-<section class="detail-gallery-section">
+<section class="detail-gallery-section hidden md:block">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="hero-gallery-grid">
+            <?php foreach (array_slice($gallery, 0, 5) as $idx => $img): ?>
+                <div>
+                    <img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($r['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>">
+                    <?php if ($idx === 4 && count($gallery) > 5): ?>
+                        <div class="hero-gallery-more"><i data-lucide="images" class="w-5 h-5"></i>+<?= count($gallery)-5 ?> fotos</div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<section class="detail-gallery-section md:hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="detail-slider" data-slider>
             <div class="detail-slider-main slider-wrap">
@@ -100,6 +114,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                     'map' => $availabilityMap,
                     'basePrice' => (float)($r['price_pix'] ?: $r['price']),
                     'checkoutBase' => url('/checkout?transfer=' . $r['id']),
+                    'cartType' => 'transfer',
+                    'cartId' => (int)$r['id'],
                 ]), ENT_QUOTES) ?>)">
                     <div class="flex items-start justify-between flex-wrap gap-4 mb-5">
                         <div>
@@ -150,7 +166,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                     </div>
 
                     <a href="#calendario" onclick="event.preventDefault();document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary w-full"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar por data</a>
-                    <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Quero%20reservar%20o%20transfer%20<?= urlencode($r['title']) ?>" target="_blank" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)"><i data-lucide="message-circle" class="w-4 h-4"></i> Falar no WhatsApp</a>
+                    <button type="button" onclick="window.cart.addSelectedOrAsk('transfer', <?= (int)$r['id'] ?>, '<?= e(addslashes($r['title'])) ?>')" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition hover:scale-[1.02]" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Adicionar ao carrinho</button>
+                    <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Quero%20reservar%20o%20transfer%20<?= urlencode($r['title']) ?>" target="_blank" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm" style="color:var(--maresia-dark);border-color:var(--maresia)"><i data-lucide="message-circle" class="w-4 h-4"></i> Falar no WhatsApp</a>
                 </div>
             </aside>
         </div>

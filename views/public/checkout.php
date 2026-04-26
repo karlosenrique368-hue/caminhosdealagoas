@@ -25,9 +25,13 @@ if (!$roteiroId && !$pacoteId && !$transferId && ($_GET['cart'] ?? '') === '1' &
         elseif (($ci['type'] ?? '') === 'transfer') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location_to AS location FROM transfers WHERE id=? AND status='published'", [(int)$ci['id']]);
         if (!$row) continue;
         $dates = !empty($ci['travel_dates']) && is_array($ci['travel_dates']) ? array_values($ci['travel_dates']) : (!empty($ci['travel_date']) ? [$ci['travel_date']] : []);
+        $qty = max(1, (int)($ci['qty'] ?? 1));
+        $dateCount = max(1, count($dates));
+        $unitPrice = (float)($row['price_pix'] ?: $row['price']);
+        $subtotal = $unitPrice * $qty * $dateCount;
         $query = ['cart_key' => $key, $ci['type'] => (int)$row['id']];
         if ($dates) $query['dates'] = implode(',', $dates);
-        $cartRows[] = ['key'=>$key, 'type'=>$ci['type'], 'row'=>$row, 'dates'=>$dates, 'qty'=>max(1,(int)($ci['qty'] ?? 1)), 'checkout'=>url('/checkout?' . http_build_query($query))];
+        $cartRows[] = ['key'=>$key, 'type'=>$ci['type'], 'row'=>$row, 'dates'=>$dates, 'qty'=>$qty, 'date_count'=>$dateCount, 'subtotal'=>$subtotal, 'checkout'=>url('/checkout?' . http_build_query($query))];
     }
     ?>
     <section class="pt-32 pb-16" style="background:var(--bg-surface)">
@@ -47,8 +51,12 @@ if (!$roteiroId && !$pacoteId && !$transferId && ($_GET['cart'] ?? '') === '1' &
                             <div class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color:var(--terracota)"><?= $cart['type'] === 'roteiro' ? 'Passeio' : ($cart['type'] === 'pacote' ? 'Pacote' : 'Transfer') ?></div>
                             <h2 class="font-display text-lg font-bold line-clamp-2" style="color:var(--sepia)"><?= e($row['title']) ?></h2>
                             <?php if ($cart['dates']): ?><div class="text-xs mt-2 font-semibold" style="color:var(--horizonte)"><i data-lucide="calendar" class="w-3.5 h-3.5 inline -mt-0.5"></i> <?= e(implode(', ', array_map(fn($d) => date('d/m/Y', strtotime($d)), $cart['dates']))) ?></div><?php endif; ?>
+                            <div class="text-[11px] mt-2" style="color:var(--text-muted)"><?= (int)$cart['qty'] ?> <?= (int)$cart['qty'] === 1 ? 'item' : 'itens' ?><?= (int)$cart['date_count'] > 1 ? ' · ' . (int)$cart['date_count'] . ' datas' : '' ?></div>
                             <div class="mt-3 flex items-center justify-between gap-3">
-                                <strong class="font-display text-xl" style="color:var(--terracota)"><?= formatPrice($row['price_pix'] ?: $row['price']) ?></strong>
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-muted)">Total do item</div>
+                                    <strong class="font-display text-xl" style="color:var(--terracota)"><?= formatPrice($cart['subtotal']) ?></strong>
+                                </div>
                                 <span class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)"><i data-lucide="arrow-right" class="w-4 h-4"></i></span>
                             </div>
                         </div>

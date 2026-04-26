@@ -143,7 +143,7 @@ document.addEventListener('input', (e) => {
         const popover = document.createElement('div');
         popover.className = 'premium-date-popover';
         popover.hidden = true;
-        wrapper.appendChild(popover);
+        document.body.appendChild(popover);
 
         let current = parse(input.value) || new Date();
         current = new Date(current.getFullYear(), current.getMonth(), 1);
@@ -163,6 +163,19 @@ document.addEventListener('input', (e) => {
             if (input.min && dayIso < input.min) return true;
             if (input.max && dayIso > input.max) return true;
             return false;
+        }
+        function positionPopover() {
+            const rect = wrapper.getBoundingClientRect();
+            const width = Math.min(320, window.innerWidth - 32);
+            let left = Math.min(Math.max(16, rect.left), window.innerWidth - width - 16);
+            const popoverHeight = popover.offsetHeight || 360;
+            let top = rect.bottom + 8;
+            if (top + popoverHeight > window.innerHeight - 12 && rect.top > popoverHeight + 12) {
+                top = rect.top - popoverHeight - 8;
+            }
+            popover.style.width = width + 'px';
+            popover.style.left = left + 'px';
+            popover.style.top = top + 'px';
         }
         function render() {
             const year = current.getFullYear();
@@ -190,15 +203,15 @@ document.addEventListener('input', (e) => {
             </div>`;
             popover.innerHTML = html;
             if (typeof lucide !== 'undefined') lucide.createIcons();
+            positionPopover();
         }
         function open() {
             document.querySelectorAll('.premium-date-field.is-open').forEach(w => {
                 if (w !== wrapper) {
                     w.classList.remove('is-open');
-                    const p = w.querySelector('.premium-date-popover');
-                    if (p) p.hidden = true;
                 }
             });
+            document.querySelectorAll('.premium-date-popover').forEach(p => { if (p !== popover) p.hidden = true; });
             wrapper.classList.add('is-open');
             popover.hidden = false;
             render();
@@ -211,6 +224,7 @@ document.addEventListener('input', (e) => {
             popover.hidden ? open() : close();
         });
         popover.addEventListener('click', (e) => {
+            e.stopPropagation();
             const nav = e.target.closest('[data-nav]');
             const day = e.target.closest('[data-day]');
             const action = e.target.closest('[data-action]');
@@ -231,6 +245,8 @@ document.addEventListener('input', (e) => {
             if (d) current = new Date(d.getFullYear(), d.getMonth(), 1);
             updateTrigger();
         });
+        window.addEventListener('scroll', () => { if (!popover.hidden) positionPopover(); }, { passive: true });
+        window.addEventListener('resize', () => { if (!popover.hidden) positionPopover(); });
         new MutationObserver(updateTrigger).observe(input, { attributes: true, attributeFilter: ['value'] });
         updateTrigger();
     }
@@ -238,12 +254,11 @@ document.addEventListener('input', (e) => {
     function bindAll() { document.querySelectorAll('input[type="date"]').forEach(enhance); }
     document.addEventListener('DOMContentLoaded', bindAll);
     document.addEventListener('click', (e) => {
-        if (e.target.closest('.premium-date-field')) return;
+        if (e.target.closest('.premium-date-field') || e.target.closest('.premium-date-popover')) return;
         document.querySelectorAll('.premium-date-field.is-open').forEach(w => {
             w.classList.remove('is-open');
-            const p = w.querySelector('.premium-date-popover');
-            if (p) p.hidden = true;
         });
+        document.querySelectorAll('.premium-date-popover').forEach(p => { p.hidden = true; });
     });
     new MutationObserver(bindAll).observe(document.body, { childList: true, subtree: true });
 })();
@@ -258,9 +273,12 @@ window.availabilityCalendar = function availabilityCalendar(config) {
         map: config.map || {},
         basePrice: Number(config.basePrice || 0),
         checkoutBase: config.checkoutBase || '#',
+        cartType: config.cartType || '',
+        cartId: Number(config.cartId || 0),
         viewYear: today.getFullYear(),
         viewMonth: today.getMonth(),
         selectedDates: [],
+        init(){ this.syncCartSelection(); },
         get selectedIso() { return this.selectedDates[0] || ''; },
         get modeLabel() {
             if (this.mode === 'open') return 'Datas abertas — selecione uma ou várias datas disponíveis';
@@ -305,10 +323,28 @@ window.availabilityCalendar = function availabilityCalendar(config) {
         prevMonth(){ if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; } else this.viewMonth--; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
         nextMonth(){ if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; } else this.viewMonth++; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
         isSelected(isoDate){ return this.selectedDates.includes(isoDate); },
+        get cartSelectionKey(){
+            if (this.cartType && this.cartId) return this.cartType + ':' + this.cartId;
+            try {
+                const url = new URL(this.checkoutBase, window.location.origin);
+                for (const type of ['roteiro','pacote','transfer']) {
+                    const value = url.searchParams.get(type);
+                    if (value) return type + ':' + Number(value);
+                }
+            } catch(e) {}
+            return '';
+        },
+        syncCartSelection(){
+            const key = this.cartSelectionKey;
+            if (!key) return;
+            window.detailCalendarSelections = window.detailCalendarSelections || {};
+            window.detailCalendarSelections[key] = this.selectedDates.slice();
+        },
         select(cell){
             const i = this.selectedDates.indexOf(cell.iso);
             if (i >= 0) this.selectedDates.splice(i, 1); else this.selectedDates.push(cell.iso);
             this.selectedDates.sort();
+            this.syncCartSelection();
             this.$nextTick(() => window.lucide && window.lucide.createIcons());
         },
         formatDate(isoDate){ return new Date(isoDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }); },
@@ -630,6 +666,14 @@ window.cart = (function () {
             window.showToast && window.showToast(r.msg || 'Erro ao adicionar.', 'error');
         }
     }
+    function addSelectedOrAsk(type, id, title) {
+        const key = type + ':' + Number(id);
+        const dates = (window.detailCalendarSelections && Array.isArray(window.detailCalendarSelections[key]))
+            ? window.detailCalendarSelections[key].filter(Boolean)
+            : [];
+        if (dates.length) return add(type, id, dates);
+        return askDate(type, id, title);
+    }
     function askDate(type, id, title) {
         // Tenta abrir o modal Alpine. Se não houver listener, faz fallback com prompt nativo.
         let handled = false;
@@ -661,7 +705,7 @@ window.cart = (function () {
     document.addEventListener('DOMContentLoaded', refresh);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
-    return { open, close, add, askDate, remove, update, clear, refresh, get state() { return state; } };
+    return { open, close, add, addSelectedOrAsk, askDate, remove, update, clear, refresh, get state() { return state; } };
 })();
 
 
