@@ -4,44 +4,67 @@ $pageTitle = 'Pacotes de Viagem';
 $q = trim($_GET['q'] ?? '');
 $destination = trim($_GET['destination'] ?? '');
 $duration = (int)($_GET['duration'] ?? 0);
+$date = trim($_GET['date'] ?? '');
+if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $date = '';
 $sort = $_GET['sort'] ?? 'destaque';
-$where = "status='published'";
+$where = "p.status='published'";
 $params = [];
 
-if ($q) { $where .= " AND (title LIKE ? OR short_desc LIKE ? OR destination LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
-if ($destination) { $where .= " AND destination LIKE ?"; $params[] = "%$destination%"; }
+if ($q) { $where .= " AND (p.title LIKE ? OR p.short_desc LIKE ? OR p.destination LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
+if ($destination) { $where .= " AND p.destination LIKE ?"; $params[] = "%$destination%"; }
 if ($duration) {
-    if ($duration === 99) $where .= " AND duration_days >= 8";
-    else $where .= " AND duration_days = ?";
+    if ($duration === 99) $where .= " AND p.duration_days >= 8";
+    else $where .= " AND p.duration_days = ?";
     if ($duration !== 99) $params[] = $duration;
+}
+if ($date) {
+    $where .= " AND (
+        (COALESCE(p.availability_mode,'fixed')='fixed' AND EXISTS (
+            SELECT 1 FROM departures d
+            WHERE d.entity_type='pacote' AND d.entity_id=p.id AND d.departure_date=? AND d.status='open' AND (d.seats_total - d.seats_sold) > 0
+        ))
+        OR (COALESCE(p.availability_mode,'fixed')='open' AND ? >= CURDATE() AND NOT EXISTS (
+            SELECT 1 FROM departures d
+            WHERE d.entity_type='pacote' AND d.entity_id=p.id AND d.departure_date=? AND (d.status<>'open' OR (d.seats_total - d.seats_sold) <= 0)
+        ))
+    )";
+    $params[] = $date;
+    $params[] = $date;
+    $params[] = $date;
 }
 
 $orderBy = match($sort) {
-    'preco_asc'  => 'COALESCE(price_pix,price) ASC',
-    'preco_desc' => 'COALESCE(price_pix,price) DESC',
-    'recentes'   => 'created_at DESC',
-    'duracao'    => 'duration_days DESC',
-    default      => 'featured DESC, created_at DESC',
+    'preco_asc'  => 'COALESCE(p.price_pix,p.price) ASC',
+    'preco_desc' => 'COALESCE(p.price_pix,p.price) DESC',
+    'recentes'   => 'p.created_at DESC',
+    'duracao'    => 'p.duration_days DESC',
+    default      => 'p.featured DESC, p.created_at DESC',
 };
 
-$pacotes = dbAll("SELECT * FROM pacotes WHERE $where ORDER BY $orderBy", $params);
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM pacotes p WHERE $where",
+    "SELECT p.* FROM pacotes p WHERE $where ORDER BY $orderBy",
+    $params,
+    ['allowed'=>[12,24,48], 'default'=>12]
+);
+$pacotes = $pag['rows'];
 $destinations = dbAll("SELECT DISTINCT destination FROM pacotes WHERE status='published' AND destination IS NOT NULL AND destination != '' ORDER BY destination");
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
-<section class="pt-36 pb-16 relative overflow-hidden" style="background:linear-gradient(180deg,var(--terracota) 0%,var(--terracota-dark) 100%)">
+<section class="pt-32 sm:pt-36 pb-12 sm:pb-16 relative overflow-hidden" style="background:linear-gradient(180deg,var(--terracota) 0%,var(--terracota-dark) 100%)">
     <div class="absolute inset-0" style="background-image:radial-gradient(circle at 70% 50%, rgba(58,107,138,0.3) 0%, transparent 60%)"></div>
     <div class="relative max-w-7xl mx-auto px-6 text-center text-white">
         <span class="text-xs font-bold tracking-[0.3em] uppercase" style="color:var(--areia-light)">Viagens completas</span>
-        <h1 class="font-display text-5xl md:text-6xl font-bold mt-3 mb-4">Pacotes de Viagem</h1>
+        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mt-3 mb-4">Pacotes de Viagem</h1>
         <p class="text-white/85 max-w-2xl mx-auto">Experiências curadas com hospedagem, transporte e passeios incluídos.</p>
     </div>
 </section>
 
-<section class="py-16">
-    <div class="max-w-7xl mx-auto px-6">
+<section class="py-10 sm:py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <!-- Premium Filter -->
-        <form method="GET" class="filter-premium">
+        <form method="GET" class="filter-premium filter-with-date">
             <div class="filter-search">
                 <label class="filter-label">Buscar</label>
                 <i data-lucide="search" class="filter-search-icon"></i>
@@ -68,6 +91,10 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </select>
             </div>
             <div>
+                <label class="filter-label">Data</label>
+                <input type="date" name="date" value="<?= e($date) ?>" class="filter-input" placeholder="Escolher data">
+            </div>
+            <div>
                 <label class="filter-label">Ordenar</label>
                 <select name="sort" class="filter-input">
                     <option value="destaque"  <?= $sort==='destaque'?'selected':'' ?>>Em destaque</option>
@@ -79,7 +106,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             </div>
             <div class="flex gap-2 items-end">
                 <button type="submit" class="filter-submit"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Filtrar</button>
-                <?php if ($q || $destination || $duration || ($sort && $sort !== 'destaque')): ?>
+                <?php if ($q || $destination || $duration || $date || ($sort && $sort !== 'destaque')): ?>
                     <a href="<?= url('/pacotes') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a>
                 <?php endif; ?>
             </div>
@@ -92,7 +119,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <p class="text-sm mt-2" style="color:var(--text-muted)">Ajuste os filtros ou <a href="<?= url('/contato') ?>" class="underline" style="color:var(--terracota)">fale com a gente</a>.</p>
             </div>
         <?php else: ?>
-        <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= count($pacotes) ?></strong> pacote<?= count($pacotes)===1?'':'s' ?> encontrado<?= count($pacotes)===1?'':'s' ?></p>
+        <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= (int)$pag['total'] ?></strong> pacote<?= (int)$pag['total']===1?'':'s' ?> encontrado<?= (int)$pag['total']===1?'':'s' ?></p>
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($pacotes as $i => $p): 
                 $slides = [];
@@ -140,6 +167,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             </a>
             <?php endforeach; ?>
         </div>
+        <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
         <?php endif; ?>
     </div>
 </section>

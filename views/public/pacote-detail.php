@@ -88,44 +88,27 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <?php if (count($gallery) > 1): ?>
-<section class="py-6 sm:py-8" x-data="galleryLightbox(<?= htmlspecialchars(json_encode($gallery), ENT_QUOTES) ?>)">
+<section class="detail-gallery-section">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="hero-gallery-grid">
-            <?php $show = array_slice($gallery, 0, 5); foreach ($show as $idx => $img): ?>
-            <div @click="open(<?= $idx ?>)">
-                <img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($p['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>">
-                <?php if ($idx === 4 && count($gallery) > 5): ?>
-                    <div class="hero-gallery-more"><i data-lucide="images" class="w-6 h-6"></i>+<?= count($gallery) - 5 ?> fotos</div>
-                <?php endif; ?>
+        <div class="detail-slider" data-slider>
+            <div class="detail-slider-main slider-wrap">
+                <?php foreach ($gallery as $idx => $img): ?>
+                    <div class="slide<?= $idx===0?' active':'' ?>" style="background-image:url('<?= e($img) ?>')"></div>
+                <?php endforeach; ?>
+                <button type="button" class="slider-arrow prev" aria-label="Foto anterior"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                <button type="button" class="slider-arrow next" aria-label="Próxima foto"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
             </div>
-            <?php endforeach; ?>
+            <div class="slider-thumbs" aria-label="Miniaturas da galeria">
+                <?php foreach ($gallery as $idx => $img): ?>
+                    <button type="button" class="thumb<?= $idx===0?' active':'' ?>" aria-label="Ver foto <?= $idx+1 ?>"><img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($p['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>"></button>
+                <?php endforeach; ?>
+            </div>
         </div>
-        <template x-teleport="body">
-            <div x-show="isOpen" x-cloak class="gallery-lightbox-backdrop" @keydown.escape.window="close()" @keydown.arrow-left.window="prev()" @keydown.arrow-right.window="next()">
-                <button class="gallery-lightbox-close" @click="close()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                <button class="gallery-lightbox-arrow prev" @click="prev()"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
-                <img :src="images[current]" :alt="'Foto ' + (current+1)" class="gallery-lightbox-image">
-                <button class="gallery-lightbox-arrow next" @click="next()"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
-                <div class="gallery-lightbox-counter"><span x-text="current+1"></span> / <span x-text="images.length"></span></div>
-            </div>
-        </template>
     </div>
 </section>
-<script>
-if (typeof galleryLightbox === 'undefined') {
-    function galleryLightbox(images) {
-        return { images, isOpen:false, current:0,
-            open(i){ this.current=i; this.isOpen=true; document.body.style.overflow='hidden'; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
-            close(){ this.isOpen=false; document.body.style.overflow=''; },
-            prev(){ this.current=(this.current-1+this.images.length)%this.images.length; },
-            next(){ this.current=(this.current+1)%this.images.length; },
-        };
-    }
-}
-</script>
 <?php endif; ?>
 
-<section class="py-10 sm:py-16">
+<section class="detail-content-section">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="grid lg:grid-cols-3 gap-6 lg:gap-10">
             <div class="lg:col-span-2 space-y-6 sm:space-y-8">
@@ -256,22 +239,22 @@ if (typeof galleryLightbox === 'undefined') {
                         <template x-for="cell in cells" :key="cell.key">
                             <button type="button" :disabled="!cell.available" @click="cell.available && select(cell)"
                                 class="calendar-cell"
-                                :class="{ 'empty':cell.empty, 'past':cell.past, 'available':cell.available&&!cell.lowSeats, 'low':cell.available&&cell.lowSeats, 'blocked':cell.blocked, 'selected':cell.iso&&cell.iso===selectedIso }">
+                                :class="{ 'empty':cell.empty, 'past':cell.past, 'available':cell.available&&!cell.lowSeats, 'low':cell.available&&cell.lowSeats, 'blocked':cell.blocked, 'selected':cell.iso&&isSelected(cell.iso) }">
                                 <span class="cal-day" x-text="cell.day"></span>
                                 <span class="cal-price" x-show="cell.available" x-text="cell.priceLabel"></span>
                             </button>
                         </template>
                     </div>
 
-                    <div x-show="selectedIso" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
+                    <div x-show="selectedDates.length" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
                         <div>
-                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Data selecionada</div>
+                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Datas selecionadas</div>
                             <div class="font-display font-bold text-lg" style="color:var(--sepia)" x-text="selectedLabel"></div>
                             <div class="text-xs mt-0.5" style="color:var(--text-secondary)" x-text="selectedDetail"></div>
                         </div>
-                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar esta data</a>
+                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar datas</a>
                     </div>
-                    <div x-show="!selectedIso && cells.some(c => c.available)" class="mt-6 text-sm text-center" style="color:var(--text-muted)">Clique em uma data disponível para reservar.</div>
+                    <div x-show="!selectedDates.length && cells.some(c => c.available)" class="mt-6 text-sm text-center" style="color:var(--text-muted)">Clique em uma ou várias datas disponíveis para reservar.</div>
                     <div x-show="!cells.some(c => c.available) && mode !== 'on_request'" class="mt-6 p-5 rounded-xl text-center" style="background:var(--bg-surface)">
                         <div class="text-sm font-semibold mb-1" style="color:var(--sepia)">Sem datas disponíveis neste mês</div>
                         <div class="text-xs" style="color:var(--text-muted)">Tente o próximo mês ou fale com a gente no WhatsApp.</div>

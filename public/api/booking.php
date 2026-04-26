@@ -46,6 +46,7 @@ $source        = in_array($_POST['source'] ?? '', ['instagram','whatsapp','indic
 $sourceDetail  = trim($_POST['source_detail'] ?? '');
 $acceptTerms   = !empty($_POST['accept_terms']);
 $priceOption   = $_POST['price_option'] ?? null;
+$cartKey       = trim($_POST['cart_key'] ?? '');
 
 // Modo grupo (checkout institucional)
 $bookingMode   = $_POST['booking_mode'] ?? 'individual';
@@ -215,6 +216,9 @@ $bookingId = dbInsert(
 if ($couponIdToIncrement) dbExec("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [$couponIdToIncrement]);
 foreach ($travelDates as $dt) {
     dbExec("UPDATE departures SET seats_sold = LEAST(seats_total, seats_sold + ?) WHERE entity_type=? AND entity_id=? AND departure_date=? AND status='open'", [$peopleTotal, $entityType, $entityId, $dt]);
+}
+if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
+    unset($_SESSION['cart'][$cartKey]);
 }
 
 jsonResponse([

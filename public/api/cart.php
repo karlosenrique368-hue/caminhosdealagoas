@@ -30,9 +30,13 @@ function cartResponse(): void {
         $qty   = max(1, (int)($it['qty'] ?? 1));
         $price = (float)($row['price_pix'] ?: $row['price']);
         $dateCount = !empty($it['travel_dates']) && is_array($it['travel_dates']) ? count($it['travel_dates']) : (!empty($it['travel_date']) ? 1 : 1);
+        $travelDates = !empty($it['travel_dates']) && is_array($it['travel_dates']) ? array_values($it['travel_dates']) : (!empty($it['travel_date']) ? [$it['travel_date']] : []);
         $sub   = $price * $qty * max(1, $dateCount);
         $total += $sub;
         $count += $qty;
+        $query = ['cart_key' => $key, $it['type'] => (int)$row['id']];
+        if ($travelDates) $query['dates'] = implode(',', $travelDates);
+        $checkoutUrl = url('/checkout?' . http_build_query($query));
         $items[] = [
             'key'        => $key,
             'type'       => $it['type'],
@@ -45,11 +49,18 @@ function cartResponse(): void {
             'location'   => $row['location'] ?? '',
             'price'      => $price,
             'qty'        => $qty,
-            'travel_date'=> $it['travel_date'] ?? null,
-            'travel_dates'=> $it['travel_dates'] ?? [],
+            'travel_date'=> $travelDates[0] ?? null,
+            'travel_dates'=> $travelDates,
             'subtotal'   => $sub,
             'url'        => url('/' . ($it['type'] === 'roteiro' ? 'passeios' : ($it['type'] === 'pacote' ? 'pacotes' : 'transfers')) . '/' . $row['slug']),
+            'checkout_url'=> $checkoutUrl,
         ];
+    }
+    $checkoutUrl = url('/checkout');
+    if (count($items) === 1) {
+        $checkoutUrl = $items[0]['checkout_url'];
+    } elseif (count($items) > 1) {
+        $checkoutUrl = url('/checkout?cart=1');
     }
     echo json_encode([
         'ok'    => true,
@@ -57,6 +68,7 @@ function cartResponse(): void {
         'total' => $total,
         'total_fmt' => 'R$ ' . number_format($total, 2, ',', '.'),
         'items' => $items,
+        'checkout_url' => $checkoutUrl,
     ]);
     exit;
 }

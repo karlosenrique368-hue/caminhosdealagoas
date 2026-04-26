@@ -5,23 +5,46 @@ $pageDesc = 'Confira todos os passeios disponíveis em Alagoas.';
 $q = trim($_GET['q'] ?? '');
 $categoryId = (int) ($_GET['cat'] ?? 0);
 $location = trim($_GET['location'] ?? '');
+$date = trim($_GET['date'] ?? $_GET['data'] ?? '');
+if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $date = '';
 $sort = $_GET['sort'] ?? 'destaque';
-$where = "status='published'";
+$where = "r.status='published'";
 $params = [];
 
-if ($q) { $where .= " AND (title LIKE ? OR short_desc LIKE ? OR location LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
-if ($categoryId) { $where .= " AND category_id = ?"; $params[] = $categoryId; }
-if ($location) { $where .= " AND location LIKE ?"; $params[] = "%$location%"; }
+if ($q) { $where .= " AND (r.title LIKE ? OR r.short_desc LIKE ? OR r.location LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
+if ($categoryId) { $where .= " AND r.category_id = ?"; $params[] = $categoryId; }
+if ($location) { $where .= " AND r.location LIKE ?"; $params[] = "%$location%"; }
+if ($date) {
+    $where .= " AND (
+        (COALESCE(r.availability_mode,'fixed')='fixed' AND EXISTS (
+            SELECT 1 FROM departures d
+            WHERE d.entity_type='roteiro' AND d.entity_id=r.id AND d.departure_date=? AND d.status='open' AND (d.seats_total - d.seats_sold) > 0
+        ))
+        OR (COALESCE(r.availability_mode,'fixed')='open' AND ? >= CURDATE() AND NOT EXISTS (
+            SELECT 1 FROM departures d
+            WHERE d.entity_type='roteiro' AND d.entity_id=r.id AND d.departure_date=? AND (d.status<>'open' OR (d.seats_total - d.seats_sold) <= 0)
+        ))
+    )";
+    $params[] = $date;
+    $params[] = $date;
+    $params[] = $date;
+}
 
 $orderBy = match($sort) {
-    'preco_asc'  => 'COALESCE(price_pix,price) ASC',
-    'preco_desc' => 'COALESCE(price_pix,price) DESC',
-    'recentes'   => 'created_at DESC',
-    'avaliados'  => 'rating_avg DESC, rating_count DESC',
-    default      => 'featured DESC, created_at DESC',
+    'preco_asc'  => 'COALESCE(r.price_pix,r.price) ASC',
+    'preco_desc' => 'COALESCE(r.price_pix,r.price) DESC',
+    'recentes'   => 'r.created_at DESC',
+    'avaliados'  => 'r.rating_avg DESC, r.rating_count DESC',
+    default      => 'r.featured DESC, r.created_at DESC',
 };
 
-$roteiros = dbAll("SELECT * FROM roteiros WHERE $where ORDER BY $orderBy", $params);
+$pag = paginate(
+    "SELECT COUNT(*) AS c FROM roteiros r WHERE $where",
+    "SELECT r.* FROM roteiros r WHERE $where ORDER BY $orderBy",
+    $params,
+    ['allowed'=>[12,24,48], 'default'=>12]
+);
+$roteiros = $pag['rows'];
 $categories = dbAll("SELECT * FROM categories WHERE type='roteiro' AND active=1 ORDER BY sort_order");
 $locations = dbAll("SELECT DISTINCT location FROM roteiros WHERE status='published' AND location IS NOT NULL AND location != '' ORDER BY location");
 
@@ -29,19 +52,19 @@ include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
 <!-- Page header -->
-<section class="pt-36 pb-16 relative overflow-hidden" style="background:linear-gradient(180deg,var(--horizonte) 0%,var(--horizonte-dark) 100%)">
+<section class="pt-32 sm:pt-36 pb-12 sm:pb-16 relative overflow-hidden" style="background:linear-gradient(180deg,var(--horizonte) 0%,var(--horizonte-dark) 100%)">
     <div class="absolute inset-0" style="background-image:radial-gradient(circle at 30% 50%, rgba(201,107,74,0.3) 0%, transparent 60%)"></div>
     <div class="relative max-w-7xl mx-auto px-6 text-center text-white">
         <span class="text-xs font-bold tracking-[0.3em] uppercase" style="color:var(--areia-light)">Nossas experiências</span>
-        <h1 class="font-display text-5xl md:text-6xl font-bold mt-3 mb-4">Passeios</h1>
+        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mt-3 mb-4">Passeios</h1>
         <p class="text-white/80 max-w-2xl mx-auto">Explore Alagoas com quem conhece cada praia, trilha e história.</p>
     </div>
 </section>
 
-<section class="py-16">
-    <div class="max-w-7xl mx-auto px-6">
+<section class="py-10 sm:py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <!-- Premium Filter -->
-        <form method="GET" class="filter-premium">
+        <form method="GET" class="filter-premium filter-with-date">
             <div class="filter-search">
                 <label class="filter-label">Buscar</label>
                 <i data-lucide="search" class="filter-search-icon"></i>
@@ -66,6 +89,10 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </select>
             </div>
             <div>
+                <label class="filter-label">Data</label>
+                <input type="date" name="date" value="<?= e($date) ?>" class="filter-input" placeholder="Escolher data">
+            </div>
+            <div>
                 <label class="filter-label">Ordenar</label>
                 <select name="sort" class="filter-input">
                     <option value="destaque"  <?= $sort==='destaque'?'selected':'' ?>>Em destaque</option>
@@ -77,7 +104,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             </div>
             <div class="flex gap-2 items-end">
                 <button type="submit" class="filter-submit"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Filtrar</button>
-                <?php if ($q || $categoryId || $location || ($sort && $sort !== 'destaque')): ?>
+                <?php if ($q || $categoryId || $location || $date || ($sort && $sort !== 'destaque')): ?>
                     <a href="<?= url('/passeios') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a>
                 <?php endif; ?>
             </div>
@@ -90,7 +117,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <p class="text-sm mt-2" style="color:var(--text-muted)">Tente ajustar os filtros ou <a href="<?= url('/contato') ?>" class="underline" style="color:var(--terracota)">falar com a gente</a>.</p>
             </div>
         <?php else: ?>
-        <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= count($roteiros) ?></strong> passeio<?= count($roteiros)===1?'':'s' ?> encontrado<?= count($roteiros)===1?'':'s' ?></p>
+        <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= (int)$pag['total'] ?></strong> passeio<?= (int)$pag['total']===1?'':'s' ?> encontrado<?= (int)$pag['total']===1?'':'s' ?></p>
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($roteiros as $i => $r): 
                 $slides = [];
@@ -136,6 +163,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             </a>
             <?php endforeach; ?>
         </div>
+        <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
         <?php endif; ?>
     </div>
 </section>

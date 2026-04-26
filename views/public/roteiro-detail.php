@@ -58,7 +58,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
 <!-- Hero image -->
-<section class="relative h-[60vh] min-h-[400px] overflow-hidden" style="margin-top:-80px">
+<section class="relative h-[55vh] min-h-[360px] overflow-hidden" style="margin-top:-80px">
     <?php if ($r['cover_image']): ?>
         <img src="<?= storageUrl($r['cover_image']) ?>" class="absolute inset-0 w-full h-full object-cover" alt="<?= e($r['title']) ?>">
     <?php else: ?>
@@ -68,14 +68,14 @@ include VIEWS_DIR . '/partials/public_head.php';
     <img src="<?= asset('brand/selo-branco.png') ?>" class="seal-rotate absolute hidden md:block" style="top:120px;right:40px;width:100px;opacity:0.35;z-index:5" alt="">
 
     <div class="relative z-10 h-full flex items-end pb-16">
-        <div class="max-w-7xl mx-auto px-6 w-full text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 w-full text-white">
             <a href="<?= url('/passeios') ?>" class="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white mb-4">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i> Todos os passeios
             </a>
             <?php if ($r['category_name']): ?>
                 <span class="inline-block text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full mb-3" style="background:var(--terracota);color:white"><?= e(tAuto($r['category_name'])) ?></span>
             <?php endif; ?>
-            <h1 class="font-display text-4xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($r['title'])) ?></h1>
+            <h1 class="font-display text-3xl sm:text-5xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($r['title'])) ?></h1>
             <div class="flex flex-wrap gap-5 text-sm text-white/85">
                 <?php if ($r['location']): ?>
                 <div class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e(tAuto($r['location'])) ?></div>
@@ -90,50 +90,28 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <?php if (count($gallery) > 1): ?>
-<!-- Gallery premium -->
-<section class="py-8" x-data="galleryLightbox(<?= htmlspecialchars(json_encode($gallery), ENT_QUOTES) ?>)">
-    <div class="max-w-7xl mx-auto px-6">
-        <div class="hero-gallery-grid">
-            <?php $show = array_slice($gallery, 0, 5); foreach ($show as $idx => $img): ?>
-            <div @click="open(<?= $idx ?>)">
-                <img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($r['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>">
-                <?php if ($idx === 4 && count($gallery) > 5): ?>
-                <div class="hero-gallery-more">
-                    <i data-lucide="images" class="w-6 h-6"></i>
-                    +<?= count($gallery) - 5 ?> fotos
-                </div>
-                <?php endif; ?>
+<section class="detail-gallery-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="detail-slider" data-slider>
+            <div class="detail-slider-main slider-wrap">
+                <?php foreach ($gallery as $idx => $img): ?>
+                    <div class="slide<?= $idx===0?' active':'' ?>" style="background-image:url('<?= e($img) ?>')"></div>
+                <?php endforeach; ?>
+                <button type="button" class="slider-arrow prev" aria-label="Foto anterior"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                <button type="button" class="slider-arrow next" aria-label="Próxima foto"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
             </div>
-            <?php endforeach; ?>
+            <div class="slider-thumbs" aria-label="Miniaturas da galeria">
+                <?php foreach ($gallery as $idx => $img): ?>
+                    <button type="button" class="thumb<?= $idx===0?' active':'' ?>" aria-label="Ver foto <?= $idx+1 ?>"><img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($r['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>"></button>
+                <?php endforeach; ?>
+            </div>
         </div>
-
-        <!-- Lightbox -->
-        <template x-teleport="body">
-            <div x-show="isOpen" x-cloak class="gallery-lightbox-backdrop" @keydown.escape.window="close()" @keydown.arrow-left.window="prev()" @keydown.arrow-right.window="next()">
-                <button class="gallery-lightbox-close" @click="close()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                <button class="gallery-lightbox-arrow prev" @click="prev()"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
-                <img :src="images[current]" :alt="'Foto ' + (current+1)" class="gallery-lightbox-image">
-                <button class="gallery-lightbox-arrow next" @click="next()"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
-                <div class="gallery-lightbox-counter"><span x-text="current+1"></span> / <span x-text="images.length"></span></div>
-            </div>
-        </template>
     </div>
 </section>
-<script>
-function galleryLightbox(images) {
-    return {
-        images, isOpen:false, current:0,
-        open(i){ this.current=i; this.isOpen=true; document.body.style.overflow='hidden'; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
-        close(){ this.isOpen=false; document.body.style.overflow=''; },
-        prev(){ this.current = (this.current - 1 + this.images.length) % this.images.length; },
-        next(){ this.current = (this.current + 1) % this.images.length; },
-    };
-}
-</script>
 <?php endif; ?>
 
-<section class="py-16">
-    <div class="max-w-7xl mx-auto px-6">
+<section class="detail-content-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="grid lg:grid-cols-3 gap-10">
             <!-- Content -->
             <div class="lg:col-span-2 space-y-10">
@@ -302,7 +280,7 @@ function galleryLightbox(images) {
                                     'available': cell.available && !cell.lowSeats,
                                     'low': cell.available && cell.lowSeats,
                                     'blocked': cell.blocked,
-                                    'selected': cell.iso && cell.iso === selectedIso
+                                    'selected': cell.iso && isSelected(cell.iso)
                                 }">
                                 <span class="cal-day" x-text="cell.day"></span>
                                 <span class="cal-price" x-show="cell.available" x-text="cell.priceLabel"></span>
@@ -311,16 +289,16 @@ function galleryLightbox(images) {
                     </div>
 
                     <!-- Resumo + CTA -->
-                    <div x-show="selectedIso" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
+                    <div x-show="selectedDates.length" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
                         <div>
-                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Data selecionada</div>
+                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Datas selecionadas</div>
                             <div class="font-display font-bold text-lg" style="color:var(--sepia)" x-text="selectedLabel"></div>
                             <div class="text-xs mt-0.5" style="color:var(--text-secondary)" x-text="selectedDetail"></div>
                         </div>
-                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar esta data</a>
+                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar datas</a>
                     </div>
-                    <div x-show="!selectedIso && cells.some(c => c.available)" class="mt-6 text-sm text-center" style="color:var(--text-muted)">
-                        Clique em uma data disponível para reservar.
+                    <div x-show="!selectedDates.length && cells.some(c => c.available)" class="mt-6 text-sm text-center" style="color:var(--text-muted)">
+                        Clique em uma ou várias datas disponíveis para reservar.
                     </div>
                     <div x-show="!cells.some(c => c.available) && mode !== 'on_request'" class="mt-6 p-5 rounded-xl text-center" style="background:var(--bg-surface)">
                         <div class="text-sm font-semibold mb-1" style="color:var(--sepia)">Sem datas disponíveis neste mês</div>

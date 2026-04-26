@@ -112,6 +112,228 @@ document.addEventListener('input', (e) => {
 });
 
 // ============================================================
+// PREMIUM: Generic visual datepicker for native date inputs
+// ============================================================
+(function initPremiumDateInputs() {
+    const monthNames = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const dow = ['D','S','T','Q','Q','S','S'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const parse = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? new Date(value + 'T12:00:00') : null;
+    const label = (value, placeholder) => {
+        const d = parse(value);
+        return d ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '') : (placeholder || 'Selecionar data');
+    };
+
+    function enhance(input) {
+        if (input.dataset.premiumDateBound || input.dataset.premiumDate === 'off') return;
+        input.dataset.premiumDateBound = '1';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'premium-date-field';
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+        input.classList.add('premium-date-native');
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'premium-date-trigger';
+        trigger.innerHTML = '<span></span><i data-lucide="calendar-days"></i>';
+        wrapper.appendChild(trigger);
+
+        const popover = document.createElement('div');
+        popover.className = 'premium-date-popover';
+        popover.hidden = true;
+        wrapper.appendChild(popover);
+
+        let current = parse(input.value) || new Date();
+        current = new Date(current.getFullYear(), current.getMonth(), 1);
+
+        function setValue(value) {
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            updateTrigger();
+        }
+        function updateTrigger() {
+            const span = trigger.querySelector('span');
+            span.textContent = label(input.value, input.getAttribute('placeholder'));
+            span.className = input.value ? '' : 'date-placeholder';
+        }
+        function isDisabled(dayIso) {
+            if (input.min && dayIso < input.min) return true;
+            if (input.max && dayIso > input.max) return true;
+            return false;
+        }
+        function render() {
+            const year = current.getFullYear();
+            const month = current.getMonth();
+            const first = new Date(year, month, 1);
+            const days = new Date(year, month + 1, 0).getDate();
+            const todayIso = iso(new Date());
+            let html = `<div class="premium-date-head">
+                <button type="button" class="premium-date-nav" data-nav="prev" aria-label="Mês anterior"><i data-lucide="chevron-left"></i></button>
+                <div class="premium-date-title">${monthNames[month]} de ${year}</div>
+                <button type="button" class="premium-date-nav" data-nav="next" aria-label="Próximo mês"><i data-lucide="chevron-right"></i></button>
+            </div><div class="premium-date-grid">`;
+            dow.forEach(d => { html += `<div class="premium-date-dow">${d}</div>`; });
+            for (let i = 0; i < first.getDay(); i++) html += '<button type="button" class="premium-date-day is-muted" tabindex="-1"></button>';
+            for (let d = 1; d <= days; d++) {
+                const value = `${year}-${pad(month + 1)}-${pad(d)}`;
+                const cls = ['premium-date-day'];
+                if (value === input.value) cls.push('is-selected');
+                if (value === todayIso) cls.push('is-today');
+                html += `<button type="button" class="${cls.join(' ')}" data-day="${value}" ${isDisabled(value) ? 'disabled' : ''}>${d}</button>`;
+            }
+            html += `</div><div class="premium-date-actions">
+                <button type="button" class="premium-date-action" data-action="today">Hoje</button>
+                <button type="button" class="premium-date-action" data-action="clear">Limpar</button>
+            </div>`;
+            popover.innerHTML = html;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        function open() {
+            document.querySelectorAll('.premium-date-field.is-open').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('is-open');
+                    const p = w.querySelector('.premium-date-popover');
+                    if (p) p.hidden = true;
+                }
+            });
+            wrapper.classList.add('is-open');
+            popover.hidden = false;
+            render();
+        }
+        function close() { wrapper.classList.remove('is-open'); popover.hidden = true; }
+        trigger.addEventListener('click', () => {
+            const d = parse(input.value);
+            if (d) current = new Date(d.getFullYear(), d.getMonth(), 1);
+            updateTrigger();
+            popover.hidden ? open() : close();
+        });
+        popover.addEventListener('click', (e) => {
+            const nav = e.target.closest('[data-nav]');
+            const day = e.target.closest('[data-day]');
+            const action = e.target.closest('[data-action]');
+            if (nav) {
+                current.setMonth(current.getMonth() + (nav.dataset.nav === 'next' ? 1 : -1));
+                render();
+            } else if (day) {
+                setValue(day.dataset.day);
+                close();
+            } else if (action) {
+                if (action.dataset.action === 'today') setValue(iso(new Date()));
+                if (action.dataset.action === 'clear') setValue('');
+                close();
+            }
+        });
+        input.addEventListener('input', () => {
+            const d = parse(input.value);
+            if (d) current = new Date(d.getFullYear(), d.getMonth(), 1);
+            updateTrigger();
+        });
+        new MutationObserver(updateTrigger).observe(input, { attributes: true, attributeFilter: ['value'] });
+        updateTrigger();
+    }
+
+    function bindAll() { document.querySelectorAll('input[type="date"]').forEach(enhance); }
+    document.addEventListener('DOMContentLoaded', bindAll);
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.premium-date-field')) return;
+        document.querySelectorAll('.premium-date-field.is-open').forEach(w => {
+            w.classList.remove('is-open');
+            const p = w.querySelector('.premium-date-popover');
+            if (p) p.hidden = true;
+        });
+    });
+    new MutationObserver(bindAll).observe(document.body, { childList: true, subtree: true });
+})();
+
+// ============================================================
+// Availability calendar used by detail pages (multi-date)
+// ============================================================
+window.availabilityCalendar = function availabilityCalendar(config) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return {
+        mode: config.mode || 'fixed',
+        map: config.map || {},
+        basePrice: Number(config.basePrice || 0),
+        checkoutBase: config.checkoutBase || '#',
+        viewYear: today.getFullYear(),
+        viewMonth: today.getMonth(),
+        selectedDates: [],
+        get selectedIso() { return this.selectedDates[0] || ''; },
+        get modeLabel() {
+            if (this.mode === 'open') return 'Datas abertas — selecione uma ou várias datas disponíveis';
+            if (this.mode === 'on_request') return 'Sob consulta — combine a data pelo WhatsApp';
+            return 'Selecione uma ou várias datas listadas abaixo';
+        },
+        get monthLabel() {
+            return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][this.viewMonth] + ' de ' + this.viewYear;
+        },
+        pad(n){ return n < 10 ? '0' + n : '' + n; },
+        iso(y,m,d){ return y + '-' + this.pad(m + 1) + '-' + this.pad(d); },
+        brl(v){ return 'R$ ' + Number(v || 0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); },
+        get cells() {
+            const first = new Date(this.viewYear, this.viewMonth, 1);
+            const startDow = first.getDay();
+            const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+            const cells = [];
+            for (let i = 0; i < startDow; i++) cells.push({ key: 'e' + i, empty: true });
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateObj = new Date(this.viewYear, this.viewMonth, d);
+                const isoStr = this.iso(this.viewYear, this.viewMonth, d);
+                const past = dateObj < today;
+                const info = this.map[isoStr];
+                let available = false, lowSeats = false, blocked = false, price = this.basePrice;
+                if (past || this.mode === 'on_request') {
+                    available = false;
+                } else if (info) {
+                    if (info.status === 'open' && Number(info.seats || 0) > 0) {
+                        available = true;
+                        lowSeats = Number(info.seats || 0) <= 3;
+                        price = Number(info.price || price);
+                    } else {
+                        blocked = true;
+                    }
+                } else if (this.mode === 'open') {
+                    available = true;
+                }
+                cells.push({ key: isoStr, iso: isoStr, day: d, empty: false, past, available, lowSeats, blocked, priceLabel: available ? this.brl(price).replace('R$ ','R$') : '', seats: info ? info.seats : null, price });
+            }
+            return cells;
+        },
+        prevMonth(){ if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; } else this.viewMonth--; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
+        nextMonth(){ if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; } else this.viewMonth++; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
+        isSelected(isoDate){ return this.selectedDates.includes(isoDate); },
+        select(cell){
+            const i = this.selectedDates.indexOf(cell.iso);
+            if (i >= 0) this.selectedDates.splice(i, 1); else this.selectedDates.push(cell.iso);
+            this.selectedDates.sort();
+            this.$nextTick(() => window.lucide && window.lucide.createIcons());
+        },
+        formatDate(isoDate){ return new Date(isoDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }); },
+        get selectedLabel(){
+            if (!this.selectedDates.length) return '';
+            if (this.selectedDates.length === 1) return this.formatDate(this.selectedDates[0]);
+            return this.selectedDates.length + ' datas selecionadas';
+        },
+        get selectedDetail(){
+            if (!this.selectedDates.length) return '';
+            if (this.selectedDates.length > 1) return this.selectedDates.map(d => this.formatDate(d)).join(' · ');
+            const c = this.cells.find(x => x.iso === this.selectedDates[0]);
+            if (!c) return '';
+            const parts = [this.brl(c.price) + (this.checkoutBase.includes('transfer=') ? ' por veículo' : ' por pessoa')];
+            if (c.seats !== null) parts.push(c.seats + ' vagas restantes');
+            return parts.join(' · ');
+        },
+        get selectedCheckoutUrl(){
+            const dates = encodeURIComponent(this.selectedDates.join(','));
+            return this.checkoutBase + (this.checkoutBase.includes('?') ? '&' : '?') + 'dates=' + dates;
+        },
+    };
+};
+
+// ============================================================
 // PREMIUM: Hero scroll-linked overlay
 // ============================================================
 (function initHeroScroll() {
@@ -149,13 +371,16 @@ document.addEventListener('input', (e) => {
         slides.forEach((s, i) => s.classList.toggle('active', i === next));
         const dots = wrap.querySelectorAll('.slider-dots .dot');
         dots.forEach((d, i) => d.classList.toggle('active', i === next));
+        const thumbs = wrap.querySelectorAll('.slider-thumbs .thumb');
+        thumbs.forEach((t, i) => t.classList.toggle('active', i === next));
     }
     // Delegated arrow + dot clicks (works for static + dynamic sliders)
     document.addEventListener('click', (e) => {
         const arrow = e.target.closest('.slider-arrow');
         const dot   = e.target.closest('.slider-dots .dot');
-        if (!arrow && !dot) return;
-        const wrap = (arrow || dot).closest('[data-slider]');
+        const thumb = e.target.closest('.slider-thumbs .thumb');
+        if (!arrow && !dot && !thumb) return;
+        const wrap = (arrow || dot || thumb).closest('[data-slider]');
         if (!wrap) return;
         e.preventDefault();
         e.stopPropagation();
@@ -165,6 +390,9 @@ document.addEventListener('input', (e) => {
         } else if (dot) {
             const dots = [...wrap.querySelectorAll('.slider-dots .dot')];
             go(wrap, dots.indexOf(dot));
+        } else if (thumb) {
+            const thumbs = [...wrap.querySelectorAll('.slider-thumbs .thumb')];
+            go(wrap, thumbs.indexOf(thumb));
         }
     }, true); // capture phase so parent <a> never wins
 
@@ -319,8 +547,10 @@ window.cart = (function () {
         const footer = document.getElementById('cart-footer');
         const subt = document.getElementById('cart-subtitle');
         const totalEl = document.getElementById('cart-total');
+        const checkoutLink = document.getElementById('cart-checkout-link');
         if (subt) subt.textContent = state.count + (state.count === 1 ? ' item' : ' itens');
         if (totalEl) totalEl.textContent = state.total_fmt || 'R$ 0,00';
+        if (checkoutLink && state.checkout_url) checkoutLink.href = state.checkout_url;
         if (!body || !empty || !footer) return;
         if (!state.items.length) {
             body.innerHTML = ''; body.style.display = 'none';
@@ -350,6 +580,7 @@ window.cart = (function () {
                             </div>
                             <div style="font-weight:700;color:var(--terracota);font-size:14px">R$ ${it.subtotal.toFixed(2).replace('.',',')}</div>
                         </div>
+                        ${it.checkout_url ? `<a href="${it.checkout_url}" style="display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--horizonte)"><i data-lucide="lock" style="width:12px;height:12px"></i>Reservar este item</a>` : ''}
                     </div>
                     <button onclick="window.cart.remove('${it.key}')" style="color:var(--text-muted);width:28px;height:28px;align-self:start" aria-label="Remover">
                         <i data-lucide="trash-2" style="width:16px;height:16px"></i>

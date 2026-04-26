@@ -73,7 +73,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             <form method="GET" action="<?= url('/passeios') ?>" class="grid md:grid-cols-4 gap-3">
                 <div>
                     <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left"><?= e(t('home.search.date')) ?></label>
-                    <input type="date" name="data" class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)">
+                    <input type="date" name="date" class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)" placeholder="Escolher data">
                 </div>
                 <div>
                     <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left"><?= e(t('home.search.find')) ?></label>

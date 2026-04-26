@@ -7,24 +7,34 @@ $q = trim($_GET['q'] ?? '');
 $from = trim($_GET['from'] ?? '');
 $to = trim($_GET['to'] ?? '');
 $capacity = (int)($_GET['capacity'] ?? 0);
+$date = trim($_GET['date'] ?? '');
+if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $date = '';
 $sort = $_GET['sort'] ?? 'destaque';
-$where = "status='published'"; $params = [];
-if ($q) { $where .= " AND (title LIKE ? OR location_from LIKE ? OR location_to LIKE ?)"; $params = ["%$q%","%$q%","%$q%"]; }
-if ($from) { $where .= " AND location_from LIKE ?"; $params[] = "%$from%"; }
-if ($to) { $where .= " AND location_to LIKE ?"; $params[] = "%$to%"; }
-if ($capacity) { $where .= " AND capacity >= ?"; $params[] = $capacity; }
+$where = "t.status='published'"; $params = [];
+if ($q) { $where .= " AND (t.title LIKE ? OR t.location_from LIKE ? OR t.location_to LIKE ?)"; $params = ["%$q%","%$q%","%$q%"]; }
+if ($from) { $where .= " AND t.location_from LIKE ?"; $params[] = "%$from%"; }
+if ($to) { $where .= " AND t.location_to LIKE ?"; $params[] = "%$to%"; }
+if ($capacity) { $where .= " AND t.capacity >= ?"; $params[] = $capacity; }
+if ($date) {
+    $where .= " AND ? >= CURDATE() AND NOT EXISTS (
+        SELECT 1 FROM departures d
+        WHERE d.entity_type='transfer' AND d.entity_id=t.id AND d.departure_date=? AND (d.status<>'open' OR (d.seats_total - d.seats_sold) <= 0)
+    )";
+    $params[] = $date;
+    $params[] = $date;
+}
 
 $orderBy = match($sort) {
-    'preco_asc'  => 'COALESCE(price_pix,price) ASC',
-    'preco_desc' => 'COALESCE(price_pix,price) DESC',
-    'recentes'   => 'created_at DESC',
-    'capacidade' => 'capacity DESC',
-    default      => 'featured DESC, created_at DESC',
+    'preco_asc'  => 'COALESCE(t.price_pix,t.price) ASC',
+    'preco_desc' => 'COALESCE(t.price_pix,t.price) DESC',
+    'recentes'   => 't.created_at DESC',
+    'capacidade' => 't.capacity DESC',
+    default      => 't.featured DESC, t.created_at DESC',
 };
 
 $pag = paginate(
-    "SELECT COUNT(*) AS c FROM transfers WHERE $where",
-    "SELECT * FROM transfers WHERE $where ORDER BY $orderBy",
+    "SELECT COUNT(*) AS c FROM transfers t WHERE $where",
+    "SELECT t.* FROM transfers t WHERE $where ORDER BY $orderBy",
     $params,
     ['allowed'=>[12,24,48], 'default'=>12]
 );
@@ -35,18 +45,18 @@ $destinations = dbAll("SELECT DISTINCT location_to FROM transfers WHERE status='
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
-<section class="py-20 pt-32" style="background:linear-gradient(135deg,var(--horizonte) 0%,var(--horizonte-dark) 100%);color:#fff;position:relative;overflow:hidden">
+<section class="py-14 sm:py-20 pt-28 sm:pt-32" style="background:linear-gradient(135deg,var(--horizonte) 0%,var(--horizonte-dark) 100%);color:#fff;position:relative;overflow:hidden">
     <img src="<?= asset('brand/selo-branco.png') ?>" class="seal-rotate absolute hidden md:block" style="top:80px;right:40px;width:110px;opacity:0.25" alt="">
     <div class="relative z-10 max-w-7xl mx-auto px-6 text-center">
         <span class="inline-block text-[11px] font-bold uppercase tracking-[0.3em] px-3 py-1 rounded-full mb-4" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2)">Transfers privativos</span>
-        <h1 class="font-brand text-5xl md:text-7xl leading-[0.95] mb-4 mx-auto max-w-4xl">Chegue tranquilo, viaje no conforto</h1>
+        <h1 class="font-brand text-4xl sm:text-5xl md:text-7xl leading-[0.95] mb-4 mx-auto max-w-4xl">Chegue tranquilo, viaje no conforto</h1>
         <p class="text-lg md:text-xl text-white/85 max-w-2xl mx-auto">Traslados privativos do aeroporto e entre destinos de Alagoas. Motoristas profissionais, veículos confortáveis, atendimento 24h.</p>
     </div>
 </section>
 
-<section class="py-16" style="background:var(--bg-surface)">
-    <div class="max-w-7xl mx-auto px-6">
-        <form method="GET" class="filter-premium">
+<section class="py-10 sm:py-16" style="background:var(--bg-surface)">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <form method="GET" class="filter-premium filter-single-row">
             <div class="filter-search">
                 <label class="filter-label">Buscar</label>
                 <i data-lucide="search" class="filter-search-icon"></i>
@@ -74,6 +84,10 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </select>
             </div>
             <div>
+                <label class="filter-label">Data</label>
+                <input type="date" name="date" value="<?= e($date) ?>" class="filter-input" placeholder="Escolher data">
+            </div>
+            <div>
                 <label class="filter-label">Ordenar</label>
                 <select name="sort" class="filter-input">
                     <option value="destaque" <?= $sort==='destaque'?'selected':'' ?>>Em destaque</option>
@@ -85,7 +99,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             </div>
             <div class="flex gap-2 items-end">
                 <button type="submit" class="filter-submit"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Filtrar</button>
-                <?php if ($q || $from || $to || $capacity || ($sort && $sort !== 'destaque')): ?><a href="<?= url('/transfers') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a><?php endif; ?>
+                <?php if ($q || $from || $to || $capacity || $date || ($sort && $sort !== 'destaque')): ?><a href="<?= url('/transfers') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a><?php endif; ?>
             </div>
         </form>
 

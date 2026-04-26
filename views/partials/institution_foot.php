@@ -1,6 +1,7 @@
         </main>
     </div>
 </div>
+<script src="<?= asset('js/app.js') ?>"></script>
 <script>
 function institutionApi(url, opts = {}) {
     const token = document.querySelector('meta[name=csrf-token]').content;
@@ -11,22 +12,6 @@ function institutionApi(url, opts = {}) {
     return fetch(url, { method: opts.method || 'POST', headers, body, credentials: 'same-origin' })
         .then(r => r.json()).catch(() => ({ ok:false, msg:'Erro de rede.' }));
 }
-document.addEventListener('DOMContentLoaded', () => window.lucide && window.lucide.createIcons());
-document.addEventListener('alpine:initialized', () => window.lucide && window.lucide.createIcons());
-// Debounced MutationObserver — evita loop infinito porque createIcons() substitui <i> por <svg>
-let _luTimer = null;
-const mo = new MutationObserver((muts) => {
-    for (const m of muts) {
-        for (const n of m.addedNodes) {
-            if (n.nodeType === 1 && n.tagName === 'I' && n.hasAttribute('data-lucide')) {
-                if (_luTimer) return;
-                _luTimer = setTimeout(() => { _luTimer = null; window.lucide && window.lucide.createIcons(); }, 80);
-                return;
-            }
-        }
-    }
-});
-mo.observe(document.body, { childList: true, subtree: true });
 </script>
 </body>
 </html>

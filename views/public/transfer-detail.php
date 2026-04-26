@@ -33,7 +33,7 @@ $pageDesc = $r['short_desc'] ?? '';
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
-<section class="relative h-[55vh] min-h-[380px] overflow-hidden" style="margin-top:-80px">
+<section class="relative h-[55vh] min-h-[360px] overflow-hidden" style="margin-top:-80px">
     <?php if (!empty($r['cover_image'])): ?>
         <img src="<?= storageUrl($r['cover_image']) ?>" class="absolute inset-0 w-full h-full object-cover" alt="<?= e($r['title']) ?>">
     <?php else: ?>
@@ -41,10 +41,10 @@ include VIEWS_DIR . '/partials/public_head.php';
     <?php endif; ?>
     <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(30,58,82,0.25) 0%, rgba(30,58,82,0.85) 100%)"></div>
     <div class="relative z-10 h-full flex items-end pb-14">
-        <div class="max-w-7xl mx-auto px-6 w-full text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 w-full text-white">
             <a href="<?= url('/transfers') ?>" class="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white mb-4"><i data-lucide="arrow-left" class="w-4 h-4"></i> Todos os transfers</a>
             <span class="inline-block text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full mb-3" style="background:var(--horizonte);color:#fff"><i data-lucide="car" class="w-3 h-3 inline"></i> Transfer privativo</span>
-            <h1 class="font-display text-4xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($r['title'])) ?></h1>
+            <h1 class="font-display text-3xl sm:text-5xl md:text-6xl font-bold leading-tight mb-4 max-w-4xl"><?= e(tAuto($r['title'])) ?></h1>
             <div class="flex flex-wrap gap-5 text-sm text-white/85">
                 <?php if ($r['location_from']): ?><div class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i><?= e(tAuto($r['location_from'])) ?> → <?= e(tAuto($r['location_to'])) ?></div><?php endif; ?>
                 <?php if ($r['duration_minutes']): ?><div class="flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i><?= (int)$r['duration_minutes'] ?> min</div><?php endif; ?>
@@ -54,8 +54,29 @@ include VIEWS_DIR . '/partials/public_head.php';
     </div>
 </section>
 
-<section class="py-16">
-    <div class="max-w-7xl mx-auto px-6">
+<?php if (count($gallery) > 1): ?>
+<section class="detail-gallery-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="detail-slider" data-slider>
+            <div class="detail-slider-main slider-wrap">
+                <?php foreach ($gallery as $idx => $img): ?>
+                    <div class="slide<?= $idx===0?' active':'' ?>" style="background-image:url('<?= e($img) ?>')"></div>
+                <?php endforeach; ?>
+                <button type="button" class="slider-arrow prev" aria-label="Foto anterior"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                <button type="button" class="slider-arrow next" aria-label="Próxima foto"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+            </div>
+            <div class="slider-thumbs" aria-label="Miniaturas da galeria">
+                <?php foreach ($gallery as $idx => $img): ?>
+                    <button type="button" class="thumb<?= $idx===0?' active':'' ?>" aria-label="Ver foto <?= $idx+1 ?>"><img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($r['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>"></button>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<section class="detail-content-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="grid lg:grid-cols-3 gap-10">
             <div class="lg:col-span-2 space-y-8">
                 <div class="admin-card p-6 sm:p-8">
@@ -71,17 +92,6 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <li class="flex items-start gap-2 text-sm" style="color:var(--text-secondary)"><i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:var(--maresia)"></i><?= e(tAuto($inc)) ?></li>
                         <?php endforeach; ?>
                     </ul>
-                </div>
-                <?php endif; ?>
-
-                <?php if (count($gallery) > 1): ?>
-                <div class="admin-card p-6 sm:p-8">
-                    <h2 class="font-display text-2xl font-bold mb-4" style="color:var(--sepia)">Galeria</h2>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <?php foreach ($gallery as $g): ?>
-                        <img src="<?= e($g) ?>" class="w-full h-32 object-cover rounded-lg" loading="lazy">
-                        <?php endforeach; ?>
-                    </div>
                 </div>
                 <?php endif; ?>
 
@@ -105,19 +115,19 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <div class="calendar-grid">
                         <template x-for="dow in ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']" :key="dow"><div class="text-center text-[11px] font-bold uppercase tracking-wider py-2" style="color:var(--text-muted)" x-text="dow"></div></template>
                         <template x-for="cell in cells" :key="cell.key">
-                            <button type="button" :disabled="!cell.available" @click="cell.available && select(cell)" class="calendar-cell" :class="{'empty':cell.empty,'past':cell.past,'available':cell.available&&!cell.lowSeats,'low':cell.available&&cell.lowSeats,'blocked':cell.blocked,'selected':cell.iso&&cell.iso===selectedIso}">
+                            <button type="button" :disabled="!cell.available" @click="cell.available && select(cell)" class="calendar-cell" :class="{'empty':cell.empty,'past':cell.past,'available':cell.available&&!cell.lowSeats,'low':cell.available&&cell.lowSeats,'blocked':cell.blocked,'selected':cell.iso&&isSelected(cell.iso)}">
                                 <span class="cal-day" x-text="cell.day"></span>
                                 <span class="cal-price" x-show="cell.available" x-text="cell.seats !== null ? cell.seats + ' vagas' : 'Livre'"></span>
                             </button>
                         </template>
                     </div>
-                    <div x-show="selectedIso" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
+                    <div x-show="selectedDates.length" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
                         <div>
-                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Data selecionada</div>
+                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Datas selecionadas</div>
                             <div class="font-display font-bold text-lg" style="color:var(--sepia)" x-text="selectedLabel"></div>
                             <div class="text-xs mt-0.5" style="color:var(--text-secondary)" x-text="selectedDetail"></div>
                         </div>
-                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar transfer</a>
+                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar datas</a>
                     </div>
                 </div>
             </div>

@@ -5,7 +5,60 @@ $solidNav  = true;
 $roteiroId  = (int)($_GET['roteiro'] ?? 0);
 $pacoteId   = (int)($_GET['pacote'] ?? 0);
 $transferId = (int)($_GET['transfer'] ?? 0);
+$cartKey = trim($_GET['cart_key'] ?? '');
+$cartItem = ($cartKey !== '' && !empty($_SESSION['cart'][$cartKey])) ? $_SESSION['cart'][$cartKey] : null;
 $item = null; $type = null;
+
+if (!$roteiroId && !$pacoteId && !$transferId && $cartItem) {
+    if (($cartItem['type'] ?? '') === 'roteiro') $roteiroId = (int)$cartItem['id'];
+    elseif (($cartItem['type'] ?? '') === 'pacote') $pacoteId = (int)$cartItem['id'];
+    elseif (($cartItem['type'] ?? '') === 'transfer') $transferId = (int)$cartItem['id'];
+}
+
+if (!$roteiroId && !$pacoteId && !$transferId && ($_GET['cart'] ?? '') === '1' && !empty($_SESSION['cart']) && count($_SESSION['cart']) > 1) {
+    include VIEWS_DIR . '/partials/public_head.php';
+    $cartRows = [];
+    foreach ($_SESSION['cart'] as $key => $ci) {
+        $row = null;
+        if (($ci['type'] ?? '') === 'roteiro') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location FROM roteiros WHERE id=? AND status='published'", [(int)$ci['id']]);
+        elseif (($ci['type'] ?? '') === 'pacote') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,destination AS location FROM pacotes WHERE id=? AND status='published'", [(int)$ci['id']]);
+        elseif (($ci['type'] ?? '') === 'transfer') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location_to AS location FROM transfers WHERE id=? AND status='published'", [(int)$ci['id']]);
+        if (!$row) continue;
+        $dates = !empty($ci['travel_dates']) && is_array($ci['travel_dates']) ? array_values($ci['travel_dates']) : (!empty($ci['travel_date']) ? [$ci['travel_date']] : []);
+        $query = ['cart_key' => $key, $ci['type'] => (int)$row['id']];
+        if ($dates) $query['dates'] = implode(',', $dates);
+        $cartRows[] = ['key'=>$key, 'type'=>$ci['type'], 'row'=>$row, 'dates'=>$dates, 'qty'=>max(1,(int)($ci['qty'] ?? 1)), 'checkout'=>url('/checkout?' . http_build_query($query))];
+    }
+    ?>
+    <section class="pt-32 pb-16" style="background:var(--bg-surface)">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="mb-8 text-center">
+                <span class="text-xs font-bold uppercase tracking-[0.24em]" style="color:var(--terracota)">Carrinho</span>
+                <h1 class="font-display text-4xl sm:text-5xl font-bold mt-2" style="color:var(--sepia)">Escolha o item da reserva</h1>
+                <p class="mt-3 text-sm" style="color:var(--text-secondary)">Cada passeio, pacote ou transfer precisa ser confirmado com suas próprias datas e dados.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-5">
+                <?php foreach ($cartRows as $cart): $row = $cart['row']; ?>
+                    <a href="<?= e($cart['checkout']) ?>" class="admin-card p-4 flex gap-4 hover:-translate-y-1 transition group">
+                        <div class="w-28 sm:w-32 aspect-[4/3] rounded-xl overflow-hidden flex-shrink-0" style="background:var(--bg-surface)">
+                            <?php if (!empty($row['cover_image'])): ?><img src="<?= e(storageUrl($row['cover_image'])) ?>" class="w-full h-full object-cover" alt="<?= e($row['title']) ?>"><?php endif; ?>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color:var(--terracota)"><?= $cart['type'] === 'roteiro' ? 'Passeio' : ($cart['type'] === 'pacote' ? 'Pacote' : 'Transfer') ?></div>
+                            <h2 class="font-display text-lg font-bold line-clamp-2" style="color:var(--sepia)"><?= e($row['title']) ?></h2>
+                            <?php if ($cart['dates']): ?><div class="text-xs mt-2 font-semibold" style="color:var(--horizonte)"><i data-lucide="calendar" class="w-3.5 h-3.5 inline -mt-0.5"></i> <?= e(implode(', ', array_map(fn($d) => date('d/m/Y', strtotime($d)), $cart['dates']))) ?></div><?php endif; ?>
+                            <div class="mt-3 flex items-center justify-between gap-3">
+                                <strong class="font-display text-xl" style="color:var(--terracota)"><?= formatPrice($row['price_pix'] ?: $row['price']) ?></strong>
+                                <span class="w-10 h-10 rounded-full flex items-center justify-center transition group-hover:text-white" style="background:var(--bg-surface);color:var(--terracota)"><i data-lucide="arrow-right" class="w-4 h-4"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <?php include VIEWS_DIR . '/partials/public_foot.php'; return;
+}
 
 // Fallback: pega o primeiro item do carrinho
 if (!$roteiroId && !$pacoteId && !$transferId && !empty($_SESSION['cart'])) {
@@ -40,7 +93,11 @@ $preAdults   = max(1, (int)($_GET['adults']   ?? 1));
 $preChildren = max(0, (int)($_GET['children'] ?? 0));
 $preInfants  = max(0, (int)($_GET['infants']  ?? 0));
 
-// Se não veio data via GET, tenta puxar do carrinho
+// Se não veio data via GET, tenta puxar do item correto do carrinho
+if (!$preDates && $cartItem) {
+    if (!empty($cartItem['travel_dates']) && is_array($cartItem['travel_dates'])) $preDates = $cartItem['travel_dates'];
+    elseif (!empty($cartItem['travel_date'])) $preDates = [$cartItem['travel_date']];
+}
 if (!$preDates && !empty($_SESSION['cart'])) {
     foreach ($_SESSION['cart'] as $ci) {
         if (($ci['type'] ?? '') !== $type || (int)($ci['id'] ?? 0) !== (int)$item['id']) continue;
@@ -527,7 +584,8 @@ function checkoutWizard() {
             ref_code:    <?= json_encode($refCode ?? '') ?>,
             entity_type: <?= json_encode($type) ?>,
             entity_id:   <?= (int)$item['id'] ?>,
-            currency:    <?= json_encode($currencyCode) ?>
+            currency:    <?= json_encode($currencyCode) ?>,
+            cart_key:    <?= json_encode($cartKey) ?>
         },
         sources: [
             {id:'instagram', label:'Instagram',  icon:'instagram',         detailLabel:'Qual perfil ou post?',     placeholder:'@perfil ou link do post'},
