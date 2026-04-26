@@ -184,9 +184,11 @@ document.addEventListener('input', (e) => {
             const days = new Date(year, month + 1, 0).getDate();
             const todayIso = iso(new Date());
             let html = `<div class="premium-date-head">
+                <button type="button" class="premium-date-nav is-year" data-nav="prev-year" aria-label="Ano anterior"><i data-lucide="chevrons-left"></i></button>
                 <button type="button" class="premium-date-nav" data-nav="prev" aria-label="Mês anterior"><i data-lucide="chevron-left"></i></button>
                 <div class="premium-date-title">${monthNames[month]} de ${year}</div>
                 <button type="button" class="premium-date-nav" data-nav="next" aria-label="Próximo mês"><i data-lucide="chevron-right"></i></button>
+                <button type="button" class="premium-date-nav is-year" data-nav="next-year" aria-label="Próximo ano"><i data-lucide="chevrons-right"></i></button>
             </div><div class="premium-date-grid">`;
             dow.forEach(d => { html += `<div class="premium-date-dow">${d}</div>`; });
             for (let i = 0; i < first.getDay(); i++) html += '<button type="button" class="premium-date-day is-muted" tabindex="-1"></button>';
@@ -217,19 +219,26 @@ document.addEventListener('input', (e) => {
             render();
         }
         function close() { wrapper.classList.remove('is-open'); popover.hidden = true; }
-        trigger.addEventListener('click', () => {
+        trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const d = parse(input.value);
             if (d) current = new Date(d.getFullYear(), d.getMonth(), 1);
             updateTrigger();
             popover.hidden ? open() : close();
         });
+        trigger.addEventListener('mousedown', (e) => e.stopPropagation());
+        popover.addEventListener('mousedown', (e) => e.stopPropagation());
         popover.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             const nav = e.target.closest('[data-nav]');
             const day = e.target.closest('[data-day]');
             const action = e.target.closest('[data-action]');
             if (nav) {
-                current.setMonth(current.getMonth() + (nav.dataset.nav === 'next' ? 1 : -1));
+                if (nav.dataset.nav === 'next-year') current.setFullYear(current.getFullYear() + 1);
+                else if (nav.dataset.nav === 'prev-year') current.setFullYear(current.getFullYear() - 1);
+                else current.setMonth(current.getMonth() + (nav.dataset.nav === 'next' ? 1 : -1));
                 render();
             } else if (day) {
                 setValue(day.dataset.day);
@@ -320,6 +329,8 @@ window.availabilityCalendar = function availabilityCalendar(config) {
             }
             return cells;
         },
+        prevYear(){ this.viewYear--; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
+        nextYear(){ this.viewYear++; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
         prevMonth(){ if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; } else this.viewMonth--; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
         nextMonth(){ if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; } else this.viewMonth++; this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
         isSelected(isoDate){ return this.selectedDates.includes(isoDate); },
@@ -449,6 +460,103 @@ window.availabilityCalendar = function availabilityCalendar(config) {
     function bindAll() { document.querySelectorAll('[data-slider]').forEach(bindSwipe); }
     bindAll();
     new MutationObserver(bindAll).observe(document.body, { childList: true, subtree: true });
+})();
+
+// ============================================================
+// PREMIUM: Detail gallery lightbox (desktop + mobile)
+// ============================================================
+(function initGalleryLightbox() {
+    let modal = null;
+    let images = [];
+    let index = 0;
+    let touchStartX = 0;
+
+    function ensureModal() {
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.className = 'gallery-lightbox-backdrop';
+        modal.hidden = true;
+        modal.innerHTML = `
+            <button type="button" class="gallery-lightbox-close" data-gallery-close aria-label="Fechar galeria"><i data-lucide="x"></i></button>
+            <button type="button" class="gallery-lightbox-arrow prev" data-gallery-action="prev" aria-label="Foto anterior"><i data-lucide="chevron-left"></i></button>
+            <img class="gallery-lightbox-image" alt="Foto em destaque">
+            <button type="button" class="gallery-lightbox-arrow next" data-gallery-action="next" aria-label="Próxima foto"><i data-lucide="chevron-right"></i></button>
+            <div class="gallery-lightbox-counter"></div>
+            <div class="gallery-lightbox-thumbs" aria-label="Miniaturas da galeria"></div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        modal.addEventListener('touchstart', (e) => { touchStartX = e.touches[0]?.clientX || 0; }, { passive: true });
+        modal.addEventListener('touchend', (e) => {
+            const dx = (e.changedTouches[0]?.clientX || 0) - touchStartX;
+            if (Math.abs(dx) > 44) move(dx < 0 ? 1 : -1);
+        }, { passive: true });
+        return modal;
+    }
+
+    function render() {
+        if (!modal || !images.length) return;
+        const img = modal.querySelector('.gallery-lightbox-image');
+        const counter = modal.querySelector('.gallery-lightbox-counter');
+        const thumbs = modal.querySelector('.gallery-lightbox-thumbs');
+        img.src = images[index];
+        img.alt = 'Foto ' + (index + 1) + ' de ' + images.length;
+        counter.textContent = (index + 1) + ' / ' + images.length;
+        thumbs.innerHTML = images.map((src, i) => `<button type="button" class="gallery-lightbox-thumb${i === index ? ' active' : ''}" data-gallery-thumb="${i}" aria-label="Ver foto ${i + 1}"><img src="${src}" alt="Miniatura ${i + 1}"></button>`).join('');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function move(delta) {
+        if (!images.length) return;
+        index = (index + delta + images.length) % images.length;
+        render();
+    }
+
+    function open(nextImages, startIndex) {
+        images = nextImages.filter(Boolean);
+        if (!images.length) return;
+        index = Math.max(0, Math.min(images.length - 1, Number(startIndex || 0)));
+        ensureModal();
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        render();
+    }
+
+    function close() {
+        if (!modal) return;
+        modal.hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-gallery-close]')) { e.preventDefault(); close(); return; }
+        const action = e.target.closest('[data-gallery-action]');
+        if (action) { e.preventDefault(); move(action.dataset.galleryAction === 'next' ? 1 : -1); return; }
+        const thumb = e.target.closest('[data-gallery-thumb]');
+        if (thumb) { e.preventDefault(); index = Number(thumb.dataset.galleryThumb || 0); render(); return; }
+
+        const opener = e.target.closest('[data-gallery-open]');
+        if (!opener || e.target.closest('.slider-arrow, .slider-dots, .slider-thumbs, .heart-btn')) return;
+        const holder = opener.closest('[data-gallery]');
+        const raw = opener.dataset.gallery || holder?.dataset.gallery || '[]';
+        let parsed = [];
+        try { parsed = JSON.parse(raw); } catch(e) { parsed = []; }
+        let startIndex = Number(opener.dataset.index || 0);
+        const slider = opener.closest('[data-slider]');
+        if (slider) {
+            const active = [...slider.querySelectorAll('.detail-slider-main .slide')].findIndex(s => s.classList.contains('active'));
+            if (active >= 0) startIndex = active;
+        }
+        e.preventDefault();
+        open(parsed, startIndex);
+    }, true);
+
+    document.addEventListener('keydown', (e) => {
+        if (!modal || modal.hidden) return;
+        if (e.key === 'Escape') close();
+        if (e.key === 'ArrowLeft') move(-1);
+        if (e.key === 'ArrowRight') move(1);
+    });
 })();
 
 // ============================================================
@@ -699,7 +807,10 @@ window.cart = (function () {
         if (qty < 1) return remove(key);
         await apiCall('update', { key, qty });
     }
-    async function clear() { await apiCall('clear'); }
+    async function clear() {
+        const r = await apiCall('clear', { clear: '1' });
+        if (r.ok) window.showToast && window.showToast('Carrinho limpo.', 'success');
+    }
     async function refresh() { await apiCall('get'); }
 
     document.addEventListener('DOMContentLoaded', refresh);

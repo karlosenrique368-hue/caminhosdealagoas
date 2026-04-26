@@ -67,7 +67,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 
         <!-- Search bar (premium glass) -->
         <div class="max-w-4xl mx-auto glass-premium rounded-2xl p-4 md:p-5 fade-in-up delay-400">
-            <div class="text-left mb-3 px-2">
+            <div class="text-left mb-3">
                 <span class="font-display text-lg sm:text-xl font-bold tracking-wide uppercase" style="color:var(--areia-light)"><?= e(t('home.search.title')) ?></span>
             </div>
             <form method="GET" action="<?= url('/passeios') ?>" class="grid md:grid-cols-4 gap-3">
@@ -109,24 +109,24 @@ include VIEWS_DIR . '/partials/public_head.php';
 <!-- ================================================
      TRUST STRIP
 ================================================ -->
-<section class="py-10 relative" style="background:var(--bg-surface);border-bottom:1px solid var(--border-default)">
-    <div class="max-w-7xl mx-auto px-6">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-            <div class="flex items-center gap-3" data-reveal>
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(201,107,74,0.1);color:var(--terracota)"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
-                <div><div class="text-sm font-bold" style="color:var(--sepia)">Pagamento seguro</div><div class="text-xs" style="color:var(--text-muted)">Pix ou cartão até 12x</div></div>
-            </div>
-            <div class="flex items-center gap-3" data-reveal style="animation-delay:100ms">
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(58,107,138,0.1);color:var(--horizonte)"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
-                <div><div class="text-sm font-bold" style="color:var(--sepia)">Curadoria local</div><div class="text-xs" style="color:var(--text-muted)">Feito por alagoanos</div></div>
-            </div>
-            <div class="flex items-center gap-3" data-reveal style="animation-delay:200ms">
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(16,185,129,0.1);color:#10B981"><i data-lucide="headphones" class="w-5 h-5"></i></div>
-                <div><div class="text-sm font-bold" style="color:var(--sepia)">Suporte 24/7</div><div class="text-xs" style="color:var(--text-muted)">Durante sua viagem</div></div>
-            </div>
-            <div class="flex items-center gap-3" data-reveal style="animation-delay:300ms">
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.1);color:#F59E0B"><i data-lucide="badge-check" class="w-5 h-5"></i></div>
-                <div><div class="text-sm font-bold" style="color:var(--sepia)">Melhor preço</div><div class="text-xs" style="color:var(--text-muted)">Garantido ou devolvemos</div></div>
+<?php
+$trustItems = [
+    ['icon'=>'shield-check','title'=>'Pagamento seguro','sub'=>'Pix ou cartão até 12x','bg'=>'rgba(201,107,74,0.1)','color'=>'var(--terracota)'],
+    ['icon'=>'map-pin','title'=>'Curadoria local','sub'=>'Feito por alagoanos','bg'=>'rgba(58,107,138,0.1)','color'=>'var(--horizonte)'],
+    ['icon'=>'headphones','title'=>'Suporte 24/7','sub'=>'Durante sua viagem','bg'=>'rgba(16,185,129,0.1)','color'=>'#10B981'],
+    ['icon'=>'badge-check','title'=>'Melhor preço','sub'=>'Garantido ou devolvemos','bg'=>'rgba(245,158,11,0.1)','color'=>'#F59E0B'],
+];
+?>
+<section class="trust-strip-section relative" style="background:var(--bg-surface);border-bottom:1px solid var(--border-default)">
+    <div class="max-w-7xl mx-auto px-0 md:px-6">
+        <div class="trust-viewport">
+            <div class="trust-track">
+                <?php foreach (array_merge($trustItems, $trustItems) as $i => $trust): ?>
+                <div class="trust-item<?= $i >= count($trustItems) ? ' is-duplicate' : '' ?>" data-reveal style="animation-delay:<?= ($i % count($trustItems)) * 100 ?>ms">
+                    <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:<?= $trust['bg'] ?>;color:<?= $trust['color'] ?>"><i data-lucide="<?= e($trust['icon']) ?>" class="w-5 h-5"></i></div>
+                    <div><div class="text-sm font-bold" style="color:var(--sepia)"><?= e($trust['title']) ?></div><div class="text-xs" style="color:var(--text-muted)"><?= e($trust['sub']) ?></div></div>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -454,9 +454,9 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <?php endif; ?>
                 <div class="flex items-center gap-3 mb-4">
                     <?php if (!empty($t['avatar'])): ?>
-                        <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="w-12 h-12 rounded-full object-cover" style="border:2px solid rgba(58,107,138,0.15)">
+                        <img src="<?= storageUrl($t['avatar']) ?>" alt="<?= e($t['name']) ?>" class="testimonial-avatar" style="border:2px solid rgba(58,107,138,0.15)">
                     <?php else: ?>
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center font-display text-xl font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))">
+                        <div class="testimonial-avatar flex items-center justify-center font-display text-xl font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))">
                             <?= e(mb_substr($t['name'], 0, 1)) ?>
                         </div>
                     <?php endif; ?>
@@ -481,7 +481,7 @@ include VIEWS_DIR . '/partials/public_head.php';
         </div>
 
         <div class="text-center mt-12" data-reveal>
-            <a href="<?= url('/depoimentos') ?>" class="btn-secondary">
+            <a href="<?= url('/depoimentos') ?>" class="testimonial-see-all">
                 <?= e(t('home.testimonials.see_all')) ?>
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </a>
@@ -503,10 +503,12 @@ include VIEWS_DIR . '/partials/public_head.php';
             <span class="text-xs font-bold tracking-wider uppercase">Pronto para a próxima aventura?</span>
         </div>
         <h2 class="font-display text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            Sua viagem dos <span class="italic" style="color:var(--areia-light)">sonhos</span> começa aqui
+            Sua viagem dos <span class="italic" style="color:var(--areia-light)">sonhos</span>
+            <span class="block">começa aqui</span>
         </h2>
         <p class="text-lg md:text-xl text-white/85 max-w-2xl mx-auto mb-10">
-            Fale com nossa equipe e receba um passeio personalizado em menos de 24 horas.
+            Fale com nossa equipe e receba um passeio personalizado
+            <span class="block">em menos de 24 horas.</span>
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="btn-primary">

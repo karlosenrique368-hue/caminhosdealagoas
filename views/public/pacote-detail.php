@@ -88,24 +88,24 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <?php if (count($gallery) > 1): ?>
-<section class="detail-gallery-section hidden md:block">
+<section class="detail-gallery-section hidden md:block" data-gallery='<?= htmlspecialchars(json_encode($gallery, JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>'>
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="hero-gallery-grid">
             <?php foreach (array_slice($gallery, 0, 5) as $idx => $img): ?>
-                <div>
+                <button type="button" data-gallery-open data-index="<?= $idx ?>" aria-label="Abrir foto <?= $idx+1 ?>">
                     <img src="<?= e($img) ?>" alt="Foto <?= $idx+1 ?> de <?= e($p['title']) ?>" loading="<?= $idx===0?'eager':'lazy' ?>">
                     <?php if ($idx === 4 && count($gallery) > 5): ?>
                         <div class="hero-gallery-more"><i data-lucide="images" class="w-5 h-5"></i>+<?= count($gallery)-5 ?> fotos</div>
                     <?php endif; ?>
-                </div>
+                </button>
             <?php endforeach; ?>
         </div>
     </div>
 </section>
-<section class="detail-gallery-section md:hidden">
+<section class="detail-gallery-section md:hidden" data-gallery='<?= htmlspecialchars(json_encode($gallery, JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>'>
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="detail-slider" data-slider>
-            <div class="detail-slider-main slider-wrap">
+            <div class="detail-slider-main slider-wrap" data-gallery-open aria-label="Abrir galeria">
                 <?php foreach ($gallery as $idx => $img): ?>
                     <div class="slide<?= $idx===0?' active':'' ?>" style="background-image:url('<?= e($img) ?>')"></div>
                 <?php endforeach; ?>
@@ -235,9 +235,11 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <p class="text-sm mt-1" style="color:var(--text-muted)" x-text="modeLabel"></p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button type="button" @click="prevMonth()" class="w-10 h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                            <div class="min-w-[160px] text-center font-display font-bold text-base" style="color:var(--sepia)" x-text="monthLabel"></div>
-                            <button type="button" @click="nextMonth()" class="w-10 h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            <button type="button" @click.stop="prevYear()" class="w-9 h-9 md:w-10 md:h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Ano anterior"><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>
+                            <button type="button" @click="prevMonth()" class="w-9 h-9 md:w-10 md:h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <div class="min-w-[126px] md:min-w-[160px] text-center font-display font-bold text-sm md:text-base" style="color:var(--sepia)" x-text="monthLabel"></div>
+                            <button type="button" @click="nextMonth()" class="w-9 h-9 md:w-10 md:h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            <button type="button" @click.stop="nextYear()" class="w-9 h-9 md:w-10 md:h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Próximo ano"><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>
                         </div>
                     </div>
 
@@ -496,6 +498,8 @@ function availabilityCalendar(config) {
             }
             return cells;
         },
+        prevYear() { this.viewYear--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        nextYear() { this.viewYear++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         prevMonth() { if (this.viewMonth===0) { this.viewMonth=11; this.viewYear--; } else this.viewMonth--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         nextMonth() { if (this.viewMonth===11) { this.viewMonth=0; this.viewYear++; } else this.viewMonth++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         select(c) { this.selectedIso = c.iso; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
@@ -530,7 +534,7 @@ function availabilityCalendar(config) {
 <style>
 .mobile-book-bar{position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--bg-card);border-top:1px solid var(--border-default);padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 -8px 24px -8px rgba(0,0,0,.15);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 @media(min-width:768px){.mobile-book-bar{display:none !important}}
-@media(max-width:767px){body{padding-bottom:88px}}
+@media(max-width:767px){body{padding-bottom:88px}.floating-whatsapp{bottom:calc(94px + env(safe-area-inset-bottom)) !important;z-index:70}}
 </style>
 
 <?php include VIEWS_DIR . '/partials/public_foot.php'; ?>

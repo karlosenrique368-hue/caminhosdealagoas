@@ -260,9 +260,11 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <p class="text-[11px] mt-1" style="color:var(--text-muted)">Escolha uma ou várias datas. O total atualiza pelo número de dias selecionados.</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button type="button" @click="prevMonth()" class="w-9 h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                            <div class="min-w-[150px] text-center font-display font-bold text-sm" style="color:var(--sepia)" x-text="monthLabel"></div>
-                            <button type="button" @click="nextMonth()" class="w-9 h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            <button type="button" @click.stop="prevYear()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Ano anterior"><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>
+                            <button type="button" @click="prevMonth()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <div class="min-w-[118px] sm:min-w-[150px] text-center font-display font-bold text-sm" style="color:var(--sepia)" x-text="monthLabel"></div>
+                            <button type="button" @click="nextMonth()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            <button type="button" @click.stop="nextYear()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Próximo ano"><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3 mb-4 text-xs" style="color:var(--text-muted)">
@@ -342,7 +344,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--text-secondary)">Como você nos conheceu? *</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--text-secondary)">Como você nos conheceu?</label>
                     <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
                         <template x-for="s in sources" :key="s.id">
                             <button type="button" @click="form.source=s.id" class="wiz-chip justify-center flex-col py-3" :class="form.source===s.id?'active':''">
@@ -679,6 +681,8 @@ function checkoutWizard() {
             }
             return cells;
         },
+        prevYear(){ this.viewYear--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        nextYear(){ this.viewYear++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         toggleDate(cell){
@@ -734,9 +738,8 @@ function checkoutWizard() {
         canProceed(){
             if (this.step === 0) return this.form.name.trim() && this.form.document.replace(/\D/g,'').length===11 && this.form.rg.trim() && this.form.birth_date && this.form.email.includes('@') && this.form.phone.replace(/\D/g,'').length>=10;
             if (this.step === 1) {
-                const okSrc = this.form.source && (this.form.source!=='indicacao' || this.form.source_detail.trim());
                 const okCom = this.form.has_comorbidity!=='sim' || this.form.comorbidity.trim();
-                return this.form.travel_dates.length > 0 && this.form.adults>=1 && (!this.isTransfer || this.peopleTotal() <= this.maxPeople) && okSrc && okCom;
+                return this.form.travel_dates.length > 0 && this.form.adults>=1 && (!this.isTransfer || this.peopleTotal() <= this.maxPeople) && okCom;
             }
             if (this.step === 2) {
                 if (!this.form.payment_method) return false;

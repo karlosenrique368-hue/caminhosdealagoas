@@ -96,7 +96,7 @@
 
 <!-- Floating WhatsApp -->
 <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank"
-   class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
+    class="floating-whatsapp fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
    style="background:#25D366;box-shadow:0 10px 30px rgba(37,211,102,0.45)">
     <i data-lucide="message-circle" class="w-6 h-6 text-white"></i>
 </a>
@@ -226,6 +226,8 @@ function cartDateModal(){
             }
             return cells;
         },
+        prevYear(){ this.viewYear--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        nextYear(){ this.viewYear++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; },
         nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; },
         toggle(cell){ if(!cell.available) return; const i=this.selectedDates.indexOf(cell.iso); if(i>=0) this.selectedDates.splice(i,1); else this.selectedDates.push(cell.iso); this.selectedDates.sort(); },
@@ -288,9 +290,11 @@ function reviewSection(opts){
             <div class="flex items-center justify-between gap-3 mb-3">
                 <label class="block text-xs font-bold uppercase tracking-wider" style="color:var(--text-secondary)">Datas disponíveis *</label>
                 <div class="flex items-center gap-1">
+                    <button type="button" @click.stop="prevYear()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Ano anterior"><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>
                     <button type="button" @click="prevMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                     <div class="min-w-[120px] text-center text-sm font-bold" style="color:var(--sepia)" x-text="monthLabel"></div>
                     <button type="button" @click="nextMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    <button type="button" @click.stop="nextYear()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Próximo ano"><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>
                 </div>
             </div>
             <div x-show="loading" class="p-8 text-center text-sm" style="color:var(--text-muted)">Carregando datas...</div>
