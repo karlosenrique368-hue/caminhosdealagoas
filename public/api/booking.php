@@ -14,6 +14,22 @@ $birth = trim($_POST['birth_date'] ?? '');
 $entityType = $_POST['entity_type'] ?? '';
 $entityId   = (int) ($_POST['entity_id'] ?? 0);
 $travelDate = $_POST['travel_date'] ?? null;
+$travelDates = [];
+$rawTravelDates = $_POST['travel_dates'] ?? null;
+if (is_string($rawTravelDates) && $rawTravelDates !== '') {
+    $decoded = json_decode($rawTravelDates, true);
+    $rawTravelDates = is_array($decoded) ? $decoded : preg_split('/[,;\s]+/', $rawTravelDates);
+}
+if (is_array($rawTravelDates)) {
+    foreach ($rawTravelDates as $dt) {
+        $dt = trim((string)$dt);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dt)) $travelDates[] = $dt;
+    }
+}
+if ($travelDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $travelDate)) $travelDates[] = $travelDate;
+$travelDates = array_values(array_unique($travelDates));
+sort($travelDates);
+$travelDate = $travelDates[0] ?? null;
 $adults     = max(1, (int)($_POST['adults'] ?? $_POST['people'] ?? 1));
 $children   = max(0, (int)($_POST['children'] ?? 0));
 $infants    = max(0, (int)($_POST['infants']  ?? 0));
@@ -49,31 +65,37 @@ $respCpf   = preg_replace('/\D/', '', $_POST['responsible_cpf'] ?? '');
 $respPhone = trim($_POST['responsible_phone'] ?? '');
 $instPartnerId = (int)($_POST['institution_partner_id'] ?? 0) ?: null;
 
-// Resposta completa do formulario (para guardar como evidencia)
-$answers = [
-    'nome' => $name, 'cpf' => $doc, 'rg' => $rg, 'birth' => $birth, 'telefone' => $phone,
-    'comorbidade' => $hasComorbid ? $comorbidity : null,
-    'como_conheceu' => $source, 'detalhe_origem' => $sourceDetail,
-    'opcao_preco' => $priceOption, 'aceite_desistencia' => $acceptTerms,
-    'pessoas' => ['adultos'=>$adults,'criancas'=>$children,'bebes'=>$infants],
-    'precos_unitarios' => ['adulto'=>$unitAdult,'crianca'=>$unitChild,'bebe'=>$unitInfant],
-    'parcelamento' => $installments > 0 ? ['parcelas'=>$installments,'valor_parcela'=>$installmentAmount,'limite_quitacao'=>date('Y-m-d', strtotime(($travelDate ?: 'now') . ' -' . (int)getSetting('pix_installments_min_days','7') . ' days'))] : null,
-    'moeda' => $currencyCode,
-    'submitted_at' => date('c'),
-];
-
 $pmMap = ['pix' => 'pix', 'pix_installments' => 'pix', 'card' => 'credit_card', 'credit_card' => 'credit_card', 'boleto' => 'boleto'];
 $paymentMethod = $pmMap[$pm] ?? null;
 
 if (!$name || !$email || !$phone) jsonResponse(['ok' => false, 'msg' => 'Preencha nome, email e telefone.']);
-if (!in_array($entityType, ['roteiro','pacote'])) jsonResponse(['ok' => false, 'msg' => 'Produto inválido.']);
+if (!in_array($entityType, ['roteiro','pacote','transfer'], true)) jsonResponse(['ok' => false, 'msg' => 'Produto inválido.']);
 if (!$entityId) jsonResponse(['ok' => false, 'msg' => 'Produto não informado.']);
 if (!$paymentMethod) jsonResponse(['ok' => false, 'msg' => 'Método de pagamento inválido.']);
 if (!$acceptTerms) jsonResponse(['ok' => false, 'msg' => 'É preciso concordar com a política de desistência.']);
+if (!$travelDates) jsonResponse(['ok' => false, 'msg' => 'Escolha pelo menos uma data disponível.']);
 
-$table = $entityType === 'roteiro' ? 'roteiros' : 'pacotes';
+$table = $entityType === 'roteiro' ? 'roteiros' : ($entityType === 'pacote' ? 'pacotes' : 'transfers');
 $entity = dbOne("SELECT * FROM {$table} WHERE id = ? AND status = 'published'", [$entityId]);
 if (!$entity) jsonResponse(['ok' => false, 'msg' => 'Produto indisponível.']);
+
+$availabilityMode = $entityType === 'transfer' ? 'open' : ($entity['availability_mode'] ?? 'fixed');
+if (!in_array($availabilityMode, ['fixed','open','on_request'], true)) $availabilityMode = 'fixed';
+if ($availabilityMode === 'on_request') jsonResponse(['ok'=>false,'msg'=>'Esta experiência está sob consulta. Fale com a equipe para reservar.']);
+$peopleTotal = $adults + $children + $infants;
+if ($entityType === 'transfer' && $peopleTotal > (int)($entity['capacity'] ?? 0)) {
+    jsonResponse(['ok'=>false,'msg'=>'A quantidade de passageiros excede a capacidade do veículo.']);
+}
+foreach ($travelDates as $dt) {
+    if (strtotime($dt) < strtotime(date('Y-m-d'))) jsonResponse(['ok'=>false,'msg'=>'A data selecionada já passou.']);
+    $dep = dbOne("SELECT * FROM departures WHERE entity_type=? AND entity_id=? AND departure_date=? LIMIT 1", [$entityType, $entityId, $dt]);
+    if ($dep) {
+        $free = max(0, (int)$dep['seats_total'] - (int)$dep['seats_sold']);
+        if ($dep['status'] !== 'open' || $free < $peopleTotal) jsonResponse(['ok'=>false,'msg'=>'Uma das datas selecionadas não tem vagas suficientes.']);
+    } elseif ($availabilityMode === 'fixed') {
+        jsonResponse(['ok'=>false,'msg'=>'Escolha apenas datas disponíveis no calendário.']);
+    }
+}
 
 // Faixas etárias e preço PIX promocional
 $factorChild  = (float) getSetting('price_factor_child',  '0.5');
@@ -88,7 +110,14 @@ $ratio = ($useDesconto && $priceAdult > 0) ? ($pricePixVal / $priceAdult) : 1.0;
 $unitAdult  = $useDesconto ? $pricePixVal : $priceAdult;
 $unitChild  = $useDesconto ? round($priceChild  * $ratio, 2) : $priceChild;
 $unitInfant = $useDesconto ? round($priceInfant * $ratio, 2) : $priceInfant;
-$subtotal = $unitAdult * $adults + $unitChild * $children + $unitInfant * $infants;
+$dateCount = max(1, count($travelDates));
+if ($entityType === 'transfer') {
+    $unitChild = 0.0;
+    $unitInfant = 0.0;
+    $subtotal = $unitAdult * $dateCount;
+} else {
+    $subtotal = ($unitAdult * $adults + $unitChild * $children + $unitInfant * $infants) * $dateCount;
+}
 
 $discount = 0.0;
 $couponIdToIncrement = null;
@@ -124,6 +153,21 @@ if ($pm === 'pix_installments') {
     if ($installments > $monthsAvailable + 1) $installments = $monthsAvailable + 1;
     $installmentAmount = round($total / $installments, 2);
 }
+
+// Resposta completa do formulário (para guardar como evidência)
+$answers = [
+    'nome' => $name, 'cpf' => $doc, 'rg' => $rg, 'birth' => $birth, 'telefone' => $phone,
+    'comorbidade' => $hasComorbid ? $comorbidity : null,
+    'como_conheceu' => $source, 'detalhe_origem' => $sourceDetail,
+    'opcao_preco' => $priceOption, 'aceite_desistencia' => $acceptTerms,
+    'datas_viagem' => $travelDates,
+    'quantidade_datas' => $dateCount,
+    'pessoas' => ['adultos'=>$adults,'criancas'=>$children,'bebes'=>$infants],
+    'precos_unitarios' => ['adulto'=>$unitAdult,'crianca'=>$unitChild,'bebe'=>$unitInfant],
+    'parcelamento' => $installments > 0 ? ['parcelas'=>$installments,'valor_parcela'=>$installmentAmount,'limite_quitacao'=>date('Y-m-d', strtotime(($travelDate ?: 'now') . ' -' . (int)getSetting('pix_installments_min_days','7') . ' days'))] : null,
+    'moeda' => $currencyCode,
+    'submitted_at' => date('c'),
+];
 
 $customer = dbOne("SELECT * FROM customers WHERE email = ?", [$email]);
 if ($customer) {
@@ -169,6 +213,9 @@ $bookingId = dbInsert(
 );
 
 if ($couponIdToIncrement) dbExec("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [$couponIdToIncrement]);
+foreach ($travelDates as $dt) {
+    dbExec("UPDATE departures SET seats_sold = LEAST(seats_total, seats_sold + ?) WHERE entity_type=? AND entity_id=? AND departure_date=? AND status='open'", [$peopleTotal, $entityType, $entityId, $dt]);
+}
 
 jsonResponse([
     'ok' => true,

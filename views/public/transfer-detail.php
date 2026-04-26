@@ -7,6 +7,18 @@ dbExec("UPDATE transfers SET views=views+1 WHERE id=?", [$r['id']]);
 $related = dbAll("SELECT * FROM transfers WHERE status='published' AND id<>? ORDER BY RAND() LIMIT 4", [$r['id']]);
 $includesArr = !empty($r['includes']) ? (json_decode($r['includes'], true) ?: []) : [];
 
+$departuresAll = dbAll("SELECT * FROM departures WHERE entity_type='transfer' AND entity_id=? AND departure_date>=CURDATE() ORDER BY departure_date", [$r['id']]);
+$departures = array_values(array_filter($departuresAll, fn($d) => $d['status'] === 'open'));
+$availabilityMap = [];
+foreach ($departuresAll as $d) {
+    $availabilityMap[$d['departure_date']] = [
+        'status' => $d['status'],
+        'seats'  => max(0, (int)$d['seats_total'] - (int)$d['seats_sold']),
+        'price'  => $d['price_override'] !== null ? (float)$d['price_override'] : (float)($r['price_pix'] ?: $r['price']),
+        'time'   => $d['departure_time'],
+    ];
+}
+
 $gallery = [];
 if (!empty($r['cover_image'])) $gallery[] = storageUrl($r['cover_image']);
 if (!empty($r['gallery'])) {
@@ -72,6 +84,42 @@ include VIEWS_DIR . '/partials/public_head.php';
                     </div>
                 </div>
                 <?php endif; ?>
+
+                <div id="calendario" class="admin-card p-6 sm:p-8" x-data="availabilityCalendar(<?= htmlspecialchars(json_encode([
+                    'mode' => 'open',
+                    'map' => $availabilityMap,
+                    'basePrice' => (float)($r['price_pix'] ?: $r['price']),
+                    'checkoutBase' => url('/checkout?transfer=' . $r['id']),
+                ]), ENT_QUOTES) ?>)">
+                    <div class="flex items-start justify-between flex-wrap gap-4 mb-5">
+                        <div>
+                            <h2 class="font-display text-2xl font-bold flex items-center gap-3" style="color:var(--sepia)"><i data-lucide="calendar-days" class="w-6 h-6" style="color:var(--terracota)"></i> Datas para o transfer</h2>
+                            <p class="text-sm mt-1" style="color:var(--text-muted)">Escolha a data de embarque. Datas bloqueadas no admin ficam indisponíveis.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="prevMonth()" class="w-10 h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <div class="min-w-[160px] text-center font-display font-bold text-base" style="color:var(--sepia)" x-text="monthLabel"></div>
+                            <button type="button" @click="nextMonth()" class="w-10 h-10 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid">
+                        <template x-for="dow in ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']" :key="dow"><div class="text-center text-[11px] font-bold uppercase tracking-wider py-2" style="color:var(--text-muted)" x-text="dow"></div></template>
+                        <template x-for="cell in cells" :key="cell.key">
+                            <button type="button" :disabled="!cell.available" @click="cell.available && select(cell)" class="calendar-cell" :class="{'empty':cell.empty,'past':cell.past,'available':cell.available&&!cell.lowSeats,'low':cell.available&&cell.lowSeats,'blocked':cell.blocked,'selected':cell.iso&&cell.iso===selectedIso}">
+                                <span class="cal-day" x-text="cell.day"></span>
+                                <span class="cal-price" x-show="cell.available" x-text="cell.seats !== null ? cell.seats + ' vagas' : 'Livre'"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="selectedIso" x-cloak class="mt-6 p-5 rounded-xl flex items-center justify-between flex-wrap gap-4" style="background:rgba(201,107,74,0.08);border:1px solid rgba(201,107,74,0.25)">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)">Data selecionada</div>
+                            <div class="font-display font-bold text-lg" style="color:var(--sepia)" x-text="selectedLabel"></div>
+                            <div class="text-xs mt-0.5" style="color:var(--text-secondary)" x-text="selectedDetail"></div>
+                        </div>
+                        <a :href="selectedCheckoutUrl" class="btn-primary"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar transfer</a>
+                    </div>
+                </div>
             </div>
 
             <aside id="reservar" class="lg:sticky lg:top-28 lg:self-start space-y-5">
@@ -91,8 +139,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <div class="flex items-center justify-between"><span class="inline-flex items-center gap-1.5" style="color:var(--text-muted)"><i data-lucide="repeat" class="w-4 h-4"></i>Tipo</span><strong style="color:var(--sepia)"><?= !empty($r['one_way']) ? 'Apenas ida' : 'Ida e volta' ?></strong></div>
                     </div>
 
-                    <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Quero%20reservar%20o%20transfer%20<?= urlencode($r['title']) ?>" target="_blank" class="btn-primary w-full"><i data-lucide="message-circle" class="w-5 h-5"></i> Reservar via WhatsApp</a>
-                    <a href="<?= url('/contato') ?>" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)"><i data-lucide="mail" class="w-4 h-4"></i> Solicitar orçamento</a>
+                    <a href="#calendario" onclick="event.preventDefault();document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary w-full"><i data-lucide="calendar-check" class="w-5 h-5"></i> Reservar por data</a>
+                    <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>?text=Ol%C3%A1!%20Quero%20reservar%20o%20transfer%20<?= urlencode($r['title']) ?>" target="_blank" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm" style="color:var(--horizonte);border-color:var(--horizonte);background:rgba(58,107,138,0.05)"><i data-lucide="message-circle" class="w-4 h-4"></i> Falar no WhatsApp</a>
                 </div>
             </aside>
         </div>
@@ -122,13 +170,51 @@ include VIEWS_DIR . '/partials/public_head.php';
     </div>
 </section>
 
+<script>
+function availabilityCalendar(config) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return {
+        mode: config.mode || 'open', map: config.map || {}, basePrice: config.basePrice || 0, checkoutBase: config.checkoutBase,
+        viewYear: today.getFullYear(), viewMonth: today.getMonth(), selectedIso: null,
+        get monthLabel(){ const n=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return n[this.viewMonth]+' de '+this.viewYear; },
+        pad(n){ return n<10?'0'+n:''+n; },
+        iso(y,m,d){ return y+'-'+this.pad(m+1)+'-'+this.pad(d); },
+        brl(v){ return 'R$ ' + Number(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); },
+        get cells(){
+            const first = new Date(this.viewYear,this.viewMonth,1);
+            const start = first.getDay();
+            const days = new Date(this.viewYear,this.viewMonth+1,0).getDate();
+            const cells=[];
+            for(let i=0;i<start;i++) cells.push({key:'e'+i,empty:true});
+            for(let d=1;d<=days;d++){
+                const dateObj = new Date(this.viewYear,this.viewMonth,d);
+                const isoStr = this.iso(this.viewYear,this.viewMonth,d);
+                const past = dateObj < today;
+                const info = this.map[isoStr];
+                let available=false, lowSeats=false, blocked=false, price=this.basePrice;
+                if (!past && info) { available = info.status === 'open' && Number(info.seats||0) > 0; blocked = !available; lowSeats = available && Number(info.seats)<=3; price = info.price || price; }
+                else if (!past && this.mode === 'open') available = true;
+                cells.push({key:isoStr, iso:isoStr, day:d, empty:false, past, available, lowSeats, blocked, priceLabel:available?this.brl(price):'', seats:info?info.seats:null, price});
+            }
+            return cells;
+        },
+        prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        select(c){ this.selectedIso=c.iso; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        get selectedLabel(){ if(!this.selectedIso)return''; return new Date(this.selectedIso+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); },
+        get selectedDetail(){ const c=this.cells.find(x=>x.iso===this.selectedIso); if(!c)return''; const parts=[this.brl(c.price)+' por veículo']; if(c.seats!==null) parts.push(c.seats+' vagas restantes'); return parts.join(' · '); },
+        get selectedCheckoutUrl(){ return this.checkoutBase + '&date=' + (this.selectedIso || ''); },
+    };
+}
+</script>
+
 <!-- Sticky bottom bar mobile -->
 <div class="mobile-book-bar md:hidden">
     <div class="flex-1 min-w-0">
         <div class="text-[10px] uppercase tracking-wider font-bold opacity-70">A partir de</div>
         <div class="font-display text-xl font-bold leading-none" style="color:var(--terracota)"><?= formatPrice($r['price_pix'] ?: $r['price']) ?></div>
     </div>
-    <a href="#reservar" onclick="event.preventDefault();document.getElementById('reservar').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary" style="white-space:nowrap"><i data-lucide="calendar-check" class="w-4 h-4"></i> Reservar</a>
+    <a href="#calendario" onclick="event.preventDefault();document.getElementById('calendario').scrollIntoView({behavior:'smooth',block:'start'})" class="btn-primary" style="white-space:nowrap"><i data-lucide="calendar-check" class="w-4 h-4"></i> Reservar</a>
 </div>
 <style>
 .mobile-book-bar{position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--bg-card);border-top:1px solid var(--border-default);padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 -8px 24px -8px rgba(0,0,0,.15);padding-bottom:calc(12px + env(safe-area-inset-bottom))}

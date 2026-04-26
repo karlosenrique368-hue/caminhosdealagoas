@@ -51,7 +51,7 @@
                 <h4 class="font-display text-lg font-semibold text-white mb-5"><?= e(t('foot.browse')) ?></h4>
                 <ul class="space-y-2 text-sm">
                     <li><a href="<?= url('/') ?>"><?= e(t('nav.home')) ?></a></li>
-                    <li><a href="<?= url('/roteiros') ?>"><?= e(t('nav.tours')) ?></a></li>
+                    <li><a href="<?= url('/passeios') ?>"><?= e(t('nav.tours')) ?></a></li>
                     <li><a href="<?= url('/pacotes') ?>"><?= e(t('nav.packages')) ?></a></li>
                     <li><a href="<?= url('/sobre') ?>"><?= e(t('nav.about')) ?></a></li>
                     <li><a href="<?= url('/contato') ?>"><?= e(t('nav.contact')) ?></a></li>
@@ -129,7 +129,7 @@
         </div>
         <h3 class="font-display text-xl font-bold mb-1" style="color:var(--sepia)">Carrinho vazio</h3>
         <p class="text-sm mb-6 max-w-xs" style="color:var(--text-muted)">Escolha um passeio ou pacote para começar sua próxima aventura.</p>
-        <a href="<?= url('/roteiros') ?>" class="btn-primary" style="padding:12px 24px">
+        <a href="<?= url('/passeios') ?>" class="btn-primary" style="padding:12px 24px">
             <i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios
         </a>
     </div>
@@ -176,25 +176,70 @@
 <script>
 function cartDateModal(){
     return {
-        visible:false, type:null, id:null, title:'', travelDate:'',
+        visible:false, type:null, id:null, title:'', loading:false,
+        mode:'fixed', map:{}, basePrice:0, selectedDates:[], viewYear:0, viewMonth:0,
         today: new Date().toISOString().split('T')[0],
-        init(){},
+        init(){ const now=new Date(); this.viewYear=now.getFullYear(); this.viewMonth=now.getMonth(); },
         open(d){
             // Sinaliza ao app.js que o modal Alpine está pronto e tratou o evento
             window.dispatchEvent(new Event('cart:ask-date-handled'));
-            this.type=d.type; this.id=d.id; this.title=d.title; this.travelDate=''; this.visible=true;
+            this.type=d.type; this.id=d.id; this.title=d.title; this.selectedDates=[]; this.map={}; this.loading=true; this.visible=true;
             document.body.style.overflow='hidden';
+            this.fetchAvailability();
             this.$nextTick(()=>window.lucide && window.lucide.createIcons());
         },
         close(){ this.visible=false; document.body.style.overflow=''; },
-        async confirm(){ if(!this.travelDate) return; await window.cart.add(this.type, this.id, this.travelDate); this.close(); }
+        async fetchAvailability(){
+            try {
+                const qs = new URLSearchParams({type:this.type, id:this.id});
+                const res = await fetch('<?= url('/api/availability') ?>?' + qs.toString(), {credentials:'same-origin'});
+                const j = await res.json();
+                if (j.ok) {
+                    this.mode = j.mode || 'fixed'; this.map = j.map || {}; this.basePrice = Number(j.basePrice || 0);
+                    const first = Object.keys(this.map).find(k => this.isAvailableIso(k));
+                    if (first) { const d = new Date(first+'T12:00:00'); this.viewYear=d.getFullYear(); this.viewMonth=d.getMonth(); }
+                }
+            } catch(e) { window.showToast && window.showToast('Não foi possível carregar as datas.', 'error'); }
+            finally { this.loading=false; this.$nextTick(()=>window.lucide && window.lucide.createIcons()); }
+        },
+        pad(n){ return n<10?'0'+n:''+n; },
+        iso(y,m,d){ return y+'-'+this.pad(m+1)+'-'+this.pad(d); },
+        brl(v){ return 'R$ ' + Number(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); },
+        isAvailableIso(iso){
+            const today = new Date(this.today+'T00:00:00');
+            const dt = new Date(iso+'T00:00:00');
+            if (dt < today || this.mode === 'on_request') return false;
+            const info = this.map[iso];
+            if (info) return info.status === 'open' && Number(info.seats || 0) > 0;
+            return this.mode === 'open';
+        },
+        get monthLabel(){ const n=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return n[this.viewMonth]+' de '+this.viewYear; },
+        get cells(){
+            const first = new Date(this.viewYear,this.viewMonth,1);
+            const start = first.getDay();
+            const days = new Date(this.viewYear,this.viewMonth+1,0).getDate();
+            const cells=[];
+            for(let i=0;i<start;i++) cells.push({key:'e'+i,empty:true});
+            for(let d=1;d<=days;d++){
+                const iso=this.iso(this.viewYear,this.viewMonth,d), info=this.map[iso], available=this.isAvailableIso(iso);
+                cells.push({key:iso,iso,day:d,empty:false,available,lowSeats:available&&info&&Number(info.seats)<=3,blocked:!!info&&!available,price:(info&&info.price)||this.basePrice,seats:info?info.seats:null});
+            }
+            return cells;
+        },
+        prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; },
+        nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; },
+        toggle(cell){ if(!cell.available) return; const i=this.selectedDates.indexOf(cell.iso); if(i>=0) this.selectedDates.splice(i,1); else this.selectedDates.push(cell.iso); this.selectedDates.sort(); },
+        selectedLabel(){ return this.selectedDates.length === 1 ? '1 data selecionada' : this.selectedDates.length + ' datas selecionadas'; },
+        selectedDatesText(){ return this.selectedDates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})).join(', '); },
+        async confirm(){ if(!this.selectedDates.length){ window.showToast && window.showToast('Escolha pelo menos uma data disponível.', 'error'); return; } await window.cart.add(this.type, this.id, this.selectedDates); this.close(); }
     }
 }
 
 function reviewSection(opts){
     return {
-        formOpen:false, loading:false,
+        formOpen:false, loading:false, photos:[],
         form:{ rating:0, title:'', content:'' },
+        handlePhotos(e){ this.photos = Array.from(e.target.files || []).slice(0,4); },
         async submit(){
             if (this.loading) return;
             if (!this.form.rating) { window.showToast && window.showToast('Escolha uma nota.', 'error'); return; }
@@ -208,6 +253,7 @@ function reviewSection(opts){
                 fd.append('rating', this.form.rating);
                 fd.append('title', this.form.title);
                 fd.append('content', this.form.content);
+                this.photos.forEach(file => fd.append('photos[]', file));
                 const r = await window.avikApi ? null : null;
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 fd.append('csrf_token', csrf);
@@ -215,7 +261,7 @@ function reviewSection(opts){
                 const j = await res.json();
                 if (j.ok) {
                     window.showToast && window.showToast('Obrigado! Sua avaliação foi enviada e será publicada após análise.', 'success');
-                    this.formOpen = false; this.form = {rating:0,title:'',content:''};
+                    this.formOpen = false; this.form = {rating:0,title:'',content:''}; this.photos = [];
                 } else {
                     window.showToast && window.showToast(j.msg || 'Erro ao enviar.', 'error');
                 }
@@ -239,12 +285,34 @@ function reviewSection(opts){
                 </div>
                 <button @click="close" class="text-2xl leading-none" style="color:var(--text-muted)">&times;</button>
             </div>
-            <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Data preferida *</label>
-            <input type="date" x-model="travelDate" :min="today" class="admin-input w-full">
-            <p class="text-[11px] mt-2" style="color:var(--text-muted)"><i data-lucide="info" class="w-3 h-3 inline -mt-0.5"></i> Você pode alterar no checkout. Itens com datas diferentes ficam separados no carrinho.</p>
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <label class="block text-xs font-bold uppercase tracking-wider" style="color:var(--text-secondary)">Datas disponíveis *</label>
+                <div class="flex items-center gap-1">
+                    <button type="button" @click="prevMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <div class="min-w-[120px] text-center text-sm font-bold" style="color:var(--sepia)" x-text="monthLabel"></div>
+                    <button type="button" @click="nextMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+            <div x-show="loading" class="p-8 text-center text-sm" style="color:var(--text-muted)">Carregando datas...</div>
+            <div x-show="!loading" class="calendar-grid" style="gap:5px">
+                <template x-for="dow in ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']" :key="dow">
+                    <div class="text-center text-[10px] font-bold uppercase py-1" style="color:var(--text-muted)" x-text="dow"></div>
+                </template>
+                <template x-for="cell in cells" :key="cell.key">
+                    <button type="button" :disabled="!cell.available" @click="toggle(cell)" class="calendar-cell" style="min-height:52px" :class="{'empty':cell.empty,'available':cell.available&&!cell.lowSeats,'low':cell.available&&cell.lowSeats,'blocked':cell.blocked,'selected':selectedDates.includes(cell.iso)}">
+                        <span class="cal-day" x-text="cell.day"></span>
+                        <span class="cal-price" x-show="cell.available" x-text="cell.seats !== null ? cell.seats + ' vagas' : 'Livre'"></span>
+                    </button>
+                </template>
+            </div>
+            <div x-show="!loading && mode==='on_request'" class="p-4 rounded-xl text-sm text-center" style="background:rgba(58,107,138,.08);color:var(--horizonte)">Essa experiência está sob consulta. Fale com a equipe para combinar a data.</div>
+            <div x-show="selectedDates.length" x-cloak class="mt-3 p-3 rounded-xl text-xs" style="background:rgba(201,107,74,.08);border:1px solid rgba(201,107,74,.25);color:var(--text-secondary)">
+                <b style="color:var(--sepia)" x-text="selectedLabel()"></b><br><span x-text="selectedDatesText()"></span>
+            </div>
+            <p class="text-[11px] mt-2" style="color:var(--text-muted)"><i data-lucide="info" class="w-3 h-3 inline -mt-0.5"></i> Você pode escolher uma ou várias datas disponíveis. No checkout os valores atualizam automaticamente.</p>
             <div class="mt-5 flex justify-end gap-2">
                 <button type="button" @click="close" class="admin-btn admin-btn-secondary">Cancelar</button>
-                <button type="button" @click="confirm()" class="btn-primary" :disabled="!travelDate" :class="!travelDate && 'opacity-60 cursor-not-allowed'"><i data-lucide="check" class="w-4 h-4"></i>Adicionar ao carrinho</button>
+                <button type="button" @click="confirm()" class="btn-primary" :disabled="!selectedDates.length" :class="!selectedDates.length && 'opacity-60 cursor-not-allowed'"><i data-lucide="check" class="w-4 h-4"></i>Adicionar ao carrinho</button>
             </div>
         </div>
     </div>

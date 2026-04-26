@@ -6,7 +6,7 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="max-w-5xl mx-auto px-6 text-center text-white">
         <span class="text-xs font-bold tracking-[0.3em] uppercase" style="color:var(--areia-light)">Fale com a gente</span>
         <h1 class="font-display text-5xl md:text-6xl font-bold mt-3 mb-4">Vamos planejar sua viagem</h1>
-        <p class="text-white/85 max-w-2xl mx-auto">Entre em contato e receba um roteiro personalizado em menos de 24h.</p>
+        <p class="text-white/85 max-w-2xl mx-auto">Entre em contato e receba um passeio personalizado em menos de 24h.</p>
     </div>
 </section>
 
@@ -35,7 +35,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                         </div>
                         <div>
                             <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Assunto</label>
-                            <input type="text" name="subject" class="admin-input" placeholder="Ex: roteiro personalizado">
+                            <input type="text" name="subject" class="admin-input" placeholder="Ex: passeio personalizado">
                         </div>
                     </div>
                     <div>

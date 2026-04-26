@@ -33,8 +33,31 @@ if ($bookingId) {
     if ($dup) jsonResponse(['ok'=>false,'msg'=>'Você já avaliou esta reserva.'], 400);
 }
 
-dbExec('INSERT INTO reviews (customer_id,booking_id,entity_type,entity_id,rating,title,content,verified,status) VALUES (?,?,?,?,?,?,?,?,?)',
-    [$cid, $bookingId, $type, $eid, $rating, $title, $content, $verified, 'pending']);
+$photos = [];
+if (!empty($_FILES['photos']) && is_array($_FILES['photos']['name'])) {
+    $uploadDir = UPLOADS_DIR . '/reviews';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+        jsonResponse(['ok'=>false,'msg'=>'Não foi possível preparar o upload.'], 500);
+    }
+    $count = min(4, count($_FILES['photos']['name']));
+    $mimeToExt = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
+    for ($i=0; $i<$count; $i++) {
+        if (($_FILES['photos']['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) continue;
+        if (($_FILES['photos']['error'][$i] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) jsonResponse(['ok'=>false,'msg'=>'Falha ao enviar uma das fotos.'], 400);
+        if (($_FILES['photos']['size'][$i] ?? 0) > MAX_UPLOAD_SIZE) jsonResponse(['ok'=>false,'msg'=>'Cada foto deve ter até 5MB.'], 400);
+        $tmp = $_FILES['photos']['tmp_name'][$i] ?? '';
+        if (!$tmp || !is_uploaded_file($tmp)) continue;
+        $mime = mime_content_type($tmp) ?: '';
+        if (!isset($mimeToExt[$mime])) jsonResponse(['ok'=>false,'msg'=>'Envie fotos em JPG, PNG ou WebP.'], 400);
+        $fileName = 'review_' . $cid . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $mimeToExt[$mime];
+        $target = $uploadDir . '/' . $fileName;
+        if (!move_uploaded_file($tmp, $target)) jsonResponse(['ok'=>false,'msg'=>'Não foi possível salvar a foto.'], 500);
+        $photos[] = '/storage/uploads/reviews/' . $fileName;
+    }
+}
+
+dbExec('INSERT INTO reviews (customer_id,booking_id,entity_type,entity_id,rating,title,content,photos,verified,status) VALUES (?,?,?,?,?,?,?,?,?,?)',
+    [$cid, $bookingId, $type, $eid, $rating, $title, $content, $photos ? json_encode($photos, JSON_UNESCAPED_SLASHES) : null, $verified, 'pending']);
 
 // Recompute avg (approved only)
 $table = $type === 'roteiro' ? 'roteiros' : 'pacotes';

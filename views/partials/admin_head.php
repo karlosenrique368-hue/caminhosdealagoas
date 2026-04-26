@@ -21,7 +21,9 @@ tailwind.config = { theme: { extend: { colors: {
 }, fontFamily:{display:['"Playfair Display"','serif'],sans:['Inter','system-ui']} }}}
 </script>
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="<?= asset('brand/Adesivo_1.svg') ?>">
 <link rel="alternate icon" type="image/png" href="<?= asset('brand/logo-terracota.png') ?>">
@@ -29,6 +31,9 @@ tailwind.config = { theme: { extend: { colors: {
 <style>
 body { background: var(--bg-surface); }
 [x-cloak] { display: none !important; }
+.admin-map-picker .leaflet-container{z-index:0!important}
+.admin-map-picker .leaflet-pane{z-index:1!important}
+.admin-map-picker .leaflet-control-container,.admin-map-picker .leaflet-top,.admin-map-picker .leaflet-bottom{z-index:2!important}
 </style>
 </head>
 <body x-data="{sidebarOpen: window.innerWidth>=1024}">

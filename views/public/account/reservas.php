@@ -5,10 +5,11 @@ include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
 $bookings = dbAll("
-    SELECT b.*, r.slug AS roteiro_slug, p.slug AS pacote_slug
+    SELECT b.*, r.slug AS roteiro_slug, p.slug AS pacote_slug, t.slug AS transfer_slug
     FROM bookings b
     LEFT JOIN roteiros r ON b.entity_type='roteiro' AND b.entity_id=r.id
     LEFT JOIN pacotes p ON b.entity_type='pacote' AND b.entity_id=p.id
+    LEFT JOIN transfers t ON b.entity_type='transfer' AND b.entity_id=t.id
     WHERE b.customer_user_id=?
     ORDER BY b.created_at DESC", [$cid]);
 ?>
@@ -19,7 +20,7 @@ $bookings = dbAll("
             <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Suas viagens</h2>
             <p class="text-xs" style="color:var(--text-muted)"><?= count($bookings) ?> reserva<?= count($bookings)===1?'':'s' ?> no total</p>
         </div>
-        <a href="<?= url('/roteiros') ?>" class="btn-primary" style="padding:10px 18px;font-size:13px">
+        <a href="<?= url('/passeios') ?>" class="btn-primary" style="padding:10px 18px;font-size:13px">
             <i data-lucide="plus" class="w-4 h-4"></i> Nova reserva
         </a>
     </div>
@@ -29,16 +30,20 @@ $bookings = dbAll("
             <div class="empty-state-icon"><i data-lucide="calendar-x" class="w-7 h-7"></i></div>
             <div class="empty-state-title">Nenhuma reserva encontrada</div>
             <div class="empty-state-desc">Que tal começar uma aventura em Alagoas?</div>
-            <a href="<?= url('/roteiros') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar roteiros</a>
+            <a href="<?= url('/passeios') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios</a>
         </div>
     <?php else: ?>
         <div class="space-y-4">
             <?php foreach ($bookings as $b):
                 $title = $b['entity_title'];
-                $slug = $b['roteiro_slug'] ?: $b['pacote_slug'];
-                $type = $b['entity_type']==='roteiro'?'roteiros':'pacotes';
+                $slug = $b['roteiro_slug'] ?: ($b['pacote_slug'] ?: $b['transfer_slug']);
+                $type = $b['entity_type']==='roteiro'?'passeios':($b['entity_type']==='pacote'?'pacotes':'transfers');
+                $typeLabel = $b['entity_type']==='roteiro' ? 'Passeio' : ($b['entity_type']==='pacote' ? 'Pacote' : 'Transfer');
                 $iconName = $b['entity_type']==='roteiro' ? 'mountain' : ($b['entity_type']==='pacote' ? 'package' : 'car');
                 $statusPill = ['paid'=>'pill-success','pending'=>'pill-warning','failed'=>'pill-danger','refunded'=>'pill-info'][$b['payment_status']] ?? 'pill-info';
+                $answerData = !empty($b['booking_answers']) ? (json_decode($b['booking_answers'], true) ?: []) : [];
+                $travelDates = !empty($answerData['datas_viagem']) && is_array($answerData['datas_viagem']) ? $answerData['datas_viagem'] : (!empty($b['travel_date']) ? [$b['travel_date']] : []);
+                $travelDateLabel = implode(', ', array_map(fn($dt) => date('d/m/Y', strtotime($dt)), $travelDates));
 
                 // Calcular parcelas restantes (PIX parcelado)
                 $hasInstallments = !empty($b['installments']) && (int)$b['installments'] > 1;
@@ -68,7 +73,7 @@ $bookings = dbAll("
                     <div class="booking-icon"><i data-lucide="<?= $iconName ?>" class="w-6 h-6"></i></div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-2 flex-wrap">
-                            <span class="pill pill-primary"><?= e($b['entity_type']) ?></span>
+                            <span class="pill pill-primary"><?= e($typeLabel) ?></span>
                             <span class="pill <?= $statusPill ?>"><?= e($b['payment_status']) ?></span>
                             <?php if ($hasInstallments): ?>
                                 <span class="pill" style="background:rgba(58,107,138,.1);color:var(--horizonte)"><i data-lucide="calendar-clock" class="w-3 h-3"></i> <?= $installmentsPaid ?>/<?= $installmentsTotal ?> parcelas</span>
@@ -77,7 +82,7 @@ $bookings = dbAll("
                         <h3 class="font-display font-bold text-lg" style="color:var(--sepia)"><?= e($title) ?></h3>
                         <p class="text-xs mt-1" style="color:var(--text-muted)">
                             Reservado em <?= date('d/m/Y', strtotime($b['created_at'])) ?>
-                            <?php if (!empty($b['travel_date'])): ?> · Viagem: <?= date('d/m/Y', strtotime($b['travel_date'])) ?><?php endif; ?>
+                            <?php if ($travelDateLabel): ?> · <?= count($travelDates) > 1 ? 'Viagens' : 'Viagem' ?>: <?= e($travelDateLabel) ?><?php endif; ?>
                             · Código: <code style="font-size:11px;background:var(--areia-light);padding:1px 6px;border-radius:4px"><?= e($b['code']) ?></code>
                         </p>
                         <?php if ($hasInstallments && $installmentsLeft > 0): ?>

@@ -217,7 +217,7 @@ if (typeof galleryLightbox === 'undefined') {
                         <i data-lucide="map-pin" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:var(--terracota)"></i><?= e($p['meeting_point']) ?>
                     </div>
                     <?php if (!empty($p['latitude']) && !empty($p['longitude'])): ?>
-                        <div class="meeting-map" data-lat="<?= e($p['latitude']) ?>" data-lng="<?= e($p['longitude']) ?>" data-label="<?= e($p['meeting_point']) ?>" style="height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--border-default)"></div>
+                        <div class="meeting-map" data-lat="<?= e($p['latitude']) ?>" data-lng="<?= e($p['longitude']) ?>" data-label="<?= e($p['meeting_point'] ?? ($p['destination'] ?? 'Ponto de encontro')) ?>" style="height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--border-default)"></div>
                         <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($p['latitude'].','.$p['longitude']) ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold" style="color:var(--horizonte)"><i data-lucide="navigation" class="w-4 h-4"></i> Como chegar (Google Maps)</a>
                     <?php endif; ?>
                 </div>
@@ -367,6 +367,11 @@ if (typeof galleryLightbox === 'undefined') {
                 </div>
                 <input type="text" x-model="form.title" maxlength="200" class="admin-input w-full mb-3" placeholder="Título (opcional)">
                 <textarea x-model="form.content" required minlength="10" rows="4" class="admin-input w-full" placeholder="Conte como foi sua viagem..."></textarea>
+                <label class="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer" style="border-color:var(--border-default);background:var(--areia-light)">
+                    <span class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i data-lucide="image-plus" class="w-4 h-4" style="color:var(--terracota)"></i> Adicionar fotos</span>
+                    <span class="text-xs" style="color:var(--text-muted)" x-text="photos.length ? photos.length + ' foto(s)' : 'até 4 imagens'"></span>
+                    <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" multiple @change="handlePhotos($event)">
+                </label>
                 <div class="mt-4 flex justify-end gap-2">
                     <button type="button" @click="formOpen=false" class="admin-btn admin-btn-secondary">Cancelar</button>
                     <button type="button" @click="submit()" :disabled="loading || !form.rating || form.content.length < 10" class="btn-primary"><i data-lucide="send" class="w-4 h-4"></i> Enviar avaliação</button>
@@ -375,7 +380,7 @@ if (typeof galleryLightbox === 'undefined') {
             <?php endif; ?>
             <?php if ($reviews): ?>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5" x-data="{ open:false }">
-                <?php foreach ($reviews as $i => $rv): ?>
+                <?php foreach ($reviews as $i => $rv): $reviewPhotos = !empty($rv['photos']) ? (json_decode($rv['photos'], true) ?: []) : []; ?>
                 <div class="admin-card p-6" <?= $i >= 3 ? 'x-show="open" x-collapse' : '' ?>>
                     <div class="flex items-center justify-between gap-1 mb-3">
                         <div class="flex items-center gap-1">
@@ -385,6 +390,13 @@ if (typeof galleryLightbox === 'undefined') {
                     </div>
                     <?php if (!empty($rv['title'])): ?><div class="font-bold text-sm mb-2" style="color:var(--sepia)"><?= e($rv['title']) ?></div><?php endif; ?>
                     <p class="text-sm leading-relaxed mb-4 italic" style="color:var(--text-secondary)">“<?= e(tAuto($rv['content'])) ?>”</p>
+                    <?php if ($reviewPhotos): ?>
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <?php foreach (array_slice($reviewPhotos, 0, 4) as $photo): ?>
+                            <img src="<?= e(url($photo)) ?>" alt="Foto da avaliação" class="w-full aspect-square object-cover rounded-lg" loading="lazy">
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="flex items-center gap-3 pt-4 border-t" style="border-color:var(--border-default)">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))"><?= e(mb_substr($rv['name'],0,1)) ?></div>
                         <div>

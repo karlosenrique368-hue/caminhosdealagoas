@@ -224,6 +224,11 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
                     Destacar este transfer
                 </label>
             </div>
+            <?php if (!$isNew): ?>
+            <div class="md:col-span-2">
+                <a href="<?= url('/admin/departures?type=transfer&entity_id=' . $id) ?>" class="admin-btn admin-btn-secondary w-full justify-center"><i data-lucide="calendar-plus" class="w-4 h-4"></i>Gerenciar datas deste transfer</a>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 

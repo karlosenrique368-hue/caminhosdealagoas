@@ -45,11 +45,13 @@ $colors = ['pending'=>'#D97706','approved'=>'#059669','rejected'=>'#DC2626'];
             <?php foreach ($reviews as $rv):
                 $statusLabel = ['pending'=>'Pendente','approved'=>'Aprovado','rejected'=>'Rejeitado'][$rv['status']] ?? $rv['status'];
                 $statusBadge = ['pending'=>'warning','approved'=>'success','rejected'=>'muted'][$rv['status']] ?? 'muted';
+                $typeLabel = $rv['entity_type'] === 'roteiro' ? 'Passeio' : 'Pacote';
+                $reviewPhotos = !empty($rv['photos']) ? (json_decode($rv['photos'], true) ?: []) : [];
             ?>
             <tr>
                 <td>
                     <div class="font-semibold"><?= e($rv['entity_title']) ?></div>
-                    <div class="text-xs uppercase tracking-wider" style="color:var(--text-muted)"><?= e($rv['entity_type']) ?></div>
+                    <div class="text-xs uppercase tracking-wider" style="color:var(--text-muted)"><?= e($typeLabel) ?></div>
                 </td>
                 <td>
                     <div class="text-sm"><?= e($rv['customer_name']) ?></div>
@@ -65,6 +67,13 @@ $colors = ['pending'=>'#D97706','approved'=>'#059669','rejected'=>'#DC2626'];
                 <td style="max-width:320px">
                     <?php if ($rv['title']): ?><div class="font-semibold text-sm"><?= e($rv['title']) ?></div><?php endif; ?>
                     <p class="text-sm line-clamp-2" style="color:var(--text-secondary)"><?= e($rv['content']) ?></p>
+                    <?php if ($reviewPhotos): ?>
+                    <div class="flex gap-1.5 mt-2">
+                        <?php foreach (array_slice($reviewPhotos, 0, 4) as $photo): ?>
+                            <img src="<?= e(url($photo)) ?>" alt="Foto da avaliação" class="w-10 h-10 rounded-lg object-cover" loading="lazy">
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
                 </td>
                 <td><span class="text-xs" style="color:var(--text-muted)"><?= date('d/m/Y', strtotime($rv['created_at'])) ?></span></td>
                 <td><span class="badge badge-<?= $statusBadge ?>"><?= $statusLabel ?></span></td>

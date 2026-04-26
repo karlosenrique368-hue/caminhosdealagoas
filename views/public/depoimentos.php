@@ -111,7 +111,7 @@ include VIEWS_DIR . '/partials/public_head.php';
         <h2 class="font-brand text-4xl md:text-5xl mb-4"><?= e(t('depoimentos.cta_title')) ?></h2>
         <p class="text-lg text-white/80 mb-8 max-w-xl mx-auto"><?= e(t('depoimentos.cta_sub')) ?></p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="<?= url('/roteiros') ?>" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition" style="background:var(--terracota);color:#fff"><i data-lucide="compass" class="w-5 h-5"></i><?= e(t('home.hero.cta1')) ?></a>
+            <a href="<?= url('/passeios') ?>" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition" style="background:var(--terracota);color:#fff"><i data-lucide="compass" class="w-5 h-5"></i><?= e(t('home.hero.cta1')) ?></a>
             <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)"><i data-lucide="message-circle" class="w-5 h-5"></i>WhatsApp</a>
         </div>
     </div>

@@ -63,8 +63,8 @@ $recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.cus
         <div class="empty-state">
             <div class="empty-state-icon"><i data-lucide="map" class="w-7 h-7"></i></div>
             <div class="empty-state-title">Nenhuma viagem ainda</div>
-            <div class="empty-state-desc">Comece explorando nossos roteiros curados em Alagoas.</div>
-            <a href="<?= url('/roteiros') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar roteiros</a>
+            <div class="empty-state-desc">Comece explorando nossos passeios curados em Alagoas.</div>
+            <a href="<?= url('/passeios') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios</a>
         </div>
     <?php else: ?>
         <div class="space-y-3">

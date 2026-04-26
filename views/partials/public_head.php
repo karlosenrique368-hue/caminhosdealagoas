@@ -1,6 +1,6 @@
 <?php
 $pageTitle = $pageTitle ?? APP_NAME;
-$pageDesc = $pageDesc ?? 'Descubra as belezas de Alagoas com roteiros, passeios e pacotes premium.';
+$pageDesc = $pageDesc ?? 'Descubra as belezas de Alagoas com passeios e pacotes premium.';
 $pageImage = $pageImage ?? asset('brand/logo-azul.png');
 $pageSchema = $pageSchema ?? null; // optional JSON-LD injected by child page
 $currentUrl = 'http' . (!empty($_SERVER['HTTPS'])?'s':'') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/');
@@ -47,7 +47,7 @@ $currentCurrency = $_SESSION['currency'] ?? 'BRL';
   "@context": "https://schema.org",
   "@type": "TravelAgency",
   "name": "Caminhos de Alagoas",
-  "description": "Roteiros, passeios e pacotes autênticos em Alagoas.",
+    "description": "Passeios e pacotes autênticos em Alagoas.",
   "url": "<?= e(rtrim($currentUrl, '/')) ?>",
   "logo": "<?= e(asset('brand/logo-azul.png')) ?>",
   "telephone": "<?= e(getSetting('contact_phone', '+5582988220546')) ?>",
@@ -121,6 +121,12 @@ tailwind.config = {
 
 <!-- Theme CSS -->
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
+<style>
+[x-cloak]{display:none!important}
+.meeting-map,.meeting-map .leaflet-container{z-index:0!important}
+.meeting-map .leaflet-pane{z-index:1!important}
+.meeting-map .leaflet-control-container,.meeting-map .leaflet-top,.meeting-map .leaflet-bottom{z-index:2!important}
+</style>
 
 <!-- Lucide -->
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>

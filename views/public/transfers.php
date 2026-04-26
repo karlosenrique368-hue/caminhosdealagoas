@@ -4,35 +4,91 @@ $pageDesc  = 'Traslados privativos do aeroporto e entre cidades de Alagoas, com 
 $solidNav  = true;
 
 $q = trim($_GET['q'] ?? '');
+$from = trim($_GET['from'] ?? '');
+$to = trim($_GET['to'] ?? '');
+$capacity = (int)($_GET['capacity'] ?? 0);
+$sort = $_GET['sort'] ?? 'destaque';
 $where = "status='published'"; $params = [];
 if ($q) { $where .= " AND (title LIKE ? OR location_from LIKE ? OR location_to LIKE ?)"; $params = ["%$q%","%$q%","%$q%"]; }
+if ($from) { $where .= " AND location_from LIKE ?"; $params[] = "%$from%"; }
+if ($to) { $where .= " AND location_to LIKE ?"; $params[] = "%$to%"; }
+if ($capacity) { $where .= " AND capacity >= ?"; $params[] = $capacity; }
+
+$orderBy = match($sort) {
+    'preco_asc'  => 'COALESCE(price_pix,price) ASC',
+    'preco_desc' => 'COALESCE(price_pix,price) DESC',
+    'recentes'   => 'created_at DESC',
+    'capacidade' => 'capacity DESC',
+    default      => 'featured DESC, created_at DESC',
+};
 
 $pag = paginate(
     "SELECT COUNT(*) AS c FROM transfers WHERE $where",
-    "SELECT * FROM transfers WHERE $where ORDER BY featured DESC, created_at DESC",
+    "SELECT * FROM transfers WHERE $where ORDER BY $orderBy",
     $params,
     ['allowed'=>[12,24,48], 'default'=>12]
 );
 $rows = $pag['rows'];
+$origins = dbAll("SELECT DISTINCT location_from FROM transfers WHERE status='published' AND location_from IS NOT NULL AND location_from != '' ORDER BY location_from");
+$destinations = dbAll("SELECT DISTINCT location_to FROM transfers WHERE status='published' AND location_to IS NOT NULL AND location_to != '' ORDER BY location_to");
 
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
 <section class="py-20 pt-32" style="background:linear-gradient(135deg,var(--horizonte) 0%,var(--horizonte-dark) 100%);color:#fff;position:relative;overflow:hidden">
     <img src="<?= asset('brand/selo-branco.png') ?>" class="seal-rotate absolute hidden md:block" style="top:80px;right:40px;width:110px;opacity:0.25" alt="">
-    <div class="relative z-10 max-w-7xl mx-auto px-6">
+    <div class="relative z-10 max-w-7xl mx-auto px-6 text-center">
         <span class="inline-block text-[11px] font-bold uppercase tracking-[0.3em] px-3 py-1 rounded-full mb-4" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2)">Transfers privativos</span>
-        <h1 class="font-brand text-5xl md:text-7xl leading-[0.95] mb-4">Chegue tranquilo, viaje no conforto</h1>
-        <p class="text-lg md:text-xl text-white/85 max-w-2xl">Traslados privativos do aeroporto e entre destinos de Alagoas. Motoristas profissionais, veículos confortáveis, atendimento 24h.</p>
-        <form method="GET" class="mt-8 max-w-md relative">
-            <i data-lucide="search" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style="color:rgba(255,255,255,.7)"></i>
-            <input type="text" name="q" value="<?= e($q) ?>" placeholder="Origem ou destino..." class="w-full pl-11 pr-4 py-3 rounded-xl text-sm" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff">
-        </form>
+        <h1 class="font-brand text-5xl md:text-7xl leading-[0.95] mb-4 mx-auto max-w-4xl">Chegue tranquilo, viaje no conforto</h1>
+        <p class="text-lg md:text-xl text-white/85 max-w-2xl mx-auto">Traslados privativos do aeroporto e entre destinos de Alagoas. Motoristas profissionais, veículos confortáveis, atendimento 24h.</p>
     </div>
 </section>
 
 <section class="py-16" style="background:var(--bg-surface)">
     <div class="max-w-7xl mx-auto px-6">
+        <form method="GET" class="filter-premium">
+            <div class="filter-search">
+                <label class="filter-label">Buscar</label>
+                <i data-lucide="search" class="filter-search-icon"></i>
+                <input type="text" name="q" value="<?= e($q) ?>" placeholder="Origem, destino ou nome..." class="filter-input">
+            </div>
+            <div>
+                <label class="filter-label">Origem</label>
+                <select name="from" class="filter-input">
+                    <option value="">Todas</option>
+                    <?php foreach ($origins as $o): ?><option value="<?= e($o['location_from']) ?>" <?= $from===$o['location_from']?'selected':'' ?>><?= e($o['location_from']) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Destino</label>
+                <select name="to" class="filter-input">
+                    <option value="">Todos</option>
+                    <?php foreach ($destinations as $d): ?><option value="<?= e($d['location_to']) ?>" <?= $to===$d['location_to']?'selected':'' ?>><?= e($d['location_to']) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Passageiros</label>
+                <select name="capacity" class="filter-input">
+                    <option value="0">Qualquer</option>
+                    <?php foreach ([3,4,6,8,12] as $cap): ?><option value="<?= $cap ?>" <?= $capacity===$cap?'selected':'' ?>><?= $cap ?>+ pax</option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Ordenar</label>
+                <select name="sort" class="filter-input">
+                    <option value="destaque" <?= $sort==='destaque'?'selected':'' ?>>Em destaque</option>
+                    <option value="recentes" <?= $sort==='recentes'?'selected':'' ?>>Mais recentes</option>
+                    <option value="preco_asc" <?= $sort==='preco_asc'?'selected':'' ?>>Menor preço</option>
+                    <option value="preco_desc" <?= $sort==='preco_desc'?'selected':'' ?>>Maior preço</option>
+                    <option value="capacidade" <?= $sort==='capacidade'?'selected':'' ?>>Maior capacidade</option>
+                </select>
+            </div>
+            <div class="flex gap-2 items-end">
+                <button type="submit" class="filter-submit"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Filtrar</button>
+                <?php if ($q || $from || $to || $capacity || ($sort && $sort !== 'destaque')): ?><a href="<?= url('/transfers') ?>" class="filter-reset" title="Limpar"><i data-lucide="x" class="w-4 h-4"></i></a><?php endif; ?>
+            </div>
+        </form>
+
         <?php if (!$rows): ?>
             <div class="text-center py-20">
                 <i data-lucide="car" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
@@ -40,7 +96,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <p class="text-sm" style="color:var(--text-muted)">Tente outra busca ou fale com a gente no WhatsApp.</p>
             </div>
         <?php else: ?>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-sm mb-6" style="color:var(--text-muted)"><strong style="color:var(--sepia)"><?= (int)$pag['total'] ?></strong> transfer<?= (int)$pag['total']===1?'':'s' ?> encontrado<?= (int)$pag['total']===1?'':'s' ?></p>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <?php foreach ($rows as $i => $r): ?>
                 <a href="<?= url('/transfers/' . $r['slug']) ?>" class="roteiro-card group" data-reveal style="animation-delay: <?= $i * 50 ?>ms">
                     <div class="img-wrap" style="aspect-ratio:4/3;position:relative">

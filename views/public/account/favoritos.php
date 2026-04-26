@@ -32,13 +32,13 @@ $items = dbAll("
         <div class="empty-state">
             <div class="empty-state-icon"><i data-lucide="heart-crack" class="w-7 h-7"></i></div>
             <div class="empty-state-title">Sua lista está vazia</div>
-            <div class="empty-state-desc">Salve roteiros e pacotes que te inspiram para voltar depois.</div>
-            <a href="<?= url('/roteiros') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Descobrir roteiros</a>
+            <div class="empty-state-desc">Salve passeios e pacotes que te inspiram para voltar depois.</div>
+            <a href="<?= url('/passeios') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Descobrir passeios</a>
         </div>
     <?php else: ?>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" id="fav-grid">
             <?php foreach ($items as $it):
-                $link = ($it['entity_type']==='roteiro'?'/roteiros/':'/pacotes/') . $it['slug'];
+                $link = ($it['entity_type']==='roteiro'?'/passeios/':'/pacotes/') . $it['slug'];
                 $cover = $it['cover'] ? storageUrl($it['cover']) : '';
             ?>
                 <div class="fav-card" data-wid="<?= (int)$it['wid'] ?>">

@@ -2,20 +2,23 @@
 /**
  * Admin · Gerenciar datas (departures)
  * Permite criar, editar, bloquear, reabrir e excluir saídas programadas
- * para roteiros e pacotes.
+ * para passeios, pacotes e transfers.
  */
 requireAdmin();
 $pageTitle = 'Datas & Disponibilidade';
 
-$filterType = in_array($_GET['type'] ?? '', ['roteiro','pacote'], true) ? $_GET['type'] : '';
+$allowedTypes = ['roteiro','pacote','transfer'];
+$filterType = in_array($_GET['type'] ?? '', $allowedTypes, true) ? $_GET['type'] : '';
 $filterEntityId = (int)($_GET['entity_id'] ?? 0);
 
 // Dropdowns
 $roteiros = dbAll("SELECT id, title FROM roteiros ORDER BY title");
 $pacotes  = dbAll("SELECT id, title FROM pacotes ORDER BY title");
+$transfers = dbAll("SELECT id, title FROM transfers ORDER BY title");
 $entityMap = [
     'roteiro' => array_column($roteiros, 'title', 'id'),
     'pacote'  => array_column($pacotes, 'title', 'id'),
+    'transfer'=> array_column($transfers, 'title', 'id'),
 ];
 
 if (isPost() && csrfVerify()) {
@@ -23,7 +26,7 @@ if (isPost() && csrfVerify()) {
     if ($action === 'save') {
         $id = (int)($_POST['id'] ?? 0);
         $data = [
-            'entity_type'    => in_array($_POST['entity_type'] ?? '', ['roteiro','pacote'], true) ? $_POST['entity_type'] : 'roteiro',
+            'entity_type'    => in_array($_POST['entity_type'] ?? '', $allowedTypes, true) ? $_POST['entity_type'] : 'roteiro',
             'entity_id'      => (int)($_POST['entity_id'] ?? 0),
             'departure_date' => $_POST['departure_date'] ?? null,
             'departure_time' => $_POST['departure_time'] ?: null,
@@ -57,7 +60,7 @@ if (isPost() && csrfVerify()) {
         flash('success','Data removida.');
     } elseif ($action === 'bulk') {
         // Criar várias datas em massa (ex: todo sábado do mês)
-        $type = in_array($_POST['bulk_type'] ?? '', ['roteiro','pacote'], true) ? $_POST['bulk_type'] : 'roteiro';
+        $type = in_array($_POST['bulk_type'] ?? '', $allowedTypes, true) ? $_POST['bulk_type'] : 'roteiro';
         $eid  = (int)($_POST['bulk_entity_id'] ?? 0);
         $from = $_POST['bulk_from'] ?? null;
         $to   = $_POST['bulk_to'] ?? null;
@@ -98,11 +101,12 @@ $whereSql = implode(' AND ', $where);
 $pag = paginate(
     "SELECT COUNT(*) AS c FROM departures d WHERE $whereSql",
     "SELECT d.*,
-        CASE d.entity_type WHEN 'roteiro' THEN r.title WHEN 'pacote' THEN p.title END AS entity_title,
-        CASE d.entity_type WHEN 'roteiro' THEN r.slug ELSE p.slug END AS entity_slug
+          CASE d.entity_type WHEN 'roteiro' THEN r.title WHEN 'pacote' THEN p.title ELSE t.title END AS entity_title,
+          CASE d.entity_type WHEN 'roteiro' THEN r.slug WHEN 'pacote' THEN p.slug ELSE t.slug END AS entity_slug
      FROM departures d
      LEFT JOIN roteiros r ON d.entity_type='roteiro' AND d.entity_id=r.id
      LEFT JOIN pacotes  p ON d.entity_type='pacote'  AND d.entity_id=p.id
+      LEFT JOIN transfers t ON d.entity_type='transfer' AND d.entity_id=t.id
      WHERE $whereSql
      ORDER BY d.departure_date DESC, d.id DESC",
     $params
@@ -136,6 +140,7 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                 <option value="">Todos</option>
                 <option value="roteiro" <?= $filterType==='roteiro'?'selected':'' ?>>Passeios</option>
                 <option value="pacote"  <?= $filterType==='pacote'?'selected':'' ?>>Pacotes</option>
+                <option value="transfer" <?= $filterType==='transfer'?'selected':'' ?>>Transfers</option>
             </select>
         </div>
         <div class="flex-1 min-w-[220px]">
@@ -150,6 +155,11 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                 <?php if ($filterType==='pacote' || !$filterType): ?>
                     <optgroup label="Pacotes">
                         <?php foreach ($pacotes as $p): ?><option value="<?= $p['id'] ?>" <?= $filterEntityId===(int)$p['id']?'selected':'' ?>><?= e($p['title']) ?></option><?php endforeach; ?>
+                    </optgroup>
+                <?php endif; ?>
+                <?php if ($filterType==='transfer' || !$filterType): ?>
+                    <optgroup label="Transfers">
+                        <?php foreach ($transfers as $t): ?><option value="<?= $t['id'] ?>" <?= $filterEntityId===(int)$t['id']?'selected':'' ?>><?= e($t['title']) ?></option><?php endforeach; ?>
                     </optgroup>
                 <?php endif; ?>
             </select>
@@ -178,7 +188,7 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                         <?php if ($d['departure_time']): ?><div class="text-xs" style="color:var(--text-muted)">às <?= date('H:i', strtotime($d['departure_time'])) ?></div><?php endif; ?>
                     </td>
                     <td>
-                        <div class="text-xs uppercase tracking-wider font-semibold" style="color:var(--terracota)"><?= $d['entity_type']==='roteiro'?'Passeio':'Pacote' ?></div>
+                        <div class="text-xs uppercase tracking-wider font-semibold" style="color:var(--terracota)"><?= $d['entity_type']==='roteiro'?'Passeio':($d['entity_type']==='pacote'?'Pacote':'Transfer') ?></div>
                         <div class="text-sm font-semibold"><?= e($d['entity_title'] ?? '—') ?></div>
                     </td>
                     <td>
@@ -223,6 +233,7 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                         <select name="entity_type" class="admin-input w-full" x-model="(editing||{entity_type:'<?= $filterType ?: 'roteiro' ?>'}).entity_type">
                             <option value="roteiro">Passeio</option>
                             <option value="pacote">Pacote</option>
+                            <option value="transfer">Transfer</option>
                         </select>
                     </label>
                     <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Produto *</span>
@@ -233,6 +244,9 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                             </optgroup>
                             <optgroup label="Pacotes">
                                 <?php foreach ($pacotes as $p): ?><option value="<?= $p['id'] ?>"><?= e($p['title']) ?></option><?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Transfers">
+                                <?php foreach ($transfers as $t): ?><option value="<?= $t['id'] ?>"><?= e($t['title']) ?></option><?php endforeach; ?>
                             </optgroup>
                         </select>
                     </label>
@@ -278,6 +292,7 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                         <select name="bulk_type" class="admin-input w-full">
                             <option value="roteiro">Passeio</option>
                             <option value="pacote">Pacote</option>
+                            <option value="transfer">Transfer</option>
                         </select>
                     </label>
                     <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">Produto *</span>
@@ -288,6 +303,9 @@ $statusBadge  = ['open'=>'success','closed'=>'muted','cancelled'=>'danger'];
                             </optgroup>
                             <optgroup label="Pacotes">
                                 <?php foreach ($pacotes as $p): ?><option value="<?= $p['id'] ?>"><?= e($p['title']) ?></option><?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Transfers">
+                                <?php foreach ($transfers as $t): ?><option value="<?= $t['id'] ?>"><?= e($t['title']) ?></option><?php endforeach; ?>
                             </optgroup>
                         </select>
                     </label>

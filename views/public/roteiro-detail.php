@@ -69,7 +69,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 
     <div class="relative z-10 h-full flex items-end pb-16">
         <div class="max-w-7xl mx-auto px-6 w-full text-white">
-            <a href="<?= url('/roteiros') ?>" class="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white mb-4">
+            <a href="<?= url('/passeios') ?>" class="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white mb-4">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i> Todos os passeios
             </a>
             <?php if ($r['category_name']): ?>
@@ -420,6 +420,11 @@ function galleryLightbox(images) {
                 </div>
                 <input type="text" x-model="form.title" maxlength="200" class="admin-input w-full mb-3" placeholder="Título (opcional)">
                 <textarea x-model="form.content" required minlength="10" rows="4" class="admin-input w-full" placeholder="Conte como foi sua viagem..."></textarea>
+                <label class="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer" style="border-color:var(--border-default);background:var(--areia-light)">
+                    <span class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i data-lucide="image-plus" class="w-4 h-4" style="color:var(--terracota)"></i> Adicionar fotos</span>
+                    <span class="text-xs" style="color:var(--text-muted)" x-text="photos.length ? photos.length + ' foto(s)' : 'até 4 imagens'"></span>
+                    <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" multiple @change="handlePhotos($event)">
+                </label>
                 <div class="mt-4 flex justify-end gap-2">
                     <button type="button" @click="formOpen=false" class="admin-btn admin-btn-secondary">Cancelar</button>
                     <button type="button" @click="submit()" :disabled="loading || !form.rating || form.content.length < 10" class="btn-primary"><i data-lucide="send" class="w-4 h-4"></i> Enviar avaliação</button>
@@ -429,7 +434,7 @@ function galleryLightbox(images) {
 
             <?php if ($reviews): ?>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5" x-data="{ open:false }">
-                <?php foreach ($reviews as $i => $rv): ?>
+                <?php foreach ($reviews as $i => $rv): $reviewPhotos = !empty($rv['photos']) ? (json_decode($rv['photos'], true) ?: []) : []; ?>
                 <div class="admin-card p-6" <?= $i >= 3 ? 'x-show="open" x-collapse' : '' ?>>
                     <div class="flex items-center justify-between gap-1 mb-3">
                         <div class="flex items-center gap-1">
@@ -439,6 +444,13 @@ function galleryLightbox(images) {
                     </div>
                     <?php if (!empty($rv['title'])): ?><div class="font-bold text-sm mb-2" style="color:var(--sepia)"><?= e($rv['title']) ?></div><?php endif; ?>
                     <p class="text-sm leading-relaxed mb-4 italic" style="color:var(--text-secondary)">“<?= e(tAuto($rv['content'])) ?>”</p>
+                    <?php if ($reviewPhotos): ?>
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <?php foreach (array_slice($reviewPhotos, 0, 4) as $photo): ?>
+                            <img src="<?= e(url($photo)) ?>" alt="Foto da avaliação" class="w-full aspect-square object-cover rounded-lg" loading="lazy">
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="flex items-center gap-3 pt-4 border-t" style="border-color:var(--border-default)">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))"><?= e(mb_substr($rv['name'],0,1)) ?></div>
                         <div>

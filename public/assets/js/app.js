@@ -330,13 +330,18 @@ window.cart = (function () {
             body.style.display = 'block';
             empty.style.display = 'none';
             footer.style.display = 'block';
-            body.innerHTML = state.items.map(it => `
+            body.innerHTML = state.items.map(it => {
+                const dates = Array.isArray(it.travel_dates) && it.travel_dates.length ? it.travel_dates : (it.travel_date ? [it.travel_date] : []);
+                const datesLabel = dates.length
+                    ? dates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})).join(', ')
+                    : '';
+                return `
                 <div class="cart-item">
                     ${it.cover ? `<img src="${it.cover}" alt="">` : `<div style="width:72px;height:72px;border-radius:10px;background:linear-gradient(135deg,#5A8FB2,#E28D6E);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-brand);font-size:28px">${it.title.charAt(0)}</div>`}
                     <div style="min-width:0">
-                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--terracota);font-weight:700">${it.type}</div>
+                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--terracota);font-weight:700">${it.type_label || it.type}</div>
                         <div style="font-weight:600;color:var(--sepia);font-size:14px;line-height:1.3;margin:2px 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.title}</div>
-                        ${it.travel_date ? `<div style="font-size:11px;color:var(--horizonte);font-weight:600;margin-bottom:4px"><i data-lucide="calendar" style="width:11px;height:11px;display:inline;vertical-align:-1px"></i> ${new Date(it.travel_date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})}</div>` : ''}
+                        ${datesLabel ? `<div style="font-size:11px;color:var(--horizonte);font-weight:600;margin-bottom:4px"><i data-lucide="calendar" style="width:11px;height:11px;display:inline;vertical-align:-1px"></i> ${dates.length > 1 ? dates.length + ' datas: ' : ''}${datesLabel}</div>` : ''}
                         <div style="display:flex;align-items:center;gap:8px">
                             <div style="display:inline-flex;align-items:center;border:1px solid var(--border-default);border-radius:8px;overflow:hidden">
                                 <button onclick="window.cart.update('${it.key}', ${it.qty - 1})" style="width:26px;height:26px;font-size:14px;color:var(--text-secondary)">−</button>
@@ -350,7 +355,7 @@ window.cart = (function () {
                         <i data-lucide="trash-2" style="width:16px;height:16px"></i>
                     </button>
                 </div>
-            `).join('');
+            `}).join('');
             if (typeof lucide !== 'undefined') setTimeout(() => lucide.createIcons(), 10);
         }
     }
@@ -385,7 +390,8 @@ window.cart = (function () {
         document.body.style.overflow = '';
     }
     async function add(type, id, travelDate) {
-        const r = await apiCall('add', { type, id, travel_date: travelDate || '' });
+        const travelDates = Array.isArray(travelDate) ? travelDate : (travelDate ? [travelDate] : []);
+        const r = await apiCall('add', { type, id, travel_date: travelDates[0] || '', travel_dates: JSON.stringify(travelDates) });
         if (r.ok) {
             window.showToast && window.showToast('Adicionado ao carrinho!', 'success');
             open();
@@ -406,8 +412,9 @@ window.cart = (function () {
                 // Fallback robusto: prompt nativo
                 const today = new Date();
                 const def = today.toISOString().split('T')[0];
-                const txt = window.prompt('Para qual data você quer reservar? (formato: AAAA-MM-DD)', def);
-                if (txt && /^\d{4}-\d{2}-\d{2}$/.test(txt)) add(type, id, txt);
+                const txt = window.prompt('Para quais datas você quer reservar? Separe por vírgula. (AAAA-MM-DD)', def);
+                const dates = (txt || '').split(/[,;\s]+/).map(v => v.trim()).filter(Boolean);
+                if (dates.length && dates.every(v => /^\d{4}-\d{2}-\d{2}$/.test(v))) add(type, id, dates);
                 else if (txt) window.showToast && window.showToast('Data inválida. Use AAAA-MM-DD.', 'error');
             }
         }, 120);

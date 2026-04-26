@@ -14,7 +14,7 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="max-w-4xl mx-auto px-6 space-y-10 text-lg leading-relaxed" style="color:var(--text-secondary)">
         <p>O <strong style="color:var(--sepia)">Caminhos de Alagoas</strong> nasceu do desejo de oferecer ao viajante uma experiência diferente: mais próxima, mais verdadeira, mais nossa.</p>
         <p>Somos uma agência alagoana com mais de uma década de atuação, especializada em conectar pessoas ao melhor que o estado tem a oferecer — das praias paradisíacas às serras do sertão, dos quilombos históricos aos saberes da culinária regional.</p>
-        <p>Cada roteiro é pensado com cuidado, cada pacote é testado pela nossa equipe antes de chegar a você. Porque viajar bem é mais do que conhecer lugares — é sair transformado, é voltar com histórias, é se sentir em casa.</p>
+        <p>Cada passeio é pensado com cuidado, cada pacote é testado pela nossa equipe antes de chegar a você. Porque viajar bem é mais do que conhecer lugares — é sair transformado, é voltar com histórias, é se sentir em casa.</p>
         <p class="font-display text-2xl italic text-center py-10" style="color:var(--terracota)">"Chegue como visitante. Volte se sentindo de casa."</p>
     </div>
 </section>

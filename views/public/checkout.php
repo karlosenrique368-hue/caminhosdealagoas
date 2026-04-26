@@ -2,35 +2,55 @@
 $pageTitle = 'Reserva segura · Caminhos de Alagoas';
 $solidNav  = true;
 
-$roteiroId = (int)($_GET['roteiro'] ?? 0);
-$pacoteId  = (int)($_GET['pacote'] ?? 0);
+$roteiroId  = (int)($_GET['roteiro'] ?? 0);
+$pacoteId   = (int)($_GET['pacote'] ?? 0);
+$transferId = (int)($_GET['transfer'] ?? 0);
 $item = null; $type = null;
 
 // Fallback: pega o primeiro item do carrinho
-if (!$roteiroId && !$pacoteId && !empty($_SESSION['cart'])) {
+if (!$roteiroId && !$pacoteId && !$transferId && !empty($_SESSION['cart'])) {
     $first = reset($_SESSION['cart']);
     if ($first['type'] === 'roteiro') $roteiroId = (int)$first['id'];
     elseif ($first['type'] === 'pacote') $pacoteId = (int)$first['id'];
+    elseif ($first['type'] === 'transfer') $transferId = (int)$first['id'];
 }
-if ($roteiroId)      { $item = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published'", [$roteiroId]); $type = 'roteiro'; }
-elseif ($pacoteId)   { $item = dbOne("SELECT * FROM pacotes  WHERE id=? AND status='published'", [$pacoteId]);   $type = 'pacote';  }
+if ($roteiroId)       { $item = dbOne("SELECT * FROM roteiros  WHERE id=? AND status='published'", [$roteiroId]);  $type = 'roteiro';  }
+elseif ($pacoteId)    { $item = dbOne("SELECT * FROM pacotes   WHERE id=? AND status='published'", [$pacoteId]);   $type = 'pacote';   }
+elseif ($transferId)  { $item = dbOne("SELECT * FROM transfers WHERE id=? AND status='published'", [$transferId]); $type = 'transfer'; }
 if (!$item) { redirect('/passeios'); }
+$typeLabel = $type === 'roteiro' ? 'Passeio' : ($type === 'pacote' ? 'Pacote' : 'Transfer');
 
 $refCode    = currentReferralCode();
 $refPartner = $refCode ? partnerByCode($refCode) : null;
 
 // Pré-seleção (vem do calendário ou do carrinho)
 $preDate     = $_GET['date']     ?? '';
+$preDatesRaw = $_GET['dates']    ?? '';
+$preDates    = [];
+if ($preDatesRaw) {
+    $decoded = json_decode($preDatesRaw, true);
+    $rawList = is_array($decoded) ? $decoded : preg_split('/[,;\s]+/', $preDatesRaw);
+    foreach ($rawList as $dt) {
+        $dt = trim((string)$dt);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dt)) $preDates[] = $dt;
+    }
+}
+if ($preDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $preDate)) $preDates[] = $preDate;
 $preAdults   = max(1, (int)($_GET['adults']   ?? 1));
 $preChildren = max(0, (int)($_GET['children'] ?? 0));
 $preInfants  = max(0, (int)($_GET['infants']  ?? 0));
 
 // Se não veio data via GET, tenta puxar do carrinho
-if (!$preDate && !empty($_SESSION['cart'])) {
+if (!$preDates && !empty($_SESSION['cart'])) {
     foreach ($_SESSION['cart'] as $ci) {
-        if (!empty($ci['travel_date'])) { $preDate = $ci['travel_date']; break; }
+        if (($ci['type'] ?? '') !== $type || (int)($ci['id'] ?? 0) !== (int)$item['id']) continue;
+        if (!empty($ci['travel_dates']) && is_array($ci['travel_dates'])) { $preDates = $ci['travel_dates']; break; }
+        if (!empty($ci['travel_date'])) { $preDates = [$ci['travel_date']]; break; }
     }
 }
+$preDates = array_values(array_unique(array_filter($preDates, fn($d) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d))));
+sort($preDates);
+$preDate = $preDates[0] ?? '';
 
 // Moeda escolhida pelo usuário (sessão/cookie) + faixas etárias
 $currencyCode   = currentCurrency();
@@ -58,6 +78,20 @@ $priceInfantPix = $pricePix > 0 && $priceAdult > 0 ? round($priceInfant * ($pric
 $pixInstallEnabled = getSetting('pix_installments_enabled', '1') === '1';
 $pixInstallMinDays = (int) getSetting('pix_installments_min_days', '7');
 $pixInstallMax     = max(1, (int) getSetting('pix_installments_max', '12'));
+
+// Disponibilidade para mini-calendário do checkout
+$departuresAll = dbAll("SELECT * FROM departures WHERE entity_type=? AND entity_id=? AND departure_date>=CURDATE() ORDER BY departure_date", [$type, $item['id']]);
+$availabilityMap = [];
+foreach ($departuresAll as $d) {
+    $availabilityMap[$d['departure_date']] = [
+        'status' => $d['status'],
+        'seats'  => max(0, (int)$d['seats_total'] - (int)$d['seats_sold']),
+        'price'  => $d['price_override'] !== null ? (float)$d['price_override'] : (float)($item['price_pix'] ?: $item['price']),
+        'time'   => $d['departure_time'],
+    ];
+}
+$availabilityMode = $type === 'transfer' ? 'open' : ($item['availability_mode'] ?? 'fixed');
+if (!in_array($availabilityMode, ['fixed','open','on_request'], true)) $availabilityMode = 'fixed';
 
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
@@ -99,7 +133,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <section class="pt-28 pb-16" style="background:linear-gradient(180deg,var(--bg-surface) 0%,var(--bg-page) 100%);min-height:100vh">
 <div class="max-w-6xl mx-auto px-4 sm:px-6" x-data="checkoutWizard()" x-init="init()">
 
-    <a href="<?= url($type==='roteiro' ? '/passeios' : '/pacotes') ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)">
+    <a href="<?= url($type==='roteiro' ? '/passeios' : ($type==='pacote' ? '/pacotes' : '/transfers')) ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao catálogo
     </a>
 
@@ -154,12 +188,41 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <div><div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--text-muted)">Passo 2 de 4</div><h2 class="font-display text-xl font-bold" style="color:var(--sepia)">Sua viagem</h2></div>
                 </div>
 
-                <div class="mb-5">
-                    <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" style="color:var(--text-secondary)">Data preferida *</label>
-                    <input type="date" x-model="form.travel_date" :min="today" class="admin-input w-full">
-                    <p class="text-[11px] mt-1.5" style="color:var(--text-muted)" x-show="form.travel_date">
-                        <i data-lucide="info" class="w-3 h-3 inline -mt-0.5"></i> <span x-text="datePreviewLabel()"></span>
-                    </p>
+                <div class="mb-6">
+                    <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider" style="color:var(--text-secondary)">Datas disponíveis *</label>
+                            <p class="text-[11px] mt-1" style="color:var(--text-muted)">Escolha uma ou várias datas. O total atualiza pelo número de dias selecionados.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="prevMonth()" class="w-9 h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <div class="min-w-[150px] text-center font-display font-bold text-sm" style="color:var(--sepia)" x-text="monthLabel"></div>
+                            <button type="button" @click="nextMonth()" class="w-9 h-9 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 mb-4 text-xs" style="color:var(--text-muted)">
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:var(--maresia)"></span> Disponível</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:#F59E0B"></span> Últimas vagas</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:var(--terracota)"></span> Selecionado</span>
+                    </div>
+                    <div class="calendar-grid">
+                        <template x-for="dow in ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']" :key="dow">
+                            <div class="text-center text-[11px] font-bold uppercase tracking-wider py-2" style="color:var(--text-muted)" x-text="dow"></div>
+                        </template>
+                        <template x-for="cell in cells" :key="cell.key">
+                            <button type="button" :disabled="!cell.available" @click="toggleDate(cell)" class="calendar-cell" :class="{'empty':cell.empty,'available':cell.available&&!cell.lowSeats,'low':cell.available&&cell.lowSeats,'blocked':cell.blocked,'selected':form.travel_dates.includes(cell.iso)}">
+                                <span class="cal-day" x-text="cell.day"></span>
+                                <span class="cal-price" x-show="cell.available" x-text="cell.seats !== null ? cell.seats + ' vagas' : 'Livre'"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="form.travel_dates.length" x-cloak class="mt-4 p-4 rounded-xl" style="background:rgba(201,107,74,.08);border:1px solid rgba(201,107,74,.25)">
+                        <div class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--terracota)" x-text="selectedDatesCountLabel()"></div>
+                        <div class="text-sm font-semibold" style="color:var(--sepia)" x-text="selectedDatesText()"></div>
+                        <p class="text-[11px] mt-1" style="color:var(--text-muted)" x-show="form.travel_date"><i data-lucide="info" class="w-3 h-3 inline -mt-0.5"></i> <span x-text="datePreviewLabel()"></span></p>
+                    </div>
+                    <div x-show="!cells.some(c => c.available) && availabilityMode !== 'on_request'" class="mt-4 p-4 rounded-xl text-center text-sm" style="background:var(--bg-surface);color:var(--text-muted)">Sem datas disponíveis neste mês. Avance para o próximo mês.</div>
+                    <div x-show="availabilityMode === 'on_request'" class="mt-4 p-4 rounded-xl text-center text-sm" style="background:rgba(58,107,138,.08);color:var(--horizonte)">Esta experiência está sob consulta. Fale com a equipe para combinar a data.</div>
                 </div>
 
                 <label class="block text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--text-secondary)">Quantas pessoas? *</label>
@@ -167,7 +230,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <div class="tier-row">
                         <div>
                             <div class="font-semibold text-sm" style="color:var(--sepia)">Adultos</div>
-                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="formatBRL(adultUnit()) + ' por pessoa'"></div>
+                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="isTransfer ? formatBRL(adultUnit()) + ' por veículo' : formatBRL(adultUnit()) + ' por pessoa'"></div>
                         </div>
                         <div class="qty-stepper">
                             <button type="button" @click="form.adults = Math.max(1, form.adults-1)" :disabled="form.adults <= 1">−</button>
@@ -178,7 +241,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <div class="tier-row">
                         <div>
                             <div class="font-semibold text-sm" style="color:var(--sepia)">Crianças <span class="font-normal" style="color:var(--text-muted)">(6 a 12 anos)</span></div>
-                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="priceChild > 0 ? formatBRL(childUnit()) + ' por criança' : 'Cortesia'"></div>
+                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="isTransfer ? 'Não altera o valor' : (priceChild > 0 ? formatBRL(childUnit()) + ' por criança' : 'Cortesia')"></div>
                         </div>
                         <div class="qty-stepper">
                             <button type="button" @click="form.children = Math.max(0, form.children-1)" :disabled="form.children <= 0">−</button>
@@ -189,7 +252,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <div class="tier-row">
                         <div>
                             <div class="font-semibold text-sm" style="color:var(--sepia)">Bebês <span class="font-normal" style="color:var(--text-muted)">(0 a 5 anos)</span></div>
-                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="priceInfant > 0 ? formatBRL(infantUnit()) + ' por bebê' : 'Cortesia'"></div>
+                            <div class="text-[11px]" style="color:var(--text-muted)" x-text="isTransfer ? 'Não altera o valor' : (priceInfant > 0 ? formatBRL(infantUnit()) + ' por bebê' : 'Cortesia')"></div>
                         </div>
                         <div class="qty-stepper">
                             <button type="button" @click="form.infants = Math.max(0, form.infants-1)" :disabled="form.infants <= 0">−</button>
@@ -197,6 +260,9 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <button type="button" @click="form.infants = Math.min(10, form.infants+1)" :disabled="form.infants >= 10">+</button>
                         </div>
                     </div>
+                </div>
+                <div x-show="isTransfer && peopleTotal() > maxPeople" x-cloak class="mb-6 p-3 rounded-xl text-sm" style="background:rgba(239,68,68,.08);color:#B91C1C;border:1px solid rgba(239,68,68,.2)">
+                    Capacidade máxima deste veículo: <b x-text="maxPeople"></b> passageiros.
                 </div>
 
                 <div class="mb-5">
@@ -375,19 +441,21 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <div class="w-20 h-20 rounded-xl img-placeholder"><span class="text-2xl"><?= e(mb_substr($item['title'],0,1)) ?></span></div>
                     <?php endif; ?>
                     <div class="flex-1 min-w-0">
-                        <div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--terracota)"><?= e($type) ?></div>
+                        <div class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--terracota)"><?= e($typeLabel) ?></div>
                         <div class="font-semibold leading-snug" style="color:var(--sepia)"><?= e($item['title']) ?></div>
                         <?php if (!empty($item['duration'])): ?><div class="text-xs flex items-center gap-1 mt-1" style="color:var(--text-muted)"><i data-lucide="clock" class="w-3 h-3"></i><?= e($item['duration']) ?></div><?php endif; ?>
                     </div>
                 </div>
-                <div class="text-xs mb-3 p-2 rounded-lg" style="background:var(--bg-surface);color:var(--text-secondary)" x-show="form.travel_date">
+                <div class="text-xs mb-3 p-2 rounded-lg" style="background:var(--bg-surface);color:var(--text-secondary)" x-show="form.travel_dates.length">
                     <i data-lucide="calendar" class="w-3 h-3 inline -mt-0.5"></i>
-                    <span x-text="'Data: ' + formatDate(form.travel_date)"></span>
+                    <span x-text="(form.travel_dates.length > 1 ? 'Datas: ' : 'Data: ') + selectedDatesText()"></span>
                 </div>
                 <div class="py-4 border-t border-b space-y-2" style="border-color:var(--border-default)">
-                    <div class="flex justify-between text-sm"><span style="color:var(--text-secondary)" x-text="'Adultos × ' + form.adults"></span><span style="color:var(--sepia)" x-text="formatBRL(adultUnit() * form.adults)"></span></div>
-                    <div class="flex justify-between text-sm" x-show="form.children > 0"><span style="color:var(--text-secondary)" x-text="'Crianças × ' + form.children"></span><span style="color:var(--sepia)" x-text="formatBRL(childUnit() * form.children)"></span></div>
-                    <div class="flex justify-between text-sm" x-show="form.infants > 0"><span style="color:var(--text-secondary)" x-text="'Bebês × ' + form.infants"></span><span style="color:var(--sepia)" x-text="form.infants && infantUnit()===0 ? 'Cortesia' : formatBRL(infantUnit() * form.infants)"></span></div>
+                    <div class="flex justify-between text-sm" x-show="isTransfer"><span style="color:var(--text-secondary)" x-text="'Transfer' + (selectedDateCount()>1 ? ' × ' + selectedDateCount() + ' datas' : '')"></span><span style="color:var(--sepia)" x-text="formatBRL(adultUnit() * selectedDateCount())"></span></div>
+                    <div class="flex justify-between text-sm" x-show="isTransfer"><span style="color:var(--text-secondary)">Passageiros</span><span style="color:var(--sepia)" x-text="peopleTotal()"></span></div>
+                    <div class="flex justify-between text-sm" x-show="!isTransfer"><span style="color:var(--text-secondary)" x-text="'Adultos × ' + form.adults + (selectedDateCount()>1 ? ' × ' + selectedDateCount() + ' datas' : '')"></span><span style="color:var(--sepia)" x-text="formatBRL(adultUnit() * form.adults * selectedDateCount())"></span></div>
+                    <div class="flex justify-between text-sm" x-show="!isTransfer && form.children > 0"><span style="color:var(--text-secondary)" x-text="'Crianças × ' + form.children + (selectedDateCount()>1 ? ' × ' + selectedDateCount() + ' datas' : '')"></span><span style="color:var(--sepia)" x-text="formatBRL(childUnit() * form.children * selectedDateCount())"></span></div>
+                    <div class="flex justify-between text-sm" x-show="!isTransfer && form.infants > 0"><span style="color:var(--text-secondary)" x-text="'Bebês × ' + form.infants + (selectedDateCount()>1 ? ' × ' + selectedDateCount() + ' datas' : '')"></span><span style="color:var(--sepia)" x-text="form.infants && infantUnit()===0 ? 'Cortesia' : formatBRL(infantUnit() * form.infants * selectedDateCount())"></span></div>
                     <div class="flex justify-between text-sm" x-show="form.payment_method==='pix' && form.price_option==='promo' && pricePix < priceAdult"><span style="color:var(--maresia-dark)"><i data-lucide="zap" class="w-3 h-3 inline"></i> Desconto PIX</span><span class="font-semibold" style="color:var(--maresia-dark)" x-text="'− ' + formatBRL(discount())"></span></div>
                 </div>
                 <div class="flex justify-between items-end pt-4">
@@ -437,11 +505,18 @@ function checkoutWizard() {
         currencySymbol: <?= json_encode($currencySymbol) ?>,
         currencyLocale: <?= json_encode($currencyLocale) ?>,
         currencyCode:   <?= json_encode($currencyCode) ?>,
+        isTransfer:     <?= $type === 'transfer' ? 'true' : 'false' ?>,
+        maxPeople:      <?= (int)($item['capacity'] ?? 20) ?>,
         installMinDays: <?= (int)$pixInstallMinDays ?>,
         installMax:     <?= (int)$pixInstallMax ?>,
+        availabilityMode: <?= json_encode($availabilityMode) ?>,
+        availabilityMap: <?= json_encode($availabilityMap, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>,
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
         form: {
             name:'', document:'', rg:'', birth_date:'', email:'', phone:'',
             travel_date: <?= json_encode($preDate) ?>,
+            travel_dates: <?= json_encode($preDates, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>,
             adults:   <?= (int)$preAdults ?>,
             children: <?= (int)$preChildren ?>,
             infants:  <?= (int)$preInfants ?>,
@@ -467,7 +542,12 @@ function checkoutWizard() {
             {id:'credit_card',      label:'Cartão de crédito',    hint:'Parcele em até 12×',                     icon:'credit-card',     badge:''},
             {id:'boleto',           label:'Boleto bancário',      hint:'Compensação em 1-3 dias úteis',          icon:'file-text',       badge:''}
         ],
-        init() { if (window.lucide) window.lucide.createIcons(); },
+        init() {
+            if (this.form.travel_dates.length && !this.form.travel_date) this.form.travel_date = this.form.travel_dates[0];
+            const first = this.form.travel_date || Object.keys(this.availabilityMap).find(k => this.isAvailableIso(k));
+            if (first) { const d = new Date(first+'T12:00:00'); this.viewYear=d.getFullYear(); this.viewMonth=d.getMonth(); }
+            if (window.lucide) window.lucide.createIcons();
+        },
 
         // ===== Máscaras =====
         maskCPF(v){ v=(v||'').replace(/\D/g,'').slice(0,11); return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); },
@@ -478,13 +558,17 @@ function checkoutWizard() {
         adultUnit(){  return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.pricePix       : this.priceAdult; },
         childUnit(){  return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.priceChildPix  : this.priceChild; },
         infantUnit(){ return (this.form.payment_method==='pix' && this.form.price_option==='promo') ? this.priceInfantPix : this.priceInfant; },
-        subtotal(){ return this.adultUnit()*Math.max(1,this.form.adults) + this.childUnit()*Math.max(0,this.form.children) + this.infantUnit()*Math.max(0,this.form.infants); },
+        peopleTotal(){ return Math.max(1,this.form.adults) + Math.max(0,this.form.children) + Math.max(0,this.form.infants); },
+        selectedDateCount(){ return Math.max(1, this.form.travel_dates.length || (this.form.travel_date ? 1 : 0)); },
+        subtotalPerDate(){ return this.isTransfer ? this.adultUnit() : (this.adultUnit()*Math.max(1,this.form.adults) + this.childUnit()*Math.max(0,this.form.children) + this.infantUnit()*Math.max(0,this.form.infants)); },
+        subtotal(){ return this.subtotalPerDate() * this.selectedDateCount(); },
         discount(){
             if (this.form.payment_method!=='pix' || this.form.price_option!=='promo') return 0;
+            if (this.isTransfer) return Math.max(0, this.priceAdult - this.pricePix) * this.selectedDateCount();
             const da = (this.priceAdult - this.pricePix) * this.form.adults;
             const dc = Math.max(0, this.priceChild - this.priceChildPix) * this.form.children;
             const di = Math.max(0, this.priceInfant - this.priceInfantPix) * this.form.infants;
-            return da + dc + di;
+            return (da + dc + di) * this.selectedDateCount();
         },
         total(){ return this.subtotal(); },
         formatBRL(v){
@@ -493,6 +577,8 @@ function checkoutWizard() {
             catch(e){ return this.currencySymbol + ' ' + n.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
         },
         formatDate(s){ if(!s) return '—'; const d=new Date(s+'T12:00:00'); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); },
+        selectedDatesCountLabel(){ return this.form.travel_dates.length === 1 ? '1 data selecionada' : this.form.travel_dates.length + ' datas selecionadas'; },
+        selectedDatesText(){ return this.form.travel_dates.map(d => this.formatDate(d)).join(', '); },
         datePreviewLabel(){
             if(!this.form.travel_date) return '';
             const d = new Date(this.form.travel_date+'T12:00:00');
@@ -501,6 +587,41 @@ function checkoutWizard() {
             if (days === 0) return 'Viagem é hoje!';
             if (days === 1) return 'Viagem é amanhã.';
             return 'Faltam ' + days + ' dias para a viagem.';
+        },
+
+        // ===== Mini-calendário de disponibilidade =====
+        pad(n){ return n<10?'0'+n:''+n; },
+        iso(y,m,d){ return y+'-'+this.pad(m+1)+'-'+this.pad(d); },
+        get monthLabel(){ const n=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return n[this.viewMonth]+' de '+this.viewYear; },
+        isAvailableIso(iso){
+            const today = new Date(this.today+'T00:00:00');
+            const dt = new Date(iso+'T00:00:00');
+            if (dt < today || this.availabilityMode === 'on_request') return false;
+            const info = this.availabilityMap[iso];
+            if (info) return info.status === 'open' && Number(info.seats || 0) > 0;
+            return this.availabilityMode === 'open';
+        },
+        get cells(){
+            const first = new Date(this.viewYear,this.viewMonth,1);
+            const start = first.getDay();
+            const days = new Date(this.viewYear,this.viewMonth+1,0).getDate();
+            const cells=[];
+            for(let i=0;i<start;i++) cells.push({key:'e'+i,empty:true});
+            for(let d=1;d<=days;d++){
+                const iso=this.iso(this.viewYear,this.viewMonth,d), info=this.availabilityMap[iso], available=this.isAvailableIso(iso);
+                cells.push({key:iso,iso,day:d,empty:false,available,lowSeats:available&&info&&Number(info.seats)<=3,blocked:!!info&&!available,price:(info&&info.price)||this.pricePix||this.priceAdult,seats:info?info.seats:null});
+            }
+            return cells;
+        },
+        prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        toggleDate(cell){
+            if(!cell.available) return;
+            const i = this.form.travel_dates.indexOf(cell.iso);
+            if(i>=0) this.form.travel_dates.splice(i,1); else this.form.travel_dates.push(cell.iso);
+            this.form.travel_dates.sort();
+            this.form.travel_date = this.form.travel_dates[0] || '';
+            this.$nextTick(()=>window.lucide&&window.lucide.createIcons());
         },
 
         // ===== PIX parcelado =====
@@ -549,7 +670,7 @@ function checkoutWizard() {
             if (this.step === 1) {
                 const okSrc = this.form.source && (this.form.source!=='indicacao' || this.form.source_detail.trim());
                 const okCom = this.form.has_comorbidity!=='sim' || this.form.comorbidity.trim();
-                return this.form.travel_date && this.form.adults>=1 && okSrc && okCom;
+                return this.form.travel_dates.length > 0 && this.form.adults>=1 && (!this.isTransfer || this.peopleTotal() <= this.maxPeople) && okSrc && okCom;
             }
             if (this.step === 2) {
                 if (!this.form.payment_method) return false;
@@ -563,7 +684,7 @@ function checkoutWizard() {
         async submit(){
             if(!this.form.accept_terms){ showToast('Aceite a política de desistência.', 'error'); return; }
             this.loading = true;
-            const payload = { ...this.form, accept_terms:'1' };
+            const payload = { ...this.form, travel_date: this.form.travel_dates[0] || '', travel_dates: JSON.stringify(this.form.travel_dates), accept_terms:'1' };
             const res = await caminhosApi('<?= url('/api/booking') ?>', { method:'POST', data: payload });
             showToast(res.msg || (res.ok ? 'Reserva criada!' : 'Erro ao processar.'), res.ok ? 'success' : 'error');
             if (res.ok && res.redirect) window.location = res.redirect;

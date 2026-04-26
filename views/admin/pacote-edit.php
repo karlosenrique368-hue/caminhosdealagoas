@@ -33,6 +33,8 @@ if (isPost() && csrfVerify()) {
         'includes'         => $linesToJson($_POST['includes_text'] ?? ''),
         'excludes'         => $linesToJson($_POST['excludes_text'] ?? ''),
         'destination'      => trim($_POST['destination'] ?? ''),
+        'latitude'         => ($_POST['latitude'] ?? '') !== '' && is_numeric($_POST['latitude']) ? (float)$_POST['latitude'] : null,
+        'longitude'        => ($_POST['longitude'] ?? '') !== '' && is_numeric($_POST['longitude']) ? (float)$_POST['longitude'] : null,
         'duration_days'    => (int)($_POST['duration_days'] ?? 1),
         'duration_nights'  => (int)($_POST['duration_nights'] ?? 0),
         'price'            => parseBRL($_POST['price'] ?? '0'),
@@ -117,6 +119,18 @@ $msg = flash('success');
                 <div class="grid md:grid-cols-2 gap-4">
                     <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Dias</label><input type="number" name="duration_days" min="1" value="<?= e($pacote['duration_days'] ?? 1) ?>" class="admin-input"></div>
                     <div><label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Noites</label><input type="number" name="duration_nights" min="0" value="<?= e($pacote['duration_nights'] ?? 0) ?>" class="admin-input"></div>
+                </div>
+                <div class="admin-map-picker" x-data="mapPicker({lat:'<?= e($pacote['latitude'] ?? '') ?>',lng:'<?= e($pacote['longitude'] ?? '') ?>'})" x-init="init()">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <label class="block text-sm font-semibold" style="color:var(--sepia)">Ponto no mapa</label>
+                        <button type="button" @click="clear()" class="text-xs font-semibold" style="color:var(--terracota)">Limpar ponto</button>
+                    </div>
+                    <div x-ref="map" style="height:280px;border-radius:14px;overflow:hidden;border:1px solid var(--border-default)"></div>
+                    <div class="grid md:grid-cols-2 gap-3 mt-3">
+                        <input type="number" step="0.0000001" name="latitude" x-model="lat" @input.debounce.400ms="syncFromInputs()" class="admin-input" placeholder="Latitude">
+                        <input type="number" step="0.0000001" name="longitude" x-model="lng" @input.debounce.400ms="syncFromInputs()" class="admin-input" placeholder="Longitude">
+                    </div>
+                    <p class="text-[11px] mt-2" style="color:var(--text-muted)">Clique no mapa para marcar o ponto vermelho que aparece na página pública.</p>
                 </div>
             </div>
 
@@ -256,6 +270,15 @@ function itineraryBuilder(initial) {
         })),
         add() { this.steps.push({title:'',description:''}); this.$nextTick(()=>window.lucide && window.lucide.createIcons()); },
         remove(i) { this.steps.splice(i,1); if(!this.steps.length) this.add(); }
+    }
+}
+function mapPicker(initial){
+    return {
+        lat: initial.lat || '', lng: initial.lng || '', map:null, marker:null,
+        init(){ this.$nextTick(() => { if (typeof L === 'undefined') return; const hasPoint = this.lat && this.lng; const center = hasPoint ? [parseFloat(this.lat), parseFloat(this.lng)] : [-9.6658,-35.7353]; this.map = L.map(this.$refs.map,{scrollWheelZoom:false}).setView(center, hasPoint ? 15 : 11); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(this.map); this.map.on('click', e => this.setPoint(e.latlng.lat, e.latlng.lng)); if (hasPoint) this.setPoint(parseFloat(this.lat), parseFloat(this.lng), false); setTimeout(()=>this.map.invalidateSize(),250); }); },
+        setPoint(lat,lng,move=true){ this.lat = Number(lat).toFixed(7); this.lng = Number(lng).toFixed(7); if (!this.marker) this.marker = L.marker([lat,lng]).addTo(this.map); else this.marker.setLatLng([lat,lng]); if (move) this.map.setView([lat,lng],15); },
+        syncFromInputs(){ if (!this.map || !this.lat || !this.lng) return; const lat=parseFloat(this.lat), lng=parseFloat(this.lng); if (isFinite(lat) && isFinite(lng)) this.setPoint(lat,lng); },
+        clear(){ this.lat=''; this.lng=''; if (this.marker) { this.map.removeLayer(this.marker); this.marker=null; } },
     }
 }
 </script>

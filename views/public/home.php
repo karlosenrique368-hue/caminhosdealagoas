@@ -1,6 +1,6 @@
 <?php
 $pageTitle = 'Turismo Premium em Alagoas';
-$pageDesc  = 'Roteiros autênticos, pacotes premium e experiências únicas em Alagoas. Reserve sua viagem dos sonhos.';
+$pageDesc  = 'Passeios autênticos, pacotes premium e experiências únicas em Alagoas. Reserve sua viagem dos sonhos.';
 
 $featured = dbAll("SELECT * FROM roteiros WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 8");
 $pacotesFeatured = dbAll("SELECT * FROM pacotes WHERE status='published' AND featured=1 ORDER BY created_at DESC LIMIT 4");
@@ -55,7 +55,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 
         <!-- CTA buttons -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16 fade-in-up delay-300">
-            <a href="<?= url('/roteiros') ?>" class="btn-hero-primary animate-glow">
+            <a href="<?= url('/passeios') ?>" class="btn-hero-primary animate-glow">
                 <i data-lucide="compass" class="w-5 h-5"></i>
                 <?= e(t('home.hero.cta1')) ?>
             </a>
@@ -70,7 +70,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             <div class="text-left mb-3 px-2">
                 <span class="font-script text-sm tracking-widest uppercase" style="color:var(--areia-light)"><?= e(t('home.search.title')) ?></span>
             </div>
-            <form method="GET" action="<?= url('/roteiros') ?>" class="grid md:grid-cols-4 gap-3">
+            <form method="GET" action="<?= url('/passeios') ?>" class="grid md:grid-cols-4 gap-3">
                 <div>
                     <label class="block text-[11px] font-semibold tracking-wider uppercase text-white/70 mb-1.5 text-left"><?= e(t('home.search.date')) ?></label>
                     <input type="date" name="data" class="w-full px-4 py-3 rounded-xl bg-white/95 text-sm outline-none focus:ring-2 focus:ring-terracota" style="color:var(--sepia)">
@@ -133,7 +133,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 </section>
 
 <!-- ================================================
-     DESTAQUES — Roteiros
+    DESTAQUES — Passeios
 ================================================ -->
 <section id="destaques" class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
@@ -142,7 +142,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <span class="text-xs font-bold tracking-[0.3em] uppercase" style="color:var(--terracota)">Experiências imperdíveis</span>
             </div>
             <h2 class="section-title">Passeios em <span class="ornament">destaque</span></h2>
-            <p class="section-subtitle">Roteiros selecionados por quem conhece cada canto de Alagoas — história, natureza e sabor.</p>
+            <p class="section-subtitle">Passeios selecionados por quem conhece cada canto de Alagoas — história, natureza e sabor.</p>
         </div>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -155,7 +155,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 $slides = array_values(array_unique(array_filter($slides)));
             ?>
             <div class="card-premium group" data-reveal style="animation-delay: <?= $i * 80 ?>ms">
-                <a href="<?= url('/roteiros/' . $r['slug']) ?>" class="block">
+                <a href="<?= url('/passeios/' . $r['slug']) ?>" class="block">
                     <div class="slider-wrap" data-slider style="aspect-ratio:4/3;background:linear-gradient(135deg,var(--horizonte-light),var(--maresia-light))">
                         <?php if (!empty($slides)): ?>
                             <?php foreach ($slides as $sIdx => $src): ?>
@@ -226,7 +226,7 @@ include VIEWS_DIR . '/partials/public_head.php';
         </div>
 
         <div class="text-center mt-12">
-            <a href="<?= url('/roteiros') ?>" class="btn-outline">
+            <a href="<?= url('/passeios') ?>" class="btn-outline">
                 Ver todos os passeios
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </a>
@@ -246,7 +246,7 @@ include VIEWS_DIR . '/partials/public_head.php';
         </div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <?php foreach ([
-                ['icon'=>'gem','title'=>'Experiências autênticas','desc'=>'Roteiros curados por quem vive Alagoas — histórias, sabores e lugares fora do comum.','color'=>'terracota'],
+                ['icon'=>'gem','title'=>'Experiências autênticas','desc'=>'Passeios curados por quem vive Alagoas — histórias, sabores e lugares fora do comum.','color'=>'terracota'],
                 ['icon'=>'users','title'=>'Grupos pequenos','desc'=>'Atendimento personalizado com turmas reduzidas para você aproveitar sem pressa.','color'=>'horizonte'],
                 ['icon'=>'leaf','title'=>'Turismo responsável','desc'=>'Parcerias com comunidades locais, respeito ambiental e impacto positivo.','color'=>'maresia'],
                 ['icon'=>'star','title'=>'Avaliação 4,9/5','desc'=>'Mais de 300 viajantes recomendam. Qualidade reconhecida em cada detalhe.','color'=>'areia'],
@@ -300,7 +300,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                         O <strong style="color:var(--sepia)">Caminhos de Alagoas</strong> é um projeto da MaçaiOK — agência alagoana com mais de 10 anos de história, criada para oferecer viagens seguras, confortáveis e cheias de sentido.
                     </p>
                     <p>
-                        Aqui, você viaja com quem vive o território e sabe o que realmente faz diferença: histórias, cultura, gente, sabores e lugares que não aparecem nos roteiros prontos.
+                        Aqui, você viaja com quem vive o território e sabe o que realmente faz diferença: histórias, cultura, gente, sabores e lugares que não aparecem nos passeios prontos.
                     </p>
                     <p>
                         Nossa proposta é simples: <strong style="color:var(--sepia)">transformar passeios em vivências</strong> que aproximam, emocionam e valorizam o que Alagoas tem de mais genuíno.
@@ -393,7 +393,7 @@ include VIEWS_DIR . '/partials/public_head.php';
         <div class="grid md:grid-cols-3 gap-6 md:gap-4 relative">
             <div class="timeline-line hidden md:block"></div>
             <?php foreach ([
-                ['step'=>'01','icon'=>'search','title'=>'Escolha seu passeio','desc'=>'Navegue pelos roteiros e pacotes curados. Filtre por data, destino ou estilo.'],
+                ['step'=>'01','icon'=>'search','title'=>'Escolha seu passeio','desc'=>'Navegue pelos passeios e pacotes curados. Filtre por data, destino ou estilo.'],
                 ['step'=>'02','icon'=>'credit-card','title'=>'Reserve com segurança','desc'=>'Pague com Pix ou cartão em até 12x. Confirmação imediata e voucher por email.'],
                 ['step'=>'03','icon'=>'plane-takeoff','title'=>'Viva a experiência','desc'=>'Nossa equipe cuida de tudo. Você só precisa aproveitar cada momento.'],
             ] as $i => $st): ?>
@@ -506,7 +506,7 @@ include VIEWS_DIR . '/partials/public_head.php';
             Sua viagem dos <span class="italic" style="color:var(--areia-light)">sonhos</span> começa aqui
         </h2>
         <p class="text-lg md:text-xl text-white/85 max-w-2xl mx-auto mb-10">
-            Fale com nossa equipe e receba um roteiro personalizado em menos de 24 horas.
+            Fale com nossa equipe e receba um passeio personalizado em menos de 24 horas.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="btn-primary">

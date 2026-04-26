@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS transfers (
 ALTER TABLE departures
     MODIFY entity_type ENUM('roteiro','pacote','transfer') NOT NULL;
 
+-- Permitir reservas diretas de transfers no checkout
+ALTER TABLE bookings
+    MODIFY entity_type ENUM('roteiro','pacote','transfer') NOT NULL;
+
 -- Seed de exemplo
 INSERT INTO transfers (title, slug, short_desc, description, location_from, location_to, vehicle_type, capacity, duration_minutes, distance_km, price, price_pix, one_way, status, featured)
 VALUES

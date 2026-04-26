@@ -2,7 +2,7 @@
 /**
  * Cart API — session-based cart
  * GET  ?action=get       → returns cart
- * POST ?action=add       { type, id }
+ * POST ?action=add       { type, id, travel_date|travel_dates }
  * POST ?action=remove    { key }
  * POST ?action=update    { key, qty }
  * POST ?action=clear
@@ -23,16 +23,20 @@ function cartResponse(): void {
             $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,location,duration_hours FROM roteiros WHERE id=? AND status='published'", [$it['id']]);
         } elseif ($it['type'] === 'pacote') {
             $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,destination AS location,duration_days FROM pacotes WHERE id=? AND status='published'", [$it['id']]);
+        } elseif ($it['type'] === 'transfer') {
+            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,location_to AS location,duration_minutes FROM transfers WHERE id=? AND status='published'", [$it['id']]);
         }
         if (!$row) { unset($_SESSION['cart'][$key]); continue; }
         $qty   = max(1, (int)($it['qty'] ?? 1));
         $price = (float)($row['price_pix'] ?: $row['price']);
-        $sub   = $price * $qty;
+        $dateCount = !empty($it['travel_dates']) && is_array($it['travel_dates']) ? count($it['travel_dates']) : (!empty($it['travel_date']) ? 1 : 1);
+        $sub   = $price * $qty * max(1, $dateCount);
         $total += $sub;
         $count += $qty;
         $items[] = [
             'key'        => $key,
             'type'       => $it['type'],
+            'type_label' => $it['type'] === 'roteiro' ? 'Passeio' : ($it['type'] === 'pacote' ? 'Pacote' : 'Transfer'),
             'id'         => (int)$row['id'],
             'title'      => $row['title'],
             'slug'       => $row['slug'],
@@ -42,8 +46,9 @@ function cartResponse(): void {
             'price'      => $price,
             'qty'        => $qty,
             'travel_date'=> $it['travel_date'] ?? null,
+            'travel_dates'=> $it['travel_dates'] ?? [],
             'subtotal'   => $sub,
-            'url'        => url('/' . ($it['type'] === 'roteiro' ? 'roteiros' : 'pacotes') . '/' . $row['slug']),
+            'url'        => url('/' . ($it['type'] === 'roteiro' ? 'passeios' : ($it['type'] === 'pacote' ? 'pacotes' : 'transfers')) . '/' . $row['slug']),
         ];
     }
     echo json_encode([
@@ -78,18 +83,33 @@ switch ($action) {
     case 'add':
         $type = $data['type'] ?? '';
         $id   = (int)($data['id'] ?? 0);
+        $travelDates = [];
+        $rawDates = $data['travel_dates'] ?? null;
+        if (is_string($rawDates) && $rawDates !== '') {
+            $decoded = json_decode($rawDates, true);
+            $rawDates = is_array($decoded) ? $decoded : preg_split('/[,;\s]+/', $rawDates);
+        }
+        if (is_array($rawDates)) {
+            foreach ($rawDates as $dt) {
+                $dt = trim((string)$dt);
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dt)) $travelDates[] = $dt;
+            }
+        }
         $travelDate = $data['travel_date'] ?? null;
-        if ($travelDate && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $travelDate)) $travelDate = null;
-        if (!in_array($type, ['roteiro','pacote'], true) || $id <= 0) {
+        if ($travelDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $travelDate)) $travelDates[] = $travelDate;
+        $travelDates = array_values(array_unique($travelDates));
+        sort($travelDates);
+        $travelDate = $travelDates[0] ?? null;
+        if (!in_array($type, ['roteiro','pacote','transfer'], true) || $id <= 0) {
             echo json_encode(['ok' => false, 'msg' => 'Dados inválidos.']);
             exit;
         }
-        // Chave inclui data para permitir mesma viagem em dias diferentes
-        $key = $type . ':' . $id . ($travelDate ? ':' . $travelDate : '');
+        // Chave inclui datas para permitir a mesma experiência em seleções diferentes
+        $key = $type . ':' . $id . ($travelDates ? ':' . implode('|', $travelDates) : '');
         if (isset($_SESSION['cart'][$key])) {
             $_SESSION['cart'][$key]['qty'] = ($_SESSION['cart'][$key]['qty'] ?? 1) + 1;
         } else {
-            $_SESSION['cart'][$key] = ['type' => $type, 'id' => $id, 'qty' => 1, 'travel_date' => $travelDate];
+            $_SESSION['cart'][$key] = ['type' => $type, 'id' => $id, 'qty' => 1, 'travel_date' => $travelDate, 'travel_dates' => $travelDates];
         }
         cartResponse();
         break;
