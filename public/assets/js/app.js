@@ -394,8 +394,23 @@ window.cart = (function () {
         }
     }
     function askDate(type, id, title) {
+        // Tenta abrir o modal Alpine. Se não houver listener, faz fallback com prompt nativo.
+        let handled = false;
+        const onHandled = () => { handled = true; };
+        window.addEventListener('cart:ask-date-handled', onHandled, { once: true });
         const ev = new CustomEvent('cart:ask-date', { detail: { type, id, title: title || '' } });
         window.dispatchEvent(ev);
+        setTimeout(() => {
+            window.removeEventListener('cart:ask-date-handled', onHandled);
+            if (!handled) {
+                // Fallback robusto: prompt nativo
+                const today = new Date();
+                const def = today.toISOString().split('T')[0];
+                const txt = window.prompt('Para qual data você quer reservar? (formato: AAAA-MM-DD)', def);
+                if (txt && /^\d{4}-\d{2}-\d{2}$/.test(txt)) add(type, id, txt);
+                else if (txt) window.showToast && window.showToast('Data inválida. Use AAAA-MM-DD.', 'error');
+            }
+        }, 120);
     }
     async function remove(key) { await apiCall('remove', { key }); }
     async function update(key, qty) {

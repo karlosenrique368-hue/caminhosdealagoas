@@ -16,10 +16,22 @@ if (!in_array($type, ['roteiro','pacote'], true) || !$eid || !$rating || !$conte
 
 // verified if customer has a completed booking for this entity
 $verified = 0;
-$field = $type === 'roteiro' ? 'roteiro_id' : 'pacote_id';
-$b = dbOne("SELECT id FROM bookings WHERE customer_user_id=? AND $field=? AND status IN ('confirmed','completed') LIMIT 1", [$cid,$eid]);
-$bookingId = $b['id'] ?? null;
-if ($b) $verified = 1;
+$bookingIdInput = (int)($_POST['booking_id'] ?? 0);
+$bookingId = null;
+if ($bookingIdInput > 0) {
+    $b = dbOne("SELECT id FROM bookings WHERE id=? AND customer_user_id=? AND entity_type=? AND entity_id=? AND payment_status='paid' LIMIT 1", [$bookingIdInput,$cid,$type,$eid]);
+    if ($b) { $bookingId = (int)$b['id']; $verified = 1; }
+}
+if (!$bookingId) {
+    $b = dbOne("SELECT id FROM bookings WHERE customer_user_id=? AND entity_type=? AND entity_id=? AND payment_status='paid' LIMIT 1", [$cid,$type,$eid]);
+    if ($b) { $bookingId = (int)$b['id']; $verified = 1; }
+}
+
+// Evita duplicada
+if ($bookingId) {
+    $dup = dbOne('SELECT id FROM reviews WHERE booking_id=? AND customer_id=? LIMIT 1', [$bookingId, $cid]);
+    if ($dup) jsonResponse(['ok'=>false,'msg'=>'Você já avaliou esta reserva.'], 400);
+}
 
 dbExec('INSERT INTO reviews (customer_id,booking_id,entity_type,entity_id,rating,title,content,verified,status) VALUES (?,?,?,?,?,?,?,?,?)',
     [$cid, $bookingId, $type, $eid, $rating, $title, $content, $verified, 'pending']);

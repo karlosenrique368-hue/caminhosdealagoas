@@ -127,6 +127,10 @@ tailwind.config = {
 <!-- Alpine.js -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 
+<!-- Leaflet (mapas) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <link rel="icon" type="image/png" href="<?= asset('brand/selo-azul.png') ?>">
 </head>
 <body<?= !empty($solidNav) ? ' class="has-solid-nav"' : '' ?>>
@@ -172,7 +176,7 @@ tailwind.config = {
                 </button>
                 <div x-show="open" x-transition class="absolute right-0 mt-2 w-56 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
                     <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                    <a href="?lang=<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
+                    <a href="<?= e(urlWithParam('lang', $code)) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
                         <img src="<?= $flagUrl($code) ?>" alt="" style="width:24px;height:18px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
                         <span class="font-bold text-xs w-6"><?= e($siglas[$code]) ?></span>
                         <span class="flex-1"><?= e($name) ?></span>
@@ -194,7 +198,7 @@ tailwind.config = {
                 </button>
                 <div x-show="open" x-transition class="absolute right-0 mt-2 w-48 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
                     <?php foreach ($currencyNames as $code=>$name): ?>
-                    <a href="?currency=<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
+                    <a href="<?= e(urlWithParam('currency', $code)) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
                         <span class="font-bold w-9" style="color:var(--terracota)"><?= e($currencySymbols[$code]) ?></span>
                         <span class="flex-1"><?= e($name) ?></span>
                         <span class="text-[11px] font-bold" style="color:var(--text-muted)"><?= e($code) ?></span>

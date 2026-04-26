@@ -12,9 +12,24 @@ $departuresAll = dbAll("SELECT * FROM departures WHERE entity_type='roteiro' AND
 $departures = array_values(array_filter($departuresAll, fn($d) => $d['status'] === 'open'));
 $related = dbAll("SELECT * FROM roteiros WHERE status='published' AND id<>? ORDER BY RAND() LIMIT 4", [$r['id']]);
 
-// Avaliacoes deste passeio (e tambem destacados se tiver poucos)
-$reviews = dbAll("SELECT * FROM testimonials WHERE active=1 AND roteiro_id=? ORDER BY featured DESC, created_at DESC LIMIT 12", [$r['id']]);
-$reviewsAvg = $reviews ? round(array_sum(array_column($reviews,'rating')) / count($reviews), 1) : 0;
+// Avaliações REAIS (verificadas) deste passeio + fallback em testimonials destacados
+$reviews = dbAll("
+    SELECT r.id, r.rating, r.title, r.content, r.photos, r.created_at, r.verified, c.name
+    FROM reviews r
+    JOIN customers c ON c.id = r.customer_id
+    WHERE r.entity_type='roteiro' AND r.entity_id=? AND r.status='approved'
+    ORDER BY r.created_at DESC LIMIT 12", [$r['id']]);
+$reviewsCount = (int)($r['rating_count'] ?? count($reviews));
+$reviewsAvg   = $reviewsCount > 0 && !empty($r['rating_avg'])
+    ? round((float)$r['rating_avg'], 1)
+    : ($reviews ? round(array_sum(array_column($reviews,'rating')) / count($reviews), 1) : 0);
+// Pode o cliente logado avaliar? (precisa ter booking pago)
+$canReview = false; $reviewBookingId = null;
+if (function_exists('isCustomerLoggedIn') && isCustomerLoggedIn()) {
+    $cid = currentCustomerId();
+    $bk = dbOne("SELECT b.id FROM bookings b LEFT JOIN reviews rv ON rv.booking_id=b.id AND rv.customer_id=b.customer_user_id WHERE b.customer_user_id=? AND b.entity_type='roteiro' AND b.entity_id=? AND b.payment_status='paid' AND rv.id IS NULL ORDER BY b.id DESC LIMIT 1", [$cid, $r['id']]);
+    if ($bk) { $canReview = true; $reviewBookingId = (int)$bk['id']; }
+}
 
 // Mapa de datas para o JS do calendario: { '2026-05-10': {status,seats,price}, ... }
 $availabilityMap = [];
@@ -231,10 +246,14 @@ function galleryLightbox(images) {
                 <?php if ($r['meeting_point']): ?>
                 <div class="admin-card p-6">
                     <h3 class="font-display text-lg font-bold mb-3" style="color:var(--sepia)">Ponto de encontro</h3>
-                    <div class="flex items-start gap-3 text-sm" style="color:var(--text-secondary)">
+                    <div class="flex items-start gap-3 text-sm mb-4" style="color:var(--text-secondary)">
                         <i data-lucide="map-pin" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:var(--terracota)"></i>
                         <?= e($r['meeting_point']) ?>
                     </div>
+                    <?php if (!empty($r['latitude']) && !empty($r['longitude'])): ?>
+                        <div class="meeting-map" data-lat="<?= e($r['latitude']) ?>" data-lng="<?= e($r['longitude']) ?>" data-label="<?= e($r['meeting_point']) ?>" style="height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--border-default)"></div>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($r['latitude'].','.$r['longitude']) ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold" style="color:var(--horizonte)"><i data-lucide="navigation" class="w-4 h-4"></i> Como chegar (Google Maps)</a>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
 
@@ -371,46 +390,76 @@ function galleryLightbox(images) {
         </div>
 
         <!-- Avaliações deste passeio -->
-        <?php if ($reviews): ?>
-        <div class="mt-20" x-data="{ open:false }">
+        <div class="mt-20" x-data="reviewSection({entityType:'roteiro', entityId:<?= (int)$r['id'] ?>, bookingId:<?= (int)($reviewBookingId ?: 0) ?>})">
             <div class="flex items-end justify-between flex-wrap gap-4 mb-8">
                 <div>
                     <h2 class="font-display text-3xl font-bold mb-1" style="color:var(--sepia)">Avaliações de quem foi</h2>
+                    <?php if ($reviews): ?>
                     <div class="flex items-center gap-2 text-sm" style="color:var(--text-muted)">
                         <span class="inline-flex items-center gap-1 font-display font-bold text-lg" style="color:var(--terracota)"><?= number_format($reviewsAvg,1,',','.') ?><i data-lucide="star" class="w-4 h-4 fill-current"></i></span>
-                        · <?= count($reviews) ?> avaliações
+                        · <?= count($reviews) ?> avaliações verificadas
                     </div>
+                    <?php else: ?>
+                    <p class="text-sm" style="color:var(--text-muted)">Seja o primeiro a avaliar este passeio.</p>
+                    <?php endif; ?>
                 </div>
-                <a href="<?= url('/depoimentos') ?>" class="text-sm font-semibold inline-flex items-center gap-1" style="color:var(--horizonte)">Ver todas <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                <?php if ($canReview): ?>
+                    <button type="button" @click="formOpen=true" class="btn-primary"><i data-lucide="pen-square" class="w-4 h-4"></i> Avaliar este passeio</button>
+                <?php endif; ?>
             </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+            <!-- Formulário de avaliação (apenas se cliente logado e pago) -->
+            <?php if ($canReview): ?>
+            <div x-show="formOpen" x-transition x-cloak class="admin-card p-6 mb-6" style="border-left:4px solid var(--terracota)">
+                <h3 class="font-display text-xl font-bold mb-4" style="color:var(--sepia)">Como foi sua experiência?</h3>
+                <div class="flex items-center gap-1.5 mb-4">
+                    <template x-for="n in 5" :key="n">
+                        <button type="button" @click="form.rating=n" class="text-2xl" :style="n <= form.rating ? 'color:#F59E0B' : 'color:#D1D5DB'"><i data-lucide="star" class="w-7 h-7" :class="n <= form.rating ? 'fill-current' : ''"></i></button>
+                    </template>
+                    <span class="text-xs ml-2" style="color:var(--text-muted)" x-text="['','Péssimo','Regular','Bom','Muito bom','Excelente'][form.rating]"></span>
+                </div>
+                <input type="text" x-model="form.title" maxlength="200" class="admin-input w-full mb-3" placeholder="Título (opcional)">
+                <textarea x-model="form.content" required minlength="10" rows="4" class="admin-input w-full" placeholder="Conte como foi sua viagem..."></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button type="button" @click="formOpen=false" class="admin-btn admin-btn-secondary">Cancelar</button>
+                    <button type="button" @click="submit()" :disabled="loading || !form.rating || form.content.length < 10" class="btn-primary"><i data-lucide="send" class="w-4 h-4"></i> Enviar avaliação</button>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($reviews): ?>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5" x-data="{ open:false }">
                 <?php foreach ($reviews as $i => $rv): ?>
                 <div class="admin-card p-6" <?= $i >= 3 ? 'x-show="open" x-collapse' : '' ?>>
-                    <div class="flex items-center gap-1 mb-3">
-                        <?php for ($s=0;$s<(int)$rv['rating'];$s++): ?><i data-lucide="star" class="w-3.5 h-3.5 fill-current" style="color:#F59E0B"></i><?php endfor; ?>
+                    <div class="flex items-center justify-between gap-1 mb-3">
+                        <div class="flex items-center gap-1">
+                            <?php for ($s=0;$s<(int)$rv['rating'];$s++): ?><i data-lucide="star" class="w-3.5 h-3.5 fill-current" style="color:#F59E0B"></i><?php endfor; ?>
+                        </div>
+                        <?php if (!empty($rv['verified'])): ?><span class="pill" style="background:rgba(122,157,110,.12);color:var(--mata);font-size:10px"><i data-lucide="badge-check" class="w-3 h-3"></i> Verificada</span><?php endif; ?>
                     </div>
+                    <?php if (!empty($rv['title'])): ?><div class="font-bold text-sm mb-2" style="color:var(--sepia)"><?= e($rv['title']) ?></div><?php endif; ?>
                     <p class="text-sm leading-relaxed mb-4 italic" style="color:var(--text-secondary)">“<?= e(tAuto($rv['content'])) ?>”</p>
                     <div class="flex items-center gap-3 pt-4 border-t" style="border-color:var(--border-default)">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-white" style="background:linear-gradient(135deg,var(--horizonte),var(--terracota))"><?= e(mb_substr($rv['name'],0,1)) ?></div>
                         <div>
                             <div class="font-bold text-sm" style="color:var(--sepia)"><?= e($rv['name']) ?></div>
-                            <?php if (!empty($rv['location'])): ?><div class="text-xs" style="color:var(--text-muted)"><?= e(tAuto($rv['location'])) ?></div><?php endif; ?>
+                            <div class="text-xs" style="color:var(--text-muted)"><?= date('d/m/Y', strtotime($rv['created_at'])) ?></div>
                         </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
-            </div>
             <?php if (count($reviews) > 3): ?>
-                <div class="text-center mt-6">
+                <div class="md:col-span-2 lg:col-span-3 text-center mt-2">
                     <button type="button" @click="open=!open" class="btn-secondary">
                         <span x-show="!open">Ver mais <?= count($reviews) - 3 ?> avaliações</span>
                         <span x-show="open" x-cloak>Ver menos</span>
-                        <i data-lucide="chevron-down" class="w-4 h-4" :style="open ? 'transform:rotate(180deg)' : ''"></i>
+                        <i data-lucide="chevron-down" class="w-4 h-4" :style="{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }"></i>
                     </button>
                 </div>
             <?php endif; ?>
+            </div>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
 
         <!-- Related -->
         <?php if ($related): ?>

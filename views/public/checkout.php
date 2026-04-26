@@ -32,20 +32,24 @@ if (!$preDate && !empty($_SESSION['cart'])) {
     }
 }
 
-// Configurações de moeda + faixas etárias
-$currencyCode   = getSetting('currency_code',   'BRL');
-$currencySymbol = getSetting('currency_symbol', 'R$');
-$currencyLocale = getSetting('currency_locale', 'pt-BR');
+// Moeda escolhida pelo usuário (sessão/cookie) + faixas etárias
+$currencyCode   = currentCurrency();
+$currencyMeta   = I18N_SUPPORTED_CURRENCIES[$currencyCode] ?? I18N_SUPPORTED_CURRENCIES['BRL'];
+$currencySymbol = $currencyMeta['symbol'];
+$currencyLocale = in_array($currencyCode, ['BRL','EUR']) ? 'pt-BR' : 'en-US';
+$currencyRate   = currencyRates()[$currencyCode] ?? 1.0;
 $factorChild    = (float) getSetting('price_factor_child',  '0.5');
 $factorInfant   = (float) getSetting('price_factor_infant', '0');
 
-// Preço cheio + PIX + faixas
-$priceAdult  = (float)$item['price'];
-$pricePix    = (float)($item['price_pix'] ?? $item['price']);
-$priceChild  = isset($item['price_children']) && $item['price_children'] !== null
-                ? (float)$item['price_children'] : round($priceAdult * $factorChild, 2);
-$priceInfant = isset($item['price_infant']) && $item['price_infant'] !== null
-                ? (float)$item['price_infant']   : round($priceAdult * $factorInfant, 2);
+// Preço cheio + PIX + faixas (sempre em BRL na DB; converte para a moeda do user)
+$priceAdult  = convertPrice((float)$item['price'],  $currencyCode);
+$pricePix    = convertPrice((float)($item['price_pix'] ?? $item['price']), $currencyCode);
+$priceChildBRL  = isset($item['price_children']) && $item['price_children'] !== null
+                ? (float)$item['price_children'] : round((float)$item['price'] * $factorChild, 2);
+$priceInfantBRL = isset($item['price_infant']) && $item['price_infant'] !== null
+                ? (float)$item['price_infant']   : round((float)$item['price'] * $factorInfant, 2);
+$priceChild  = convertPrice($priceChildBRL,  $currencyCode);
+$priceInfant = convertPrice($priceInfantBRL, $currencyCode);
 
 $priceChildPix  = $pricePix > 0 && $priceAdult > 0 ? round($priceChild  * ($pricePix / $priceAdult), 2) : $priceChild;
 $priceInfantPix = $pricePix > 0 && $priceAdult > 0 ? round($priceInfant * ($pricePix / $priceAdult), 2) : $priceInfant;
@@ -390,8 +394,17 @@ include VIEWS_DIR . '/partials/public_head.php';
                     <span class="text-sm font-semibold" style="color:var(--text-secondary)">Total</span>
                     <span class="font-display text-3xl font-bold" style="color:var(--terracota)" x-text="formatBRL(total())"></span>
                 </div>
-                <div class="text-[11px] mt-1 text-right" style="color:var(--text-muted)" x-show="form.payment_method==='pix_installments' && form.installments && canInstallment()">
-                    <span x-text="form.installments + 'x de ' + formatBRL(installmentValue(form.installments)) + ' sem juros'"></span>
+                <!-- Destaque grande das parcelas PIX -->
+                <div class="mt-3 p-3 rounded-xl" style="background:linear-gradient(135deg,rgba(58,107,138,.08),rgba(122,157,110,.06));border:1.5px solid rgba(58,107,138,.25)" x-show="form.payment_method==='pix_installments' && form.installments && canInstallment()" x-cloak>
+                    <div class="flex items-center gap-2 mb-1">
+                        <i data-lucide="calendar-clock" class="w-4 h-4" style="color:var(--horizonte)"></i>
+                        <span class="text-[10px] uppercase tracking-widest font-bold" style="color:var(--horizonte)">Você paga em</span>
+                    </div>
+                    <div class="font-display text-2xl font-bold leading-tight" style="color:var(--horizonte)">
+                        <span x-text="form.installments"></span>×
+                        <span x-text="formatBRL(installmentValue(form.installments))"></span>
+                    </div>
+                    <div class="text-[11px] mt-1" style="color:var(--text-muted)">Sem juros · 1ª hoje · última até <span x-text="installmentDeadlineLabel()"></span></div>
                 </div>
                 <?php if ($refPartner): ?>
                 <div class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style="background:rgba(201,107,74,.06);border:1px solid rgba(201,107,74,.2)">

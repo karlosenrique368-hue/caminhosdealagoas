@@ -173,6 +173,59 @@
 </script>
 <?php endif; ?>
 
+<script>
+function cartDateModal(){
+    return {
+        visible:false, type:null, id:null, title:'', travelDate:'',
+        today: new Date().toISOString().split('T')[0],
+        init(){},
+        open(d){
+            // Sinaliza ao app.js que o modal Alpine está pronto e tratou o evento
+            window.dispatchEvent(new Event('cart:ask-date-handled'));
+            this.type=d.type; this.id=d.id; this.title=d.title; this.travelDate=''; this.visible=true;
+            document.body.style.overflow='hidden';
+            this.$nextTick(()=>window.lucide && window.lucide.createIcons());
+        },
+        close(){ this.visible=false; document.body.style.overflow=''; },
+        async confirm(){ if(!this.travelDate) return; await window.cart.add(this.type, this.id, this.travelDate); this.close(); }
+    }
+}
+
+function reviewSection(opts){
+    return {
+        formOpen:false, loading:false,
+        form:{ rating:0, title:'', content:'' },
+        async submit(){
+            if (this.loading) return;
+            if (!this.form.rating) { window.showToast && window.showToast('Escolha uma nota.', 'error'); return; }
+            if ((this.form.content||'').trim().length < 10) { window.showToast && window.showToast('Conte mais sobre sua experiência (mín. 10 caracteres).', 'error'); return; }
+            this.loading = true;
+            try {
+                const fd = new FormData();
+                fd.append('booking_id', opts.bookingId);
+                fd.append('entity_type', opts.entityType);
+                fd.append('entity_id', opts.entityId);
+                fd.append('rating', this.form.rating);
+                fd.append('title', this.form.title);
+                fd.append('content', this.form.content);
+                const r = await window.avikApi ? null : null;
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                fd.append('csrf_token', csrf);
+                const res = await fetch('<?= url('/api/reviews?action=add_review') ?>', { method:'POST', body:fd, credentials:'same-origin' });
+                const j = await res.json();
+                if (j.ok) {
+                    window.showToast && window.showToast('Obrigado! Sua avaliação foi enviada e será publicada após análise.', 'success');
+                    this.formOpen = false; this.form = {rating:0,title:'',content:''};
+                } else {
+                    window.showToast && window.showToast(j.msg || 'Erro ao enviar.', 'error');
+                }
+            } catch(e) { window.showToast && window.showToast('Erro de rede.', 'error'); }
+            finally { this.loading = false; }
+        }
+    }
+}
+</script>
+
 <!-- Modal: escolher data antes de adicionar ao carrinho -->
 <div x-data="cartDateModal()" x-init="init()" @cart:ask-date.window="open($event.detail)" x-cloak>
     <div x-show="visible" x-transition.opacity class="fixed inset-0 z-[100]" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(4px)" @click="close"></div>
@@ -196,17 +249,145 @@
         </div>
     </div>
 </div>
+
+<!-- Auto-init de mapas Leaflet em qualquer .meeting-map[data-lat][data-lng] -->
 <script>
-function cartDateModal(){
-    return {
-        visible:false, type:null, id:null, title:'', travelDate:'',
-        today: new Date().toISOString().split('T')[0],
-        init(){},
-        open(d){ this.type=d.type; this.id=d.id; this.title=d.title; this.travelDate=''; this.visible=true; document.body.style.overflow='hidden'; this.$nextTick(()=>window.lucide && window.lucide.createIcons()); },
-        close(){ this.visible=false; document.body.style.overflow=''; },
-        async confirm(){ if(!this.travelDate) return; await window.cart.add(this.type, this.id, this.travelDate); this.close(); }
+(function(){
+    function initMaps(){
+        if (typeof L === 'undefined') return false;
+        document.querySelectorAll('.meeting-map[data-lat][data-lng]').forEach(function(el){
+            if (el.dataset.initialized) return;
+            el.dataset.initialized = '1';
+            var lat = parseFloat(el.dataset.lat), lng = parseFloat(el.dataset.lng);
+            if (!isFinite(lat) || !isFinite(lng)) return;
+            var label = el.dataset.label || 'Ponto de encontro';
+            var map = L.map(el, { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
+            var pin = L.divIcon({
+                className: 'meeting-pin',
+                html: '<div style="width:30px;height:30px;background:#DC2626;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 14px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;background:white;border-radius:50%;transform:rotate(45deg)"></div></div>',
+                iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -28]
+            });
+            L.marker([lat, lng], { icon: pin }).addTo(map).bindPopup('<b>'+label.replace(/[<>&]/g,'')+'</b>');
+            // Reflow no resize
+            setTimeout(function(){ map.invalidateSize(); }, 200);
+        });
+        return true;
     }
-}
+    function tryInit(){ if (!initMaps()) setTimeout(tryInit, 100); }
+    if (document.readyState !== 'loading') tryInit(); else document.addEventListener('DOMContentLoaded', tryInit);
+})();
 </script>
+
+<!-- Tradução automática site-wide (client-side, multi-idioma) -->
+<?php $autoLang = $_SESSION['lang'] ?? 'pt-BR'; if ($autoLang !== 'pt-BR'): ?>
+<script>
+(function(){
+    var LANG = <?= json_encode($autoLang) ?>;
+    var ENDPOINT = '<?= url('/api/translate-batch') ?>';
+    var BATCH = 40;
+    var SKIP_TAGS = {SCRIPT:1,STYLE:1,CODE:1,PRE:1,TEXTAREA:1,INPUT:1,SELECT:1,OPTION:1,NOSCRIPT:1,SVG:1,IFRAME:1};
+    var seen = new WeakSet();
+
+    function isTranslatable(node){
+        if (!node || !node.parentElement) return false;
+        var p = node.parentElement;
+        if (p.closest('[data-no-translate],[translate="no"],.notranslate')) return false;
+        if (SKIP_TAGS[p.tagName]) return false;
+        var v = node.nodeValue;
+        if (!v) return false;
+        var s = v.trim();
+        if (s.length < 2) return false;
+        if (!/[\p{L}]/u.test(s)) return false; // só símbolos/números
+        if (seen.has(node)) return false;
+        return true;
+    }
+
+    function collectNodes(root){
+        var out = [];
+        var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode: function(n){ return isTranslatable(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; }
+        });
+        var n; while ((n = w.nextNode())) out.push(n);
+        return out;
+    }
+
+    function collectAttrs(root){
+        // Atributos visíveis: placeholder, title, alt, aria-label, value de submit
+        var out = [];
+        root.querySelectorAll('[placeholder],[title],[alt],[aria-label]').forEach(function(el){
+            if (el.closest('[data-no-translate],[translate="no"],.notranslate')) return;
+            ['placeholder','title','alt','aria-label'].forEach(function(attr){
+                var v = el.getAttribute(attr);
+                if (!v || !v.trim() || !/[\p{L}]/u.test(v) || el.dataset['__t_'+attr]) return;
+                out.push({el:el, attr:attr, original:v});
+            });
+        });
+        return out;
+    }
+
+    async function translateChunk(items, applyFn){
+        var texts = items.map(function(it){ return it.original; });
+        try {
+            var res = await fetch(ENDPOINT, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({lang:LANG, texts:texts}),
+                credentials:'same-origin'
+            });
+            if (!res.ok) return;
+            var j = await res.json();
+            if (!j || !j.ok || !j.translations) return;
+            j.translations.forEach(function(tr, i){ if (tr) applyFn(items[i], tr); });
+        } catch(e) {}
+    }
+
+    async function run(root){
+        var nodes = collectNodes(root);
+        var nodeItems = nodes.map(function(n){ seen.add(n); return {node:n, original:n.nodeValue.trim(), raw:n.nodeValue}; });
+        for (var i=0; i<nodeItems.length; i+=BATCH) {
+            await translateChunk(nodeItems.slice(i, i+BATCH), function(it, tr){
+                // Preserva espaços iniciais/finais
+                var lead = (it.raw.match(/^\s*/) || [''])[0];
+                var tail = (it.raw.match(/\s*$/) || [''])[0];
+                it.node.nodeValue = lead + tr + tail;
+            });
+        }
+        var attrItems = collectAttrs(root);
+        for (var i=0; i<attrItems.length; i+=BATCH) {
+            await translateChunk(attrItems.slice(i, i+BATCH), function(it, tr){
+                it.el.dataset['__t_'+it.attr] = '1';
+                it.el.setAttribute(it.attr, tr);
+            });
+        }
+    }
+
+    function start(){
+        run(document.body);
+        // Observa mudanças (Alpine, fetch dinâmico, modais)
+        var debounce = null;
+        var pending = new Set();
+        var mo = new MutationObserver(function(muts){
+            muts.forEach(function(m){
+                m.addedNodes.forEach(function(n){
+                    if (n.nodeType === 1) pending.add(n);
+                });
+            });
+            if (pending.size === 0) return;
+            clearTimeout(debounce);
+            debounce = setTimeout(function(){
+                pending.forEach(function(n){ if (document.contains(n)) run(n); });
+                pending.clear();
+            }, 600);
+        });
+        mo.observe(document.body, {childList:true, subtree:true});
+    }
+
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start);
+})();
+</script>
+<?php endif; ?>
+
 </body>
 </html>

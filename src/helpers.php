@@ -14,7 +14,24 @@ function url(string $path = ''): string {
 }
 
 function asset(string $path): string {
-    return url('assets/' . ltrim($path, '/'));
+    $rel = ltrim($path, '/');
+    $abs = __DIR__ . '/../public/assets/' . $rel;
+    $v = is_file($abs) ? '?v=' . filemtime($abs) : '';
+    return url('assets/' . $rel) . $v;
+}
+
+/**
+ * Constrói URL preservando a query string atual e substituindo um parâmetro.
+ * Útil para seletores de idioma/moeda que devem manter contexto da página.
+ */
+function urlWithParam(string $key, string $value, ?string $path = null): string {
+    $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
+    $parts  = parse_url($reqUri);
+    $qs     = [];
+    if (!empty($parts['query'])) parse_str($parts['query'], $qs);
+    $qs[$key] = $value;
+    $p = $path !== null ? $path : ($parts['path'] ?? '/');
+    return $p . '?' . http_build_query($qs);
 }
 
 function redirect(string $to): void {
