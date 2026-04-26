@@ -22,6 +22,11 @@ function paymentWebhookUrl(): string {
     return integrationAppUrl() . '/api/payment-webhook';
 }
 
+function paymentGatewaySecretForProvider(string $provider): string {
+    if ($provider === 'pagseguro') return integrationSetting('payment_pagseguro_token', integrationSetting('payment_secret_key', ''));
+    return integrationSetting('payment_secret_key', '');
+}
+
 function logActivity(?int $adminId, string $action, ?string $entity = null, ?int $entityId = null, ?string $description = null): void {
     try {
         dbExec(
@@ -156,7 +161,7 @@ function prepareBookingPayment(int $bookingId): array {
     $transactionId = $booking['gateway_tx_id'] ?: strtoupper(substr($provider, 0, 4)) . '-' . $booking['code'] . '-' . strtoupper(substr(hash('sha256', $booking['code'] . microtime(true)), 0, 8));
     dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = COALESCE(gateway_tx_id, ?) WHERE id = ?', [$provider, $transactionId, $bookingId]);
 
-    $secret = integrationSetting('payment_secret_key', '');
+    $secret = paymentGatewaySecretForProvider($provider);
     $mode = in_array($provider, ['manual', 'sandbox'], true) ? 'sandbox_ready' : ($secret !== '' ? 'credentials_ready' : 'missing_credentials');
     logActivity(null, 'payment_prepared', 'booking', $bookingId, 'Gateway ' . $provider . ' preparado para reserva ' . $booking['code']);
 

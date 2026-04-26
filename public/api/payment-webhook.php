@@ -32,15 +32,15 @@ function webhookValue(array $payload, array $keys): string {
 }
 
 $provider = strtolower(preg_replace('/[^a-z0-9_\-]/i', '', webhookValue($payload, ['provider', 'gateway', 'type'])) ?: integrationSetting('payment_provider', 'manual'));
-$reference = strtoupper(webhookValue($payload, ['booking_code', 'code', 'external_reference', 'reference', 'data.external_reference', 'metadata.booking_code']));
-$transactionId = webhookValue($payload, ['transaction_id', 'payment_id', 'id', 'data.id', 'payment.id']);
-$rawStatus = strtolower(webhookValue($payload, ['status', 'payment_status', 'data.status', 'payment.status']));
+$reference = strtoupper(webhookValue($payload, ['booking_code', 'code', 'reference_id', 'external_reference', 'reference', 'data.reference_id', 'data.external_reference', 'metadata.booking_code', 'charges.0.reference_id']));
+$transactionId = webhookValue($payload, ['transaction_id', 'payment_id', 'id', 'data.id', 'payment.id', 'charges.0.id', 'charges.0.payment_response.reference']);
+$rawStatus = strtolower(webhookValue($payload, ['status', 'payment_status', 'data.status', 'payment.status', 'charges.0.status']));
 $statusMap = [
     'approved' => 'paid', 'paid' => 'paid', 'succeeded' => 'paid', 'completed' => 'paid', 'confirmed' => 'paid',
     'refunded' => 'refunded', 'chargeback' => 'refunded',
     'cancelled' => 'cancelled', 'canceled' => 'cancelled',
-    'failed' => 'failed', 'rejected' => 'failed', 'declined' => 'failed',
-    'pending' => 'pending', 'in_process' => 'pending', 'processing' => 'pending',
+    'failed' => 'failed', 'rejected' => 'failed', 'declined' => 'failed', 'denied' => 'failed',
+    'pending' => 'pending', 'in_process' => 'pending', 'processing' => 'pending', 'waiting' => 'pending', 'in_analysis' => 'pending', 'authorized' => 'pending',
 ];
 $nextStatus = $statusMap[$rawStatus] ?? '';
 if ($nextStatus === '') jsonResponse(['ok' => false, 'msg' => 'Status do pagamento não reconhecido.'], 422);

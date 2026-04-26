@@ -115,6 +115,8 @@ $trustItems = [
     ['icon'=>'map-pin','title'=>'Curadoria local','sub'=>'Feito por alagoanos','bg'=>'rgba(58,107,138,0.1)','color'=>'var(--horizonte)'],
     ['icon'=>'headphones','title'=>'Suporte 24/7','sub'=>'Durante sua viagem','bg'=>'rgba(16,185,129,0.1)','color'=>'#10B981'],
     ['icon'=>'badge-check','title'=>'Melhor preço','sub'=>'Garantido ou devolvemos','bg'=>'rgba(245,158,11,0.1)','color'=>'#F59E0B'],
+    ['icon'=>'user-check','title'=>'Guias verificados','sub'=>'Parceiros selecionados','bg'=>'rgba(122,157,110,0.12)','color'=>'var(--maresia-dark)'],
+    ['icon'=>'calendar-heart','title'=>'Reserva flexível','sub'=>'Ajuste com atendimento humano','bg'=>'rgba(58,107,138,0.1)','color'=>'var(--horizonte-dark)'],
 ];
 ?>
 <section class="trust-strip-section relative" style="background:var(--bg-surface);border-bottom:1px solid var(--border-default)">
@@ -461,15 +463,15 @@ $trustItems = [
                         </div>
                     <?php endif; ?>
                     <div>
-                        <div class="font-bold flex items-center gap-1.5" style="color:var(--sepia)">
+                        <div class="testimonial-name font-bold" style="color:var(--sepia)">
                             <?= e($t['name']) ?>
                             <?php if (!empty($t['author_url'])): ?><a href="<?= e($t['author_url']) ?>" target="_blank" rel="noopener" title="Ver perfil" style="color:var(--horizonte)"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a><?php endif; ?>
                         </div>
-                        <div class="text-xs" style="color:var(--text-muted)"><?= e(tAuto($t['location'] ?? '')) ?></div>
+                        <div class="testimonial-location text-xs" style="color:var(--text-muted)"><?= e(tAuto($t['location'] ?? '')) ?></div>
                     </div>
-                    <div class="ml-auto flex gap-0.5">
+                    <div class="testimonial-stars ml-auto flex gap-0.5">
                         <?php for ($s = 0; $s < (int)$t['rating']; $s++): ?>
-                            <i data-lucide="star" class="w-4 h-4 fill-current" style="color:#F59E0B"></i>
+                            <i data-lucide="star" class="w-3.5 h-3.5 fill-current" style="color:#F59E0B"></i>
                         <?php endfor; ?>
                     </div>
                 </div>

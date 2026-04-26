@@ -2,6 +2,26 @@
 requireAdmin();
 $adm = currentAdmin();
 $pageTitle = $pageTitle ?? 'Dashboard';
+$adminPath = currentPath();
+$adminHelps = [
+    '/admin/dashboard' => ['Visão geral do negócio', 'Use esta tela para acompanhar reservas pendentes, receita confirmada e os principais movimentos recentes.', ['Receita só considera reservas pagas.', 'Reservas pendentes precisam de conferência ou confirmação de pagamento.']],
+    '/admin/roteiros' => ['Gestão de passeios', 'Cadastre e revise experiências vendidas individualmente, com fotos, preços, datas e regras de disponibilidade.', ['Mantenha título, descrição curta e imagem principal bem preenchidos.', 'Use destaque apenas nos passeios que devem aparecer na home.']],
+    '/admin/pacotes' => ['Gestão de pacotes', 'Monte ofertas completas com hospedagem, transporte e passeios combinados.', ['Revise valores antes de publicar.', 'Descrições claras reduzem dúvidas no WhatsApp.']],
+    '/admin/transfers' => ['Gestão de transfers', 'Controle rotas, capacidade máxima e valores de deslocamento.', ['Capacidade é o máximo de passageiros.', 'Use nomes simples para origem e destino.']],
+    '/admin/reservas' => ['Gestão de reservas', 'Acompanhe pedidos, altere status de pagamento e abra os detalhes quando precisar conferir dados do cliente.', ['Marcar como pago dispara comissão, email e notificações quando as integrações estão ativas.', 'Cancelado, falhou ou reembolsado revoga comissão quando necessário.']],
+    '/admin/departures' => ['Datas e vagas', 'Configure calendário, horários e quantidade de assentos disponíveis para passeios e pacotes.', ['Fechar uma data impede novas reservas.', 'Ajuste vagas antes de divulgar campanhas.']],
+    '/admin/clientes' => ['Clientes', 'Consulte histórico, contatos e dados básicos dos viajantes cadastrados pelo checkout.', ['Use a busca para localizar por nome ou email.', 'Evite editar dados pessoais sem solicitação do cliente.']],
+    '/admin/cupons' => ['Cupons', 'Crie descontos com validade, limite de uso e compra mínima.', ['Prefira códigos curtos e fáceis de digitar.', 'Teste o cupom no checkout antes de divulgar.']],
+    '/admin/mensagens' => ['Mensagens', 'Centralize contatos recebidos pelo site e organize retornos.', ['Marque como lida/respondida para manter a fila limpa.', 'Priorize mensagens com telefone informado.']],
+    '/admin/instituicoes' => ['Parceiros', 'Gerencie parceiros, indicações, benefícios e comissões.', ['Cada parceiro tem código próprio de indicação.', 'Pagamentos de comissão devem ser conferidos com reservas pagas.']],
+    '/admin/traducoes' => ['Idiomas e moedas', 'Revise traduções automáticas e ajustes de moedas exibidas ao cliente.', ['Priorize textos das páginas de venda.', 'Traduções manuais têm mais qualidade que cache automático.']],
+    '/admin/integracoes' => ['Integrações comerciais', 'Configure pagamento, email, pixels, alertas operacionais, backups e itens legais sem mexer no código.', ['Deixe o gateway em sandbox até validar credenciais.', 'Campos de senha vazios mantêm a credencial já salva.']],
+    '/admin/configuracoes' => ['Configurações gerais', 'Ajuste identidade, contato, redes sociais, home e métodos simples de pagamento.', ['WhatsApp deve usar DDI + DDD + número, só dígitos.', 'SEO e descrição aparecem em compartilhamentos e buscadores.']],
+];
+$adminHelp = null;
+foreach ($adminHelps as $helpPath => $helpData) {
+    if (strpos($adminPath, $helpPath) === 0) { $adminHelp = $helpData; break; }
+}
 ?><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -142,3 +162,17 @@ body { background: var(--bg-surface); }
         </header>
 
         <main class="flex-1 p-4 md:p-8">
+            <?php if ($adminHelp): ?>
+            <section class="admin-help-panel mb-6">
+                <div class="admin-help-icon"><i data-lucide="circle-help" class="w-5 h-5"></i></div>
+                <div>
+                    <h2><?= e($adminHelp[0]) ?></h2>
+                    <p><?= e($adminHelp[1]) ?></p>
+                    <?php if (!empty($adminHelp[2])): ?>
+                    <ul>
+                        <?php foreach ($adminHelp[2] as $tip): ?><li><?= e($tip) ?></li><?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
+                </div>
+            </section>
+            <?php endif; ?>

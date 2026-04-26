@@ -34,19 +34,61 @@ $norm = array_map(function($t){
     return $t;
 }, $texts);
 
+$staticDict = [
+    'en' => [
+        'Guias verificados' => 'Verified guides',
+        'Parceiros selecionados' => 'Selected partners',
+        'Reserva flexível' => 'Flexible booking',
+        'Ajuste com atendimento humano' => 'Adjust with human support',
+    ],
+    'es' => [
+        'Guias verificados' => 'Guías certificados',
+        'Parceiros selecionados' => 'Socios seleccionados',
+        'Reserva flexível' => 'Reserva flexible',
+        'Ajuste com atendimento humano' => 'Ajustes con atención humana',
+    ],
+    'fr' => [
+        'Guias verificados' => 'Guides vérifiés',
+        'Parceiros selecionados' => 'Partenaires sélectionnés',
+        'Reserva flexível' => 'Réservation flexible',
+        'Ajuste com atendimento humano' => 'Ajustement avec assistance humaine',
+    ],
+    'de' => [
+        'Guias verificados' => 'Verifizierte Guides',
+        'Parceiros selecionados' => 'Ausgewählte Partner',
+        'Reserva flexível' => 'Flexible Buchung',
+        'Ajuste com atendimento humano' => 'Änderung mit persönlicher Betreuung',
+    ],
+    'it' => [
+        'Guias verificados' => 'Guide verificate',
+        'Parceiros selecionados' => 'Partner selezionati',
+        'Reserva flexível' => 'Prenotazione flessibile',
+        'Ajuste com atendimento humano' => 'Modifica con assistenza umana',
+    ],
+    'zh' => [
+        'Guias verificados' => '认证导游',
+        'Parceiros selecionados' => '精选合作伙伴',
+        'Reserva flexível' => '灵活预订',
+        'Ajuste com atendimento humano' => '人工客服协助调整',
+    ],
+];
+
 // Hashes únicos para query no DB
 $hashes = [];
 $hashIndex = []; // hash => [posições]
+$staticHits = [];
 foreach ($norm as $i => $t) {
     if ($t === '' || mb_strlen($t) < 2) continue;
     // Pula se for só números/símbolos
     if (!preg_match('/[\p{L}]/u', $t)) continue;
+    if (isset($staticDict[$lang][$t])) { $staticHits[$i] = $staticDict[$lang][$t]; continue; }
     $h = md5($t);
     $hashes[$h] = $t;
     $hashIndex[$h][] = $i;
 }
 
 $translations = array_fill(0, count($norm), null);
+foreach ($staticHits as $pos => $translation) $translations[$pos] = $translation;
 
 if (!$hashes) { echo json_encode(['ok'=>true,'translations'=>$translations]); exit; }
 

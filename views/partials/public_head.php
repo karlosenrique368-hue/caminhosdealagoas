@@ -149,20 +149,21 @@ tailwind.config = {
                 <?php
                     $flagFiles = ['pt-BR'=>'pt_BR.png','en'=>'en_US.png','es'=>'es_ES.png','fr'=>'fr_FR.png','de'=>'de_DE.png','it'=>'it_IT.png','zh'=>'zh_CN.png'];
                     $siglas = ['pt-BR'=>'PT','en'=>'EN','es'=>'ES','fr'=>'FR','de'=>'DE','it'=>'IT','zh'=>'ZH'];
+                    $langNames = ['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'];
                     $flagUrl = fn($code) => storageUrl('uploads/img/bandeiras/' . ($flagFiles[$code] ?? 'pt_BR.png'));
                 ?>
-                <button @click="open=!open" class="inline-flex items-center gap-2 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-semibold" style="line-height:1" aria-label="Idioma">
-                    <img src="<?= $flagUrl($currentLang) ?>" alt="" style="width:22px;height:16px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
-                    <span class="text-xs font-bold tracking-wide" style="line-height:1"><?= e($siglas[$currentLang] ?? 'PT') ?></span>
+                <button @click="open=!open" data-lang-trigger class="inline-flex items-center gap-2 px-2.5 py-2 rounded-xl nav-link-tr text-sm font-semibold" style="line-height:1" aria-label="Idioma">
+                    <img data-lang-current-flag src="<?= $flagUrl($currentLang) ?>" alt="" style="width:22px;height:16px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
+                    <span data-lang-current-code class="text-xs font-bold tracking-wide" style="line-height:1"><?= e($siglas[$currentLang] ?? 'PT') ?></span>
                     <i data-lucide="chevron-down" class="w-3.5 h-3.5" style="display:block"></i>
                 </button>
                 <div x-show="open" x-transition class="absolute right-0 mt-2 w-56 rounded-xl shadow-xl border py-1.5 z-50" style="background:white;border-color:var(--border-default);display:none">
-                    <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                    <a href="<?= e(urlWithParam('lang', $code)) ?>" data-lang-switch="<?= e($code) ?>" class="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50" style="color:var(--text-primary)">
+                    <?php foreach ($langNames as $code=>$name): $activeLang = $currentLang === $code; ?>
+                    <a href="<?= e(urlWithParam('lang', $code)) ?>" data-lang-switch="<?= e($code) ?>" data-lang-option="<?= e($code) ?>" data-lang-flag="<?= e($flagUrl($code)) ?>" data-lang-sigla="<?= e($siglas[$code]) ?>" data-lang-name="<?= e($name) ?>" aria-current="<?= $activeLang ? 'true' : 'false' ?>" class="lang-option flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50 <?= $activeLang ? 'is-active' : '' ?>" style="color:var(--text-primary)">
                         <img src="<?= $flagUrl($code) ?>" alt="" style="width:24px;height:18px;object-fit:cover;border-radius:2px;display:block;flex-shrink:0">
                         <span class="font-bold text-xs w-6"><?= e($siglas[$code]) ?></span>
-                        <span class="flex-1"><?= e($name) ?></span>
-                        <?php if ($currentLang===$code): ?><i data-lucide="check" class="w-4 h-4" style="color:var(--terracota)"></i><?php endif; ?>
+                        <span class="flex-1" translate="no"><?= e($name) ?></span>
+                        <i data-lang-check data-lucide="check" class="w-4 h-4" style="color:var(--terracota);<?= $activeLang ? '' : 'display:none' ?>"></i>
                     </a>
                     <?php endforeach; ?>
                 </div>
@@ -250,12 +251,12 @@ tailwind.config = {
             <div class="menu-drawer-prefs">
                 <div class="menu-drawer-pref" x-data="{open:false}" @click.away="open=false">
                     <button type="button" @click="open=!open" class="menu-drawer-pref-btn">
-                        <span class="inline-flex items-center gap-2"><img src="<?= $flagUrl($currentLang) ?>" alt="" style="width:22px;height:16px;object-fit:cover;border-radius:2px;display:block"> Idioma</span>
+                        <span class="inline-flex items-center gap-2"><img data-lang-current-flag src="<?= $flagUrl($currentLang) ?>" alt="" style="width:22px;height:16px;object-fit:cover;border-radius:2px;display:block"><span data-lang-current-name>Idioma</span><span data-lang-current-code class="text-[11px] font-bold px-1.5 py-0.5 rounded" style="background:var(--areia-light);color:var(--terracota-dark)"><?= e($siglas[$currentLang] ?? 'PT') ?></span></span>
                         <i data-lucide="chevron-down" class="w-4 h-4" :class="open?'rotate-180':''"></i>
                     </button>
                     <div x-show="open" x-transition x-cloak class="menu-drawer-pref-list">
-                        <?php foreach (['pt-BR'=>'Português','en'=>'English','es'=>'Español','fr'=>'Français','de'=>'Deutsch','it'=>'Italiano','zh'=>'中文'] as $code=>$name): ?>
-                            <a href="<?= e(urlWithParam('lang', $code)) ?>" data-lang-switch="<?= e($code) ?>" class="inline-flex items-center gap-2"><img src="<?= $flagUrl($code) ?>" alt="" style="width:20px;height:14px;object-fit:cover;border-radius:2px;display:block"> <?= e($name) ?></a>
+                        <?php foreach ($langNames as $code=>$name): $activeLang = $currentLang === $code; ?>
+                            <a href="<?= e(urlWithParam('lang', $code)) ?>" data-lang-switch="<?= e($code) ?>" data-lang-option="<?= e($code) ?>" data-lang-flag="<?= e($flagUrl($code)) ?>" data-lang-sigla="<?= e($siglas[$code]) ?>" data-lang-name="<?= e($name) ?>" aria-current="<?= $activeLang ? 'true' : 'false' ?>" class="lang-option inline-flex items-center gap-2 <?= $activeLang ? 'is-active' : '' ?>"><img src="<?= $flagUrl($code) ?>" alt="" style="width:20px;height:14px;object-fit:cover;border-radius:2px;display:block"><span translate="no"><?= e($name) ?></span><i data-lang-check data-lucide="check" class="w-3.5 h-3.5 ml-auto" style="<?= $activeLang ? '' : 'display:none' ?>"></i></a>
                         <?php endforeach; ?>
                     </div>
                 </div>
