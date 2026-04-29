@@ -41,8 +41,9 @@ function trackReferral(string $code): bool {
         setcookie('ref_code', $p['referral_code'], [
             'expires'  => time() + 86400 * 30,
             'path'     => '/',
+            'secure'   => isSecureRequest(),
             'samesite' => 'Lax',
-            'httponly' => false,
+            'httponly' => true,
         ]);
     }
     return true;
@@ -69,7 +70,7 @@ function createPartner(array $data, string $password): array {
     $phone  = trim($data['phone'] ?? $data['whatsapp'] ?? '');
     $cidade = trim($data['city'] ?? '');
     if (!$name || !$email || !$phone) throw new RuntimeException('Preencha nome, email e telefone.');
-    if (strlen($password) < 6) throw new RuntimeException('Senha muito curta (mínimo 6 caracteres).');
+    if (strlen($password) < PASSWORD_MIN_LENGTH) throw new RuntimeException('Senha muito curta (mínimo ' . PASSWORD_MIN_LENGTH . ' caracteres).');
     $validTypes = ['individual','familia','grupo','instituicao','revendedor'];
     if (!in_array($type, $validTypes, true)) $type = 'individual';
     if (dbOne('SELECT id FROM institution_users WHERE email=?', [$email])) {
@@ -172,9 +173,25 @@ function revokeCommissionOnUnpaid(int $bookingId): void {
     $newPending = max(0, (float)$partner['commission_pending'] - $commission);
     $newCount   = max(0, (int)$partner['bookings_count_paid'] - 1);
 
+    $itemThreshold = null;
+    if ($b['entity_type'] === 'roteiro') {
+        $it = dbOne('SELECT bookings_threshold FROM roteiros WHERE id=?', [$b['entity_id']]);
+    } elseif ($b['entity_type'] === 'pacote') {
+        $it = dbOne('SELECT bookings_threshold FROM pacotes WHERE id=?', [$b['entity_id']]);
+    } else { $it = null; }
+    if ($it && $it['bookings_threshold'] !== null && $it['bookings_threshold'] !== '') $itemThreshold = (int)$it['bookings_threshold'];
+    $partnerThreshold = (int)($partner['bookings_threshold'] ?? 0);
+    $thresholdUse = $partnerThreshold > 0 ? $partnerThreshold : (int)($itemThreshold ?? 0);
+    $newFreeEarned = (int)$partner['free_spots_earned'];
+    if ($thresholdUse > 0) {
+        $oldBlocks = intdiv((int)$partner['bookings_count_paid'], $thresholdUse);
+        $newBlocks = intdiv($newCount, $thresholdUse);
+        $newFreeEarned = max((int)$partner['free_spots_used'], $newFreeEarned - max(0, $oldBlocks - $newBlocks));
+    }
+
     dbExec('UPDATE bookings SET commission_credited=0 WHERE id=?', [$bookingId]);
-    dbExec('UPDATE institutions SET commission_pending=?, bookings_count_paid=? WHERE id=?',
-        [$newPending, $newCount, $partner['id']]);
+    dbExec('UPDATE institutions SET commission_pending=?, bookings_count_paid=?, free_spots_earned=? WHERE id=?',
+        [$newPending, $newCount, $newFreeEarned, $partner['id']]);
 }
 
 /** KPIs do parceiro (area logada). */

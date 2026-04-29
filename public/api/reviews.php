@@ -1,5 +1,6 @@
 <?php
 require_once dirname(__DIR__,2) . '/src/bootstrap.php';
+if (!isPost()) jsonResponse(['ok'=>false,'msg'=>'Método inválido.'], 405);
 if (!csrfVerify()) jsonResponse(['ok'=>false,'msg'=>'CSRF inválido.'], 403);
 if (!isCustomerLoggedIn()) jsonResponse(['ok'=>false,'msg'=>'Faça login.'], 401);
 
@@ -19,11 +20,11 @@ $verified = 0;
 $bookingIdInput = (int)($_POST['booking_id'] ?? 0);
 $bookingId = null;
 if ($bookingIdInput > 0) {
-    $b = dbOne("SELECT id FROM bookings WHERE id=? AND customer_user_id=? AND entity_type=? AND entity_id=? AND payment_status='paid' LIMIT 1", [$bookingIdInput,$cid,$type,$eid]);
+    $b = dbOne("SELECT id FROM bookings WHERE id=? AND (customer_id=? OR customer_user_id=?) AND entity_type=? AND entity_id=? AND payment_status='paid' LIMIT 1", [$bookingIdInput,$cid,$cid,$type,$eid]);
     if ($b) { $bookingId = (int)$b['id']; $verified = 1; }
 }
 if (!$bookingId) {
-    $b = dbOne("SELECT id FROM bookings WHERE customer_user_id=? AND entity_type=? AND entity_id=? AND payment_status='paid' LIMIT 1", [$cid,$type,$eid]);
+    $b = dbOne("SELECT id FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND entity_type=? AND entity_id=? AND payment_status='paid' LIMIT 1", [$cid,$cid,$type,$eid]);
     if ($b) { $bookingId = (int)$b['id']; $verified = 1; }
 }
 

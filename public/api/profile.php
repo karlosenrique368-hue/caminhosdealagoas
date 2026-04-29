@@ -19,9 +19,14 @@ $cid = currentCustomerId();
 
 try {
     if ($action === 'password') {
+        $current = (string)($_POST['current_password'] ?? '');
         $new = (string)($_POST['new_password'] ?? '');
-        if (strlen($new) < 6) {
-            jsonResponse(['ok' => false, 'msg' => 'Senha precisa ter no mínimo 6 caracteres.'], 422);
+        $customer = dbOne('SELECT password_hash FROM customers WHERE id=?', [$cid]);
+        if (!empty($customer['password_hash']) && !password_verify($current, $customer['password_hash'])) {
+            jsonResponse(['ok' => false, 'msg' => 'Senha atual incorreta.'], 422);
+        }
+        if (strlen($new) < PASSWORD_MIN_LENGTH) {
+            jsonResponse(['ok' => false, 'msg' => 'Senha precisa ter no mínimo ' . PASSWORD_MIN_LENGTH . ' caracteres.'], 422);
         }
         dbExec('UPDATE customers SET password_hash=? WHERE id=?', [password_hash($new, PASSWORD_DEFAULT), $cid]);
         jsonResponse(['ok' => true, 'msg' => 'Senha atualizada com sucesso!']);
@@ -49,5 +54,5 @@ try {
     $_SESSION['customer_name'] = $name;
     jsonResponse(['ok' => true, 'msg' => 'Perfil atualizado!', 'data' => ['name' => $name]]);
 } catch (Throwable $e) {
-    jsonResponse(['ok' => false, 'msg' => 'Erro ao processar: ' . $e->getMessage()], 500);
+    jsonException($e, 'Erro ao processar o perfil.');
 }

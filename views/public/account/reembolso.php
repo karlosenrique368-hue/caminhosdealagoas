@@ -13,10 +13,10 @@ $refunds = dbAll('
 $eligibleBookings = dbAll("
     SELECT b.id, b.total, b.entity_title AS title, b.code
     FROM bookings b
-    WHERE b.customer_user_id=?
+        WHERE (b.customer_id=? OR b.customer_user_id=?)
       AND b.payment_status='paid'
       AND b.id NOT IN (SELECT booking_id FROM refund_requests WHERE customer_id=?)
-    ORDER BY b.created_at DESC", [$cid, $cid]);
+        ORDER BY b.created_at DESC", [$cid, $cid, $cid]);
 $preselect = (int)($_GET['booking'] ?? 0);
 ?>
 
@@ -87,8 +87,8 @@ $preselect = (int)($_GET['booking'] ?? 0);
         <?php else: ?>
             <div class="space-y-3">
                 <?php foreach ($refunds as $r):
-                    $pill = ['pending'=>'pill-warning','approved'=>'pill-success','rejected'=>'pill-danger','processed'=>'pill-info'][$r['status']] ?? 'pill-info';
-                    $statusLabel = ['pending'=>'pendente','approved'=>'aprovado','rejected'=>'rejeitado','processed'=>'processado'][$r['status']] ?? $r['status'];
+                    $pill = ['em_analise'=>'pill-warning','aprovado'=>'pill-success','negado'=>'pill-danger','pago'=>'pill-info'][$r['status']] ?? 'pill-info';
+                    $statusLabel = ['em_analise'=>'em análise','aprovado'=>'aprovado','negado'=>'negado','pago'=>'pago'][$r['status']] ?? $r['status'];
                 ?>
                     <div class="p-4 rounded-xl border" style="background:var(--areia-light);border-color:var(--border-default)">
                         <div class="flex items-center justify-between gap-2 mb-2">

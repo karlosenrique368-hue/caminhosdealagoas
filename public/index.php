@@ -8,9 +8,14 @@ $path = currentPath();
 
 // Static storage pass-through (fallback se .htaccess não rodar)
 if (preg_match('#^/storage/(.+)$#', $path, $m)) {
-    $file = STORAGE_DIR . '/' . $m[1];
-    if (is_file($file)) {
+    $storageRoot = realpath(STORAGE_DIR);
+    $file = realpath(STORAGE_DIR . '/' . $m[1]);
+    if ($storageRoot && $file && str_starts_with($file, $storageRoot . DIRECTORY_SEPARATOR) && is_file($file)) {
         $mime = mime_content_type($file) ?: 'application/octet-stream';
+        if (preg_match('/\.(php|phtml|phar|sql|env|ini|log)$/i', $file)) {
+            http_response_code(403);
+            exit;
+        }
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($file));
         readfile($file);

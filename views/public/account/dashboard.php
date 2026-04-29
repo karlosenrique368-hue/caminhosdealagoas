@@ -4,12 +4,12 @@ $accountTab = 'dashboard';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
-$totalBookings = (int)(dbOne('SELECT COUNT(*) c FROM bookings WHERE customer_user_id=?', [$cid])['c'] ?? 0);
+$totalBookings = (int)(dbOne('SELECT COUNT(*) c FROM bookings WHERE customer_id=? OR customer_user_id=?', [$cid, $cid])['c'] ?? 0);
 $totalWishlist = (int)(dbOne('SELECT COUNT(*) c FROM wishlist WHERE customer_id=?', [$cid])['c'] ?? 0);
-$totalSpent = (float)(dbOne("SELECT COALESCE(SUM(total),0) s FROM bookings WHERE customer_user_id=? AND payment_status='paid'", [$cid])['s'] ?? 0);
-$paidCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE customer_user_id=? AND payment_status='paid'", [$cid])['c'] ?? 0);
-$pendingCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE customer_user_id=? AND payment_status='pending'", [$cid])['c'] ?? 0);
-$recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.customer_user_id=? ORDER BY b.created_at DESC LIMIT 5", [$cid]);
+$totalSpent = (float)(dbOne("SELECT COALESCE(SUM(total),0) s FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='paid'", [$cid, $cid])['s'] ?? 0);
+$paidCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='paid'", [$cid, $cid])['c'] ?? 0);
+$pendingCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='pending'", [$cid, $cid])['c'] ?? 0);
+$recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.customer_id=? OR b.customer_user_id=? ORDER BY b.created_at DESC LIMIT 5", [$cid, $cid]);
 ?>
 
 <!-- Premium stat grid -->

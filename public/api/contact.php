@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../src/bootstrap.php';
 
 if (!isPost()) jsonResponse(['ok' => false, 'msg' => 'Método inválido.'], 405);
 if (!csrfVerify()) jsonResponse(['ok' => false, 'msg' => 'Token inválido.'], 403);
+if (sessionRateLimited('contact', 6, 600)) jsonResponse(['ok' => false, 'msg' => 'Muitas mensagens. Tente novamente em alguns minutos.'], 429);
 
 $name    = trim($_POST['name'] ?? '');
 $email   = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL);

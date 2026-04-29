@@ -60,7 +60,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
                 <label class="block">
                     <span class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">Senha</span>
-                    <input type="password" name="password" required minlength="6" class="input-field w-full" placeholder="Mínimo 6 caracteres">
+                    <input type="password" name="password" required minlength="<?= PASSWORD_MIN_LENGTH ?>" class="input-field w-full" placeholder="Mínimo <?= PASSWORD_MIN_LENGTH ?> caracteres">
                 </label>
                 <button type="submit" class="btn-primary w-full justify-center">
                     <i data-lucide="user-plus" class="w-4 h-4"></i> Criar conta

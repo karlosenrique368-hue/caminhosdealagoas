@@ -1,6 +1,8 @@
 RewriteEngine On
 
 # Send storage files directly
+RewriteCond %{REQUEST_URI} !\.\.
+RewriteCond %{REQUEST_URI} !\.(php|phtml|phar|sql|env|ini|log)$ [NC]
 RewriteRule ^storage/(.+)$ ../storage/$1 [L]
 
 # Route everything else through index.php

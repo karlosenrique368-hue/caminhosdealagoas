@@ -9,7 +9,12 @@ if (isPost() && csrfVerify()) {
         $status = $_POST['status'] ?? 'em_analise';
         $note = trim($_POST['admin_note'] ?? '');
         if (in_array($status, ['em_analise','aprovado','negado','pago'], true)) {
+            $refund = dbOne('SELECT rr.*, b.payment_status FROM refund_requests rr JOIN bookings b ON b.id=rr.booking_id WHERE rr.id=? LIMIT 1', [$id]);
             dbExec('UPDATE refund_requests SET status=?, admin_note=?, resolved_at=IF(?="em_analise",NULL,NOW()) WHERE id=?', [$status,$note,$status,$id]);
+            if ($refund && $status === 'pago' && $refund['payment_status'] !== 'refunded') {
+                dbExec('UPDATE bookings SET payment_status="refunded" WHERE id=?', [$refund['booking_id']]);
+                handleBookingPaymentStatusChanged((int)$refund['booking_id'], $refund['payment_status'], 'refunded', 'admin_refund_paid');
+            }
         }
         flash('success', 'Status atualizado.');
     }

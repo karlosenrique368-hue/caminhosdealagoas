@@ -17,7 +17,7 @@ if (isPost() && csrfVerify()) {
             $old = $_POST['current_password'] ?? '';
             $new = $_POST['new_password'] ?? '';
             if (!password_verify($old, $cur['password_hash'])) { flash('error','Senha atual incorreta.'); }
-            elseif (strlen($new) < 6) { flash('error','A nova senha precisa ter ao menos 6 caracteres.'); }
+            elseif (strlen($new) < PASSWORD_MIN_LENGTH) { flash('error','A nova senha precisa ter ao menos ' . PASSWORD_MIN_LENGTH . ' caracteres.'); }
             else {
                 dbExec("UPDATE institution_users SET password_hash=? WHERE id=?", [password_hash($new, PASSWORD_DEFAULT), $i['user_id']]);
                 flash('success','Senha atualizada.');
@@ -57,7 +57,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
             <?= csrfField() ?>
             <input type="hidden" name="action" value="password">
             <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-muted)">Senha atual</span><input type="password" name="current_password" required class="admin-input w-full"></label>
-            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-muted)">Nova senha (mín 6)</span><input type="password" name="new_password" required minlength="6" class="admin-input w-full"></label>
+            <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-muted)">Nova senha (mín <?= PASSWORD_MIN_LENGTH ?>)</span><input type="password" name="new_password" required minlength="<?= PASSWORD_MIN_LENGTH ?>" class="admin-input w-full"></label>
             <button class="admin-btn admin-btn-secondary w-full justify-center"><i data-lucide="key" class="w-4 h-4"></i>Atualizar</button>
         </form>
     </div>

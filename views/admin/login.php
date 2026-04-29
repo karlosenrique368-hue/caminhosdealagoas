@@ -8,9 +8,14 @@ if (isPost()) {
     } else {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
-        if (adminLogin($email, $password)) {
+        $throttleKey = loginThrottleKey('admin', $email);
+        if (loginThrottleBlocked($throttleKey)) {
+            $error = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+        } elseif (adminLogin($email, $password)) {
+            loginThrottleClear($throttleKey);
             redirect('/admin/dashboard');
         } else {
+            loginThrottleFail($throttleKey);
             $error = 'E-mail ou senha incorretos.';
         }
     }
@@ -105,9 +110,11 @@ body { font-family: Inter, system-ui, sans-serif; }
             </button>
         </form>
 
-        <div class="mt-8 p-4 rounded-xl text-xs" style="background:var(--bg-surface);border:1px dashed var(--border-default);color:var(--text-secondary)">
-            <strong style="color:var(--sepia)">Acesso padrão:</strong> admin@caminhosdealagoas.com / admin123
-        </div>
+        <?php if (!IS_PRODUCTION): ?>
+            <div class="mt-8 p-4 rounded-xl text-xs" style="background:var(--bg-surface);border:1px dashed var(--border-default);color:var(--text-secondary)">
+                <strong style="color:var(--sepia)">Ambiente local:</strong> use a credencial definida no seed ou no banco de desenvolvimento.
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 

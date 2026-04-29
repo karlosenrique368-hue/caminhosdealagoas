@@ -1,6 +1,8 @@
 <?php
 require_once dirname(__DIR__,2) . '/src/bootstrap.php';
+if (!isPost()) jsonResponse(['ok'=>false,'msg'=>'Método inválido.'], 405);
 if (!csrfVerify()) jsonResponse(['ok'=>false,'msg'=>'CSRF inválido.'], 403);
+if (sessionRateLimited('waitlist', 12, 600)) jsonResponse(['ok'=>false,'msg'=>'Muitas tentativas. Tente novamente em alguns minutos.'], 429);
 
 $type = $_POST['entity_type'] ?? '';
 $eid = (int)($_POST['entity_id'] ?? 0);

@@ -9,6 +9,7 @@ function institutionLogin(string $email, string $password): bool {
     $inst = dbOne('SELECT * FROM institutions WHERE id=? AND active=1', [$u['institution_id']]);
     if (!$inst) return false;
 
+    session_regenerate_id(true);
     $_SESSION['inst_user_id']     = (int)$u['id'];
     $_SESSION['inst_user_name']   = $u['name'];
     $_SESSION['inst_user_email']  = $u['email'];

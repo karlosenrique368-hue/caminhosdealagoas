@@ -1,6 +1,6 @@
 <?php
 $code = $_GET['code'] ?? '';
-$v = $code ? dbOne('SELECT v.*, b.*, c.name AS customer_name, c.email AS customer_email, b.entity_title FROM vouchers v JOIN bookings b ON v.booking_id=b.id LEFT JOIN customers c ON b.customer_user_id=c.id OR b.customer_id=c.id WHERE v.code=?', [$code]) : null;
+$v = $code ? dbOne('SELECT v.*, b.*, c.name AS customer_name, c.email AS customer_email, b.entity_title FROM vouchers v JOIN bookings b ON v.booking_id=b.id LEFT JOIN customers c ON COALESCE(b.customer_user_id, b.customer_id)=c.id WHERE v.code=?', [$code]) : null;
 if (!$v) {
     http_response_code(404);
     echo '<h1 style="text-align:center;padding:100px">Voucher não encontrado</h1>'; exit;

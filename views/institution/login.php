@@ -7,10 +7,16 @@ if (isPost()) {
     else {
         $email = trim($_POST['email'] ?? '');
         $pass  = $_POST['password'] ?? '';
-        if (institutionLogin($email, $pass)) {
+        $throttleKey = loginThrottleKey('partner', $email);
+        if (loginThrottleBlocked($throttleKey)) {
+            $error = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+        } elseif (institutionLogin($email, $pass)) {
+            loginThrottleClear($throttleKey);
             redirect('/parceiro/dashboard');
+        } else {
+            loginThrottleFail($throttleKey);
+            $error = 'E-mail ou senha inválidos.';
         }
-        $error = 'E-mail ou senha inválidos.';
     }
 }
 $pageTitle = 'Entrar · Área do Parceiro';

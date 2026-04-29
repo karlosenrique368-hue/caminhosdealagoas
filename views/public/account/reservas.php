@@ -10,8 +10,8 @@ $bookings = dbAll("
     LEFT JOIN roteiros r ON b.entity_type='roteiro' AND b.entity_id=r.id
     LEFT JOIN pacotes p ON b.entity_type='pacote' AND b.entity_id=p.id
     LEFT JOIN transfers t ON b.entity_type='transfer' AND b.entity_id=t.id
-    WHERE b.customer_user_id=?
-    ORDER BY b.created_at DESC", [$cid]);
+    WHERE b.customer_id=? OR b.customer_user_id=?
+    ORDER BY b.created_at DESC", [$cid, $cid]);
 ?>
 
 <div class="glass-card p-6">

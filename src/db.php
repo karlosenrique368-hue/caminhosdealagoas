@@ -15,8 +15,9 @@ function db(): PDO {
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
             ]);
         } catch (PDOException $e) {
+            error_log('DB connection failed: ' . $e->getMessage());
             http_response_code(500);
-            die('Erro de conexão com o banco: ' . $e->getMessage());
+            die(IS_PRODUCTION ? 'Erro interno ao conectar ao banco.' : 'Erro de conexão com o banco: ' . $e->getMessage());
         }
     }
     return $pdo;

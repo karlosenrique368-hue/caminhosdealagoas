@@ -170,6 +170,33 @@ $answers = [
     'submitted_at' => date('c'),
 ];
 
+$pdo = db();
+try {
+    $pdo->beginTransaction();
+
+    if ($couponIdToIncrement) {
+        $cpLock = dbOne('SELECT * FROM coupons WHERE id = ? AND active = 1 FOR UPDATE', [$couponIdToIncrement]);
+        $now = date('Y-m-d H:i:s');
+        $couponStillValid = $cpLock
+            && (!$cpLock['valid_from'] || $cpLock['valid_from'] <= $now)
+            && (!$cpLock['valid_until'] || $cpLock['valid_until'] >= $now)
+            && (!$cpLock['max_uses'] || $cpLock['used_count'] < $cpLock['max_uses'])
+            && (!$cpLock['min_purchase'] || $subtotal >= (float)$cpLock['min_purchase']);
+        if (!$couponStillValid) throw new RuntimeException('Cupom indisponível no momento. Revise a reserva e tente novamente.');
+    }
+
+    $lockedDepartures = [];
+    foreach ($travelDates as $dt) {
+        $dep = dbOne('SELECT * FROM departures WHERE entity_type=? AND entity_id=? AND departure_date=? LIMIT 1 FOR UPDATE', [$entityType, $entityId, $dt]);
+        if ($dep) {
+            $free = max(0, (int)$dep['seats_total'] - (int)$dep['seats_sold']);
+            if ($dep['status'] !== 'open' || $free < $peopleTotal) throw new RuntimeException('Uma das datas selecionadas não tem vagas suficientes.');
+            $lockedDepartures[$dt] = true;
+        } elseif ($availabilityMode === 'fixed') {
+            throw new RuntimeException('Escolha apenas datas disponíveis no calendário.');
+        }
+    }
+
 $customer = dbOne("SELECT * FROM customers WHERE email = ?", [$email]);
 if ($customer) {
     dbExec("UPDATE customers SET name = ?, phone = ?, document = ?, rg = COALESCE(?, rg), birth_date = COALESCE(?, birth_date) WHERE id = ?",
@@ -205,20 +232,35 @@ for ($i = 0; $i < 5; $i++) {
 if (!$code) $code = "CA-{$year}-" . strtoupper(uniqid());
 
 $bookingId = dbInsert(
-    "INSERT INTO bookings (code, customer_id, entity_type, entity_id, booking_mode, entity_title, adults, children, infants, travel_date, subtotal, discount, total, currency, payment_method, installments, installment_amount, payment_status, notes, institution_id, referral_code, source, source_detail, comorbidity, booking_answers, participants, responsible_name, responsible_cpf, responsible_phone)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [$code, $customerId, $entityType, $entityId, $bookingMode, $entity['title'], $adults, $children, $infants, $travelDate ?: null, $subtotal, $discount, $total, $currencyCode, $paymentMethod, $installments ?: null, $installmentAmount, $notes ?: null,
+    "INSERT INTO bookings (code, customer_id, customer_user_id, entity_type, entity_id, booking_mode, entity_title, adults, children, infants, travel_date, subtotal, discount, total, currency, payment_method, installments, installment_amount, payment_status, notes, institution_id, referral_code, source, source_detail, comorbidity, booking_answers, participants, responsible_name, responsible_cpf, responsible_phone)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [$code, $customerId, $customerId, $entityType, $entityId, $bookingMode, $entity['title'], $adults, $children, $infants, $travelDate ?: null, $subtotal, $discount, $total, $currencyCode, $paymentMethod, $installments ?: null, $installmentAmount, $notes ?: null,
      $instPartnerId ?: $partnerId, $refCode, $source, $sourceDetail ?: null, $hasComorbid ? $comorbidity : null, json_encode($answers, JSON_UNESCAPED_UNICODE),
      $participants ? json_encode($participants, JSON_UNESCAPED_UNICODE) : null,
      $respName ?: null, $respCpf ?: null, $respPhone ?: null]
 );
 
-if ($couponIdToIncrement) dbExec("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [$couponIdToIncrement]);
+if ($couponIdToIncrement) {
+    $couponRows = dbExec("UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND (max_uses IS NULL OR used_count < max_uses)", [$couponIdToIncrement]);
+    if ($couponRows < 1) throw new RuntimeException('Cupom indisponível no momento. Revise a reserva e tente novamente.');
+}
 foreach ($travelDates as $dt) {
-    dbExec("UPDATE departures SET seats_sold = LEAST(seats_total, seats_sold + ?) WHERE entity_type=? AND entity_id=? AND departure_date=? AND status='open'", [$peopleTotal, $entityType, $entityId, $dt]);
+    if (!empty($lockedDepartures[$dt])) {
+        $seatRows = dbExec("UPDATE departures SET seats_sold = seats_sold + ? WHERE entity_type=? AND entity_id=? AND departure_date=? AND status='open' AND seats_sold + ? <= seats_total", [$peopleTotal, $entityType, $entityId, $dt, $peopleTotal]);
+        if ($seatRows < 1) throw new RuntimeException('Uma das datas selecionadas acabou de ficar sem vagas suficientes.');
+    }
 }
 if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
     unset($_SESSION['cart'][$cartKey]);
+}
+
+    $pdo->commit();
+} catch (RuntimeException $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    jsonResponse(['ok' => false, 'msg' => $e->getMessage()], 409);
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    jsonException($e, 'Erro ao finalizar a reserva.');
 }
 
 $payment = prepareBookingPayment($bookingId);

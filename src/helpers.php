@@ -13,6 +13,29 @@ function url(string $path = ''): string {
     return BASE_PATH . ($path === '/' ? '' : $path);
 }
 
+function isSecureRequest(): bool {
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') return true;
+    if (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') return true;
+    if (strtolower($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '') === 'on') return true;
+    return false;
+}
+
+function safeRedirectPath(?string $target, string $fallback = '/'): string {
+    $target = trim((string)$target);
+    if ($target === '' || preg_match('/[\r\n]/', $target) || str_starts_with($target, '//')) return $fallback;
+    $parts = parse_url($target);
+    if ($parts === false || isset($parts['scheme']) || isset($parts['host'])) return $fallback;
+    $path = $parts['path'] ?? '/';
+    $base = rtrim(BASE_PATH, '/');
+    if ($base !== '' && strpos($path, $base) === 0) $path = substr($path, strlen($base)) ?: '/';
+    if ($path === '' || $path[0] !== '/') $path = '/' . $path;
+    return $path . (isset($parts['query']) ? '?' . $parts['query'] : '');
+}
+
+function publicErrorMessage(string $fallback = 'Erro interno. Tente novamente em instantes.'): string {
+    return IS_PRODUCTION ? $fallback : $fallback;
+}
+
 function asset(string $path): string {
     $rel = ltrim($path, '/');
     $abs = __DIR__ . '/../public/assets/' . $rel;
@@ -80,6 +103,48 @@ function jsonResponse($data, int $status = 200): void {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+function jsonException(Throwable $e, string $message = 'Erro interno. Tente novamente em instantes.', int $status = 500): void {
+    error_log($e->getMessage());
+    jsonResponse(['ok' => false, 'msg' => IS_PRODUCTION ? $message : $message . ' (' . $e->getMessage() . ')'], $status);
+}
+
+function loginThrottleKey(string $scope, string $identifier): string {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    return $scope . ':' . hash('sha256', strtolower(trim($identifier)) . '|' . $ip);
+}
+
+function loginThrottleBlocked(string $key, int $maxAttempts = 8, int $windowSeconds = 900): bool {
+    $now = time();
+    $bucket = $_SESSION['_login_throttle'][$key] ?? ['count' => 0, 'first' => $now];
+    if (($now - (int)$bucket['first']) > $windowSeconds) {
+        $_SESSION['_login_throttle'][$key] = ['count' => 0, 'first' => $now];
+        return false;
+    }
+    return (int)$bucket['count'] >= $maxAttempts;
+}
+
+function loginThrottleFail(string $key): void {
+    $now = time();
+    $bucket = $_SESSION['_login_throttle'][$key] ?? ['count' => 0, 'first' => $now];
+    if (($now - (int)$bucket['first']) > 900) $bucket = ['count' => 0, 'first' => $now];
+    $bucket['count'] = (int)$bucket['count'] + 1;
+    $_SESSION['_login_throttle'][$key] = $bucket;
+}
+
+function loginThrottleClear(string $key): void {
+    unset($_SESSION['_login_throttle'][$key]);
+}
+
+function sessionRateLimited(string $scope, int $maxAttempts, int $windowSeconds): bool {
+    $now = time();
+    $key = $scope . ':' . ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $bucket = $_SESSION['_rate_limit'][$key] ?? ['count' => 0, 'first' => $now];
+    if (($now - (int)$bucket['first']) > $windowSeconds) $bucket = ['count' => 0, 'first' => $now];
+    $bucket['count'] = (int)$bucket['count'] + 1;
+    $_SESSION['_rate_limit'][$key] = $bucket;
+    return $bucket['count'] > $maxAttempts;
 }
 
 // ============== Flash ==============

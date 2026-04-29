@@ -7,11 +7,17 @@ if (isPost()) {
     else {
         $email = trim($_POST['email'] ?? '');
         $pass = $_POST['password'] ?? '';
-        if (customerLogin($email, $pass)) {
-            $redirect = $_GET['redirect'] ?? '/conta';
+        $throttleKey = loginThrottleKey('customer', $email);
+        if (loginThrottleBlocked($throttleKey)) {
+            $err = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+        } elseif (customerLogin($email, $pass)) {
+            loginThrottleClear($throttleKey);
+            $redirect = safeRedirectPath($_GET['redirect'] ?? '/conta', '/conta');
             redirect($redirect);
+        } else {
+            loginThrottleFail($throttleKey);
+            $err = 'E-mail ou senha incorretos.';
         }
-        $err = 'E-mail ou senha incorretos.';
     }
 }
 include VIEWS_DIR . '/partials/public_head.php';

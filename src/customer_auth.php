@@ -6,14 +6,21 @@
 function customerRegister(string $name, string $email, string $password, string $phone = '', string $document = ''): array {
     $email = strtolower(trim($email));
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return ['ok'=>false,'msg'=>'E-mail inválido.'];
-    if (strlen($password) < 6) return ['ok'=>false,'msg'=>'Senha precisa ter 6+ caracteres.'];
-    if (dbOne('SELECT id FROM customers WHERE email=?', [$email])) {
+    if (strlen($password) < PASSWORD_MIN_LENGTH) return ['ok'=>false,'msg'=>'Senha precisa ter ' . PASSWORD_MIN_LENGTH . '+ caracteres.'];
+    $existing = dbOne('SELECT id,name,email,password_hash FROM customers WHERE email=?', [$email]);
+    if ($existing && !empty($existing['password_hash'])) {
         return ['ok'=>false,'msg'=>'E-mail já cadastrado.'];
     }
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    dbExec('INSERT INTO customers (name,email,password_hash,phone,document) VALUES (?,?,?,?,?)',
-        [$name, $email, $hash, $phone, $document]);
-    $id = (int)db()->lastInsertId();
+    if ($existing) {
+        dbExec('UPDATE customers SET name=?, password_hash=?, phone=COALESCE(NULLIF(?, ""), phone), document=COALESCE(NULLIF(?, ""), document) WHERE id=?',
+            [$name, $hash, $phone, $document, $existing['id']]);
+        $id = (int)$existing['id'];
+    } else {
+        dbExec('INSERT INTO customers (name,email,password_hash,phone,document) VALUES (?,?,?,?,?)',
+            [$name, $email, $hash, $phone, $document]);
+        $id = (int)db()->lastInsertId();
+    }
     customerSessionLogin($id, $name, $email);
     return ['ok'=>true,'id'=>$id];
 }
@@ -27,6 +34,7 @@ function customerLogin(string $email, string $password): bool {
 }
 
 function customerSessionLogin(int $id, string $name, string $email): void {
+    session_regenerate_id(true);
     $_SESSION['customer_id'] = $id;
     $_SESSION['customer_name'] = $name;
     $_SESSION['customer_email'] = $email;

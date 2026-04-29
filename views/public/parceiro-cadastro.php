@@ -91,7 +91,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </label>
                 <label class="block sm:col-span-2">
                     <span class="text-xs font-bold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">Senha de acesso <span style="color:var(--terracota)">*</span></span>
-                    <input type="password" name="password" required minlength="6" class="admin-input w-full" placeholder="Mínimo 6 caracteres">
+                    <input type="password" name="password" required minlength="<?= PASSWORD_MIN_LENGTH ?>" class="admin-input w-full" placeholder="Mínimo <?= PASSWORD_MIN_LENGTH ?> caracteres">
                 </label>
             </div>
 

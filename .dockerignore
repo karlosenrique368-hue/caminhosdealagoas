@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+storage/logs/*
+storage/backups/*
+chat-session-resources
+node_modules

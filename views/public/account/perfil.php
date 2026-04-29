@@ -163,10 +163,17 @@ $cust = currentCustomer();
         <form data-ajax action="<?= url('/api/profile?action=password') ?>" method="POST" class="space-y-4">
             <?= csrfField() ?>
             <div class="form-field">
+                <label class="form-field-label">Senha atual</label>
+                <div class="form-input-group">
+                    <i data-lucide="shield-check" class="form-input-icon w-4 h-4"></i>
+                    <input type="password" name="current_password" required class="form-input" autocomplete="current-password">
+                </div>
+            </div>
+            <div class="form-field">
                 <label class="form-field-label">Nova senha</label>
                 <div class="form-input-group" x-data="{show:false}">
                     <i data-lucide="lock" class="form-input-icon w-4 h-4"></i>
-                    <input :type="show?'text':'password'" name="new_password" minlength="6" required class="form-input pr-12" placeholder="Mínimo 6 caracteres">
+                    <input :type="show?'text':'password'" name="new_password" minlength="<?= PASSWORD_MIN_LENGTH ?>" required class="form-input pr-12" placeholder="Mínimo <?= PASSWORD_MIN_LENGTH ?> caracteres" autocomplete="new-password">
                     <button type="button" @click="show=!show" class="absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--text-muted)">
                         <i :data-lucide="show?'eye-off':'eye'" class="w-4 h-4"></i>
                     </button>

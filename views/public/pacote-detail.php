@@ -22,7 +22,7 @@ $reviewsAvg   = $reviewsCount > 0 && !empty($p['rating_avg'])
 $canReview = false; $reviewBookingId = null;
 if (function_exists('isCustomerLoggedIn') && isCustomerLoggedIn()) {
     $cid = currentCustomerId();
-    $bk = dbOne("SELECT b.id FROM bookings b LEFT JOIN reviews rv ON rv.booking_id=b.id AND rv.customer_id=b.customer_user_id WHERE b.customer_user_id=? AND b.entity_type='pacote' AND b.entity_id=? AND b.payment_status='paid' AND rv.id IS NULL ORDER BY b.id DESC LIMIT 1", [$cid, $p['id']]);
+    $bk = dbOne("SELECT b.id FROM bookings b LEFT JOIN reviews rv ON rv.booking_id=b.id AND rv.customer_id=? WHERE (b.customer_id=? OR b.customer_user_id=?) AND b.entity_type='pacote' AND b.entity_id=? AND b.payment_status='paid' AND rv.id IS NULL ORDER BY b.id DESC LIMIT 1", [$cid, $cid, $cid, $p['id']]);
     if ($bk) { $canReview = true; $reviewBookingId = (int)$bk['id']; }
 }
 

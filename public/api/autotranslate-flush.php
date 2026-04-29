@@ -7,6 +7,8 @@
 require_once __DIR__ . '/../../src/bootstrap.php';
 
 header('Content-Type: application/json');
+if (!isPost()) jsonResponse(['ok'=>false,'msg'=>'Método inválido.'], 405);
+if (sessionRateLimited('autotranslate_flush', 30, 60)) jsonResponse(['ok'=>false,'msg'=>'Muitas requisições.'], 429);
 
 $raw = file_get_contents('php://input');
 $j = json_decode($raw, true);

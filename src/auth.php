@@ -7,6 +7,7 @@ function adminLogin(string $email, string $password): bool {
     $user = dbOne('SELECT * FROM admin_users WHERE email = ? AND active = 1', [$email]);
     if (!$user || !password_verify($password, $user['password_hash'])) return false;
 
+    session_regenerate_id(true);
     $_SESSION['admin_id']    = (int) $user['id'];
     $_SESSION['admin_name']  = $user['name'];
     $_SESSION['admin_email'] = $user['email'];
