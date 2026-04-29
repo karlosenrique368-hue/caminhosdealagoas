@@ -38,7 +38,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', IS_PRODUCTION ? '0' : (envBool('APP_DEBUG', true) ? '1' : '0'));
 ini_set('log_errors', '1');
 if (!is_dir(STORAGE_DIR . '/logs')) @mkdir(STORAGE_DIR . '/logs', 0775, true);
-ini_set('error_log', STORAGE_DIR . '/logs/php-error.log');
+ini_set('error_log', envValue('RAILWAY_ENVIRONMENT') ? 'php://stderr' : STORAGE_DIR . '/logs/php-error.log');
 
 // Timezone
 date_default_timezone_set((string)envValue('APP_TIMEZONE', 'America/Sao_Paulo'));
