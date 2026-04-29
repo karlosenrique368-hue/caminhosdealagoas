@@ -92,6 +92,7 @@ switch (true) {
         require VIEWS_DIR . '/public/account/login.php';
         break;
     case $path === '/conta/registrar':
+    case $path === '/conta/cadastro':
         require VIEWS_DIR . '/public/account/register.php';
         break;
     case $path === '/conta/sair':

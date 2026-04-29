@@ -103,7 +103,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <div class="grid sm:grid-cols-2 gap-3 mt-2">
                                 <div class="sm:col-span-2"><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Nome completo *</label><input x-model="p.name" class="admin-input w-full" placeholder="Nome completo do aluno"></div>
                                 <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">CPF *</label><input x-model="p.cpf" class="admin-input w-full cpf-mask" placeholder="000.000.000-00"></div>
-                                <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Data de nascimento *</label><input type="date" x-model="p.birth_date" class="admin-input w-full"></div>
+                                <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Data de nascimento *</label><?php $dobModel='p.birth_date'; include __DIR__.'/../partials/dob_picker.php'; ?></div>
                                 <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Ano / Turma *</label><input x-model="p.class" class="admin-input w-full" placeholder="ex: 3º Ano B"></div>
                                 <div>
                                     <label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Alergia / comorbidade / necessidade especial *</label>
