@@ -1,8 +1,15 @@
 <?php
 /**
  * Router — entry point
- */
-require_once __DIR__ . '/../src/bootstrap.php';
+ */// Allow PHP built-in server to serve real files directly (bypass router/bootstrap)
+if (PHP_SAPI === 'cli-server') {
+    $reqPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $candidate = __DIR__ . $reqPath;
+    if ($reqPath !== '/' && $reqPath !== '/index.php' && is_file($candidate)) {
+        if (substr($reqPath, -4) === '.php') { require $candidate; return; }
+        return false;
+    }
+}require_once __DIR__ . '/../src/bootstrap.php';
 
 $path = currentPath();
 
