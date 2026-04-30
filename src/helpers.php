@@ -10,7 +10,11 @@ function e($value): string {
 
 function url(string $path = ''): string {
     $path = '/' . ltrim($path, '/');
-    return BASE_PATH . ($path === '/' ? '' : $path);
+    $base = BASE_PATH;
+    if ($path === '/') {
+        return $base === '' ? '/' : $base;
+    }
+    return $base . $path;
 }
 
 function isSecureRequest(): bool {
@@ -296,7 +300,8 @@ function paginate(string $countSql, string $dataSql, array $params = [], array $
     if ($page > $pages) $page = $pages;
     $offset = ($page - 1) * $per;
 
-    $rows = dbAll($dataSql . " LIMIT {$per} OFFSET {$offset}", $params);
+    // LIMIT/OFFSET sao validados como inteiros mas usar concatenacao apenas apos cast explicito
+    $rows = dbAll($dataSql . " LIMIT " . (int)$per . " OFFSET " . (int)$offset, $params);
 
     $qs = $_GET;
     unset($qs[$pageParam], $qs[$perParam]);

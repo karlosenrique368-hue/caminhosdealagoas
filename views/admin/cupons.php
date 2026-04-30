@@ -6,17 +6,21 @@ if (isPost() && csrfVerify()) {
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
         $id = (int)($_POST['id'] ?? 0);
+        $type = in_array($_POST['type'] ?? 'percent', ['percent','fixed'], true) ? $_POST['type'] : 'percent';
+        $value = max(0.0, (float) str_replace(',', '.', $_POST['value'] ?? '0'));
+        if ($type === 'percent' && $value > 100) $value = 100.0;
         $data = [
             'code'          => strtoupper(trim($_POST['code'] ?? '')),
             'description'   => trim($_POST['description'] ?? ''),
-            'type'          => $_POST['type'] ?? 'percent',
-            'value'         => (float) str_replace(',', '.', $_POST['value'] ?? '0'),
+            'type'          => $type,
+            'value'         => $value,
             'min_purchase'  => parseBRL($_POST['min_amount'] ?? '0') ?: null,
             'max_uses'      => (int)($_POST['max_uses'] ?? 0) ?: null,
             'valid_from'    => $_POST['valid_from'] ?: null,
             'valid_until'   => $_POST['valid_until'] ?: null,
             'active'        => isset($_POST['active']) ? 1 : 0,
         ];
+        if ($data['code'] === '') { flash('error', 'Código do cupom é obrigatório.'); redirect('/admin/cupons'); }
         if ($id) {
             $sets = []; foreach ($data as $k=>$_) $sets[] = "`$k`=?";
             $values = array_values($data); $values[] = $id;

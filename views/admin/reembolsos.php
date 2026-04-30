@@ -9,12 +9,31 @@ if (isPost() && csrfVerify()) {
         $status = $_POST['status'] ?? 'em_analise';
         $note = trim($_POST['admin_note'] ?? '');
         if (in_array($status, ['em_analise','aprovado','negado','pago'], true)) {
-            $refund = dbOne('SELECT rr.*, b.payment_status FROM refund_requests rr JOIN bookings b ON b.id=rr.booking_id WHERE rr.id=? LIMIT 1', [$id]);
+            $refund = dbOne('SELECT rr.*, b.payment_status, b.total AS booking_total FROM refund_requests rr JOIN bookings b ON b.id=rr.booking_id WHERE rr.id=? LIMIT 1', [$id]);
+            if (!$refund) { flash('error', 'Reembolso não encontrado.'); redirect('/admin/reembolsos'); }
+            // Maquina de estados: pago exige aprovado primeiro; negado/aprovado vem de em_analise
+            $current = $refund['status'];
+            $allowed = [
+                'em_analise' => ['aprovado','negado'],
+                'aprovado'   => ['pago','negado'],
+                'negado'     => [],
+                'pago'       => [],
+            ];
+            if ($status !== $current && !in_array($status, $allowed[$current] ?? [], true)) {
+                flash('error', "Transição inválida: {$current} → {$status}.");
+                redirect('/admin/reembolsos');
+            }
+            // Validacao financeira: nao pode reembolsar mais que o pago
+            if ($status === 'pago' && (float)$refund['amount'] > (float)$refund['booking_total']) {
+                flash('error', 'Valor do reembolso excede o total pago.');
+                redirect('/admin/reembolsos');
+            }
             dbExec('UPDATE refund_requests SET status=?, admin_note=?, resolved_at=IF(?="em_analise",NULL,NOW()) WHERE id=?', [$status,$note,$status,$id]);
-            if ($refund && $status === 'pago' && $refund['payment_status'] !== 'refunded') {
+            if ($status === 'pago' && $refund['payment_status'] !== 'refunded') {
                 dbExec('UPDATE bookings SET payment_status="refunded" WHERE id=?', [$refund['booking_id']]);
                 handleBookingPaymentStatusChanged((int)$refund['booking_id'], $refund['payment_status'], 'refunded', 'admin_refund_paid');
             }
+            logActivity(null, 'refund_status', 'refund', $id, "Reembolso #{$id} {$current} -> {$status}");
         }
         flash('success', 'Status atualizado.');
     }

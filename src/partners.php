@@ -137,9 +137,10 @@ function creditCommissionOnPaid(int $bookingId): void {
     $pctToUse   = $partnerPct > 0 ? $partnerPct : (float)($itemPct ?? 0);
     $commission = round((float)$b['total'] * ($pctToUse / 100), 2);
 
-    // Atualiza booking
-    dbExec('UPDATE bookings SET commission_value=?, commission_credited=1, institution_id=COALESCE(institution_id,?) WHERE id=?',
+    // Atualizacao atomica: SO procede se conseguiu virar credited=0 -> 1 (previne race condition de webhook duplicado)
+    $rows = dbExec('UPDATE bookings SET commission_value=?, commission_credited=1, institution_id=COALESCE(institution_id,?) WHERE id=? AND commission_credited=0',
         [$commission, $partner['id'], $bookingId]);
+    if ($rows < 1) return; // ja foi creditado por outra requisicao
 
     // Atualiza parceiro
     $newCount = (int)$partner['bookings_count_paid'] + 1;
@@ -157,6 +158,7 @@ function creditCommissionOnPaid(int $bookingId): void {
 
     dbExec('UPDATE institutions SET commission_pending=?, bookings_count_paid=?, free_spots_earned=? WHERE id=?',
         [$newPending, $newCount, $newFree, $partner['id']]);
+    logActivity(null, 'commission_credited', 'booking', $bookingId, "Comissao R$ {$commission} creditada para parceiro #{$partner['id']}");
 }
 
 /** Reverte comissao (ex: reembolso ou cancelamento de booking paga). */

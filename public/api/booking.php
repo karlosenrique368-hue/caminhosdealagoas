@@ -38,6 +38,7 @@ $couponCode = strtoupper(trim($_POST['coupon_code'] ?? ''));
 $pm         = $_POST['payment_method'] ?? 'pix';
 $installments = max(0, (int)($_POST['installments'] ?? 0));
 $currencyCode = strtoupper(trim($_POST['currency'] ?? 'BRL')) ?: 'BRL';
+if (!in_array($currencyCode, ['BRL','USD','EUR','GBP','ARS'], true)) $currencyCode = 'BRL';
 
 // Campos tipo Google Forms
 $comorbidity   = trim($_POST['comorbidity'] ?? '');
@@ -131,8 +132,10 @@ if ($couponCode) {
         $validUses  = !$cp['max_uses']    || $cp['used_count'] < $cp['max_uses'];
         $validMin   = !$cp['min_purchase']|| $subtotal >= (float)$cp['min_purchase'];
         if ($validFrom && $validUntil && $validUses && $validMin) {
-            $discount = $cp['type'] === 'percent' ? $subtotal * ((float)$cp['value'] / 100) : (float)$cp['value'];
-            $discount = min($discount, $subtotal);
+            $cpValue = max(0.0, (float)$cp['value']);
+            if ($cp['type'] === 'percent') $cpValue = min($cpValue, 100.0);
+            $discount = $cp['type'] === 'percent' ? $subtotal * ($cpValue / 100) : $cpValue;
+            $discount = max(0.0, min($discount, $subtotal));
             $couponIdToIncrement = (int)$cp['id'];
         }
     }
