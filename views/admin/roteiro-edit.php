@@ -62,6 +62,7 @@ if (isPost()) {
         if (!empty($_FILES['cover_image']['name'])) {
             $path = handleImageUpload($_FILES['cover_image'], 'roteiros');
             if ($path) $data['cover_image'] = $path;
+            else $error = 'Falha no upload da capa. Use JPG/PNG/WEBP e no máximo 20MB.';
         }
 
         // Gallery: manter existentes + remover selecionadas + adicionar novas
@@ -75,6 +76,12 @@ if (isPost()) {
         $keptGallery = array_values(array_intersect($existingGallery, $keep));
         if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
             $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'roteiros');
+            $attempted = count(array_filter((array)($_FILES['gallery_new']['name'] ?? []), fn($n) => trim((string)$n) !== ''));
+            if ($attempted > 0 && count($newPaths) === 0) {
+                $error = 'Nenhuma imagem da galeria foi aceita. Use JPG/PNG/WEBP e até 20MB por arquivo.';
+            } elseif ($attempted > count($newPaths)) {
+                $error = 'Algumas imagens da galeria foram recusadas (formato/tamanho).';
+            }
             $keptGallery = array_merge($keptGallery, $newPaths);
         }
         $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
