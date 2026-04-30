@@ -37,13 +37,21 @@ if (isPost()) {
         ];
         $data['slug'] = $row['slug'] ?? slugify($data['title']);
 
-        if (($_POST['remove_cover_image'] ?? '') === '1') {
+        $warnings = [];
+        $removeCoverRequested = (($_POST['remove_cover_image'] ?? '') === '1');
+        $uploadedCoverPath = null;
+        if ($removeCoverRequested) {
             $data['cover_image'] = null;
         }
 
         if (!empty($_FILES['cover_image']['name'])) {
             $path = handleImageUpload($_FILES['cover_image'], 'transfers');
-            if ($path) $data['cover_image'] = $path;
+            if ($path) {
+                $data['cover_image'] = $path;
+                $uploadedCoverPath = $path;
+            } else {
+                $warnings[] = 'Imagem de capa não salva (erro ' . (int)($_FILES['cover_image']['error'] ?? 0) . '). Use JPG/PNG/WebP até 20MB.';
+            }
         }
         $existingGallery = [];
         if (!empty($row['gallery'])) {
@@ -68,17 +76,27 @@ if (isPost()) {
         if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
             $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'transfers');
             $keptGallery = array_merge($keptGallery, $newPaths);
+            if (!$newPaths) {
+                $warnings[] = 'Fotos da galeria não salvas. Use JPG/PNG/WebP até 20MB cada.';
+            }
+        }
+        if ($uploadedCoverPath && !in_array($uploadedCoverPath, $keptGallery, true)) {
+            $keptGallery[] = $uploadedCoverPath;
+        }
+        if (!$removeCoverRequested && empty($data['cover_image']) && !empty($keptGallery)) {
+            $data['cover_image'] = $keptGallery[0];
         }
         $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
 
         if (!$data['title']) {
             $error = 'O título é obrigatório.';
         } else {
+            $warnSuffix = !empty($warnings) ? ' Aviso: ' . implode(' | ', $warnings) : '';
             if ($isNew) {
                 $fields = array_keys($data);
                 $placeholders = array_fill(0, count($fields), '?');
                 $newId = dbInsert("INSERT INTO transfers (".implode(',', array_map(fn($f)=>"`$f`", $fields)).") VALUES (".implode(',', $placeholders).")", array_values($data));
-                flash('success', 'Transfer criado com sucesso.');
+                flash('success', 'Transfer criado com sucesso.' . $warnSuffix);
                 redirect('/admin/transfers/' . $newId);
             } else {
                 $sets = [];
@@ -86,7 +104,7 @@ if (isPost()) {
                 $values = array_values($data);
                 $values[] = $id;
                 dbExec("UPDATE transfers SET ".implode(',', $sets)." WHERE id = ?", $values);
-                flash('success', 'Transfer atualizado com sucesso.');
+                flash('success', 'Transfer atualizado com sucesso.' . $warnSuffix);
                 redirect('/admin/transfers/' . $id);
             }
         }
@@ -202,7 +220,7 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
                 <input type="file" name="cover_image" accept="image/*">
                 <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
                 <div class="upload-zone-title"><?= !empty($row['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
-                <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1600×900px</div>
+                <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 20MB · Recomendado 1600×900px</div>
             </label>
         </div>
 
@@ -230,7 +248,7 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
                 <input type="file" name="gallery_new[]" accept="image/*" multiple>
                 <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
                 <div class="upload-zone-title">Adicionar mais fotos</div>
-                <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
+                <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 20MB cada</div>
             </label>
         </div>
 

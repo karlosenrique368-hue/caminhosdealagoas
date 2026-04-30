@@ -59,7 +59,9 @@ if (isPost()) {
         $data['slug'] = $roteiro['slug'] ?? slugify($data['title']);
 
         $warnings = [];
-        if (($_POST['remove_cover_image'] ?? '') === '1') {
+        $removeCoverRequested = (($_POST['remove_cover_image'] ?? '') === '1');
+        $uploadedCoverPath = null;
+        if ($removeCoverRequested) {
             $data['cover_image'] = null;
         }
 
@@ -68,6 +70,7 @@ if (isPost()) {
             $path = handleImageUpload($_FILES['cover_image'], 'roteiros');
             if ($path) {
                 $data['cover_image'] = $path;
+                $uploadedCoverPath = $path;
             } else {
                 $errCode = (int)($_FILES['cover_image']['error'] ?? 0);
                 $warnings[] = 'Imagem de capa não salva (erro ' . $errCode . '). Use JPG/PNG/WebP até 20MB.';
@@ -102,6 +105,12 @@ if (isPost()) {
             if (!$newPaths) {
                 $warnings[] = 'Fotos da galeria não salvas. Use JPG/PNG/WebP até 20MB cada.';
             }
+        }
+        if ($uploadedCoverPath && !in_array($uploadedCoverPath, $keptGallery, true)) {
+            $keptGallery[] = $uploadedCoverPath;
+        }
+        if (!$removeCoverRequested && empty($data['cover_image']) && !empty($keptGallery)) {
+            $data['cover_image'] = $keptGallery[0];
         }
         $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
 
@@ -356,7 +365,7 @@ $msg = flash('success');
                         <input type="file" name="cover_image" accept="image/*">
                         <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
                         <div class="upload-zone-title"><?= !empty($roteiro['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
-                        <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1200×800px</div>
+                        <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 20MB · Recomendado 1200×800px</div>
                     </label>
                 </div>
 
@@ -389,7 +398,7 @@ $msg = flash('success');
                         <input type="file" name="gallery_new[]" accept="image/*" multiple>
                         <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
                         <div class="upload-zone-title">Adicionar mais fotos</div>
-                        <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
+                        <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 20MB cada</div>
                     </label>
                 </div>
             </div>
