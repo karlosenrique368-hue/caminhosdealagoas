@@ -127,16 +127,6 @@ document.addEventListener('input', (e) => {
     e.target.value = v;
 });
 
-// CPF mask
-document.addEventListener('input', (e) => {
-    if (!e.target.classList.contains('cpf-mask')) return;
-    let v = e.target.value.replace(/\D/g, '').slice(0, 11);
-    v = v.replace(/(\d{3})(\d)/, '$1.$2')
-         .replace(/(\d{3})(\d)/, '$1.$2')
-         .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    e.target.value = v;
-});
-
 // ============================================================
 // PREMIUM: Generic visual datepicker for native date inputs
 // ============================================================
@@ -841,13 +831,6 @@ window.cart = (function () {
 
     document.addEventListener('DOMContentLoaded', refresh);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-cart-open]');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        open();
-    }, true);
 
     return { open, close, add, addSelectedOrAsk, askDate, remove, update, clear, refresh, get state() { return state; } };
 })();
@@ -934,6 +917,14 @@ window.cart = (function () {
         const fieldName = zone.dataset.field || 'file';
         let files = [];
 
+        function syncInputFiles() {
+            if (uploadUrl || !input) return;
+            if (typeof DataTransfer === 'undefined') return;
+            const dt = new DataTransfer();
+            files.forEach(f => dt.items.add(f));
+            input.files = dt.files;
+        }
+
         function render() {
             preview.querySelectorAll('.upload-zone-preview-item[data-pending]').forEach(e => e.remove());
             files.forEach((f, idx) => {
@@ -950,6 +941,7 @@ window.cart = (function () {
         function handleFiles(fl) {
             const toAdd = Array.from(fl).slice(0, maxFiles - files.length);
             files = files.concat(toAdd);
+            syncInputFiles();
             render();
             if (uploadUrl) uploadAll();
         }
@@ -1000,6 +992,7 @@ window.cart = (function () {
             e.preventDefault();
             const idx = parseInt(btn.dataset.idx, 10);
             files.splice(idx, 1);
+            syncInputFiles();
             render();
         });
     }
