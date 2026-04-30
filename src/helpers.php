@@ -239,6 +239,7 @@ function setSetting(string $key, $value): void {
 
 // ============== Upload ==============
 function handleImageUpload(array $file, string $subdir = 'general'): ?string {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return null;
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) return null;
     if ($file['size'] > MAX_UPLOAD_SIZE) return null;
 
@@ -248,9 +249,18 @@ function handleImageUpload(array $file, string $subdir = 'general'): ?string {
 
     if (!in_array($mime, ALLOWED_IMAGE_TYPES, true)) return null;
 
-    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime];
+    $extMap = [
+        'image/jpeg' => 'jpg',
+        'image/jpg' => 'jpg',
+        'image/pjpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+    if (!isset($extMap[$mime])) return null;
+    $ext = $extMap[$mime];
     $dir = UPLOADS_DIR . '/' . $subdir;
     if (!is_dir($dir)) mkdir($dir, 0775, true);
+    if (!is_writable($dir)) @chmod($dir, 0777);
 
     $name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dest = $dir . '/' . $name;

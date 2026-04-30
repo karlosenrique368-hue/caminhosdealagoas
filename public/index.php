@@ -17,15 +17,24 @@ $path = currentPath();
 if (preg_match('#^/storage/(.+)$#', $path, $m)) {
     $storageRoot = realpath(STORAGE_DIR);
     $file = realpath(STORAGE_DIR . '/' . $m[1]);
+    $publicStorageRoot = realpath(PUBLIC_DIR . '/storage');
+    $publicFile = realpath(PUBLIC_DIR . '/storage/' . $m[1]);
+    $servedFile = null;
     if ($storageRoot && $file && str_starts_with($file, $storageRoot . DIRECTORY_SEPARATOR) && is_file($file)) {
-        $mime = mime_content_type($file) ?: 'application/octet-stream';
-        if (preg_match('/\.(php|phtml|phar|sql|env|ini|log)$/i', $file)) {
+        $servedFile = $file;
+    } elseif ($publicStorageRoot && $publicFile && str_starts_with($publicFile, $publicStorageRoot . DIRECTORY_SEPARATOR) && is_file($publicFile)) {
+        $servedFile = $publicFile;
+    }
+
+    if ($servedFile) {
+        $mime = mime_content_type($servedFile) ?: 'application/octet-stream';
+        if (preg_match('/\.(php|phtml|phar|sql|env|ini|log)$/i', $servedFile)) {
             http_response_code(403);
             exit;
         }
         header('Content-Type: ' . $mime);
-        header('Content-Length: ' . filesize($file));
-        readfile($file);
+        header('Content-Length: ' . filesize($servedFile));
+        readfile($servedFile);
         exit;
     }
     http_response_code(404);
