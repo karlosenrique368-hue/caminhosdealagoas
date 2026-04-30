@@ -2,13 +2,16 @@ FROM php:8.3-cli-alpine
 
 RUN docker-php-ext-install pdo_mysql
 
-RUN printf "file_uploads=On\nupload_max_filesize=20M\npost_max_size=80M\nmax_file_uploads=40\n" > /usr/local/etc/php/conf.d/uploads.ini
-
 WORKDIR /app
 COPY . .
 
-RUN mkdir -p storage/uploads storage/logs storage/backups \
-    && chown -R www-data:www-data storage
+# Rename uploads → uploads.baked so the volume mount at /app/storage/uploads
+# doesn't shadow the files we ship in the image.
+# The entrypoint copies them into the volume on first boot (cp -n = no-clobber).
+RUN mv storage/uploads storage/uploads.baked \
+    && mkdir -p storage/uploads storage/logs storage/backups \
+    && chown -R www-data:www-data storage \
+    && chmod +x docker-entrypoint.sh
 
 ENV APP_ENV=production \
     APP_BASE_PATH= \
@@ -16,4 +19,4 @@ ENV APP_ENV=production \
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t public public/index.php"]
+ENTRYPOINT ["sh", "docker-entrypoint.sh"]
