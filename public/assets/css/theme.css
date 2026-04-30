@@ -181,6 +181,27 @@ body {
     color: #fff;
 }
 
+/* Ensure icon clicks are handled by the parent clickable control.
+   Without this, some SVG nodes can swallow/re-route hit testing on certain browsers. */
+button svg,
+button i[data-lucide],
+a.admin-btn svg,
+a.admin-btn i[data-lucide],
+.btn-primary svg,
+.btn-primary i[data-lucide],
+.btn-secondary svg,
+.btn-secondary i[data-lucide],
+.btn-outline svg,
+.btn-outline i[data-lucide],
+.gallery-editor-remove svg,
+.gallery-editor-remove i[data-lucide],
+.heart-btn svg,
+.heart-btn i[data-lucide],
+.slider-arrow svg,
+.slider-arrow i[data-lucide] {
+    pointer-events: none;
+}
+
 /* Cards */
 .card-lift {
     transition: all 350ms cubic-bezier(.4,0,.2,1);
