@@ -978,13 +978,6 @@ window.cart = (function () {
             showToast('Uploads concluídos!', 'success');
         }
 
-        zone.addEventListener('click', (e) => {
-            if (!input) return;
-            if (e.target.closest('.upload-zone-preview') || e.target.closest('.remove-btn')) return;
-            e.preventDefault();
-            input.click();
-        });
-
         input.addEventListener('change', () => handleFiles(input.files));
         zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
         zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));

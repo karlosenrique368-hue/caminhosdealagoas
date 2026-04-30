@@ -1514,8 +1514,7 @@ textarea.input-field { resize: vertical; min-height: 96px; }
     inset: 0;
     opacity: 0;
     cursor: pointer;
-    z-index: 1;
-    pointer-events: none;
+    z-index: 2;
 }
 .upload-zone-icon {
     width: 56px; height: 56px;
