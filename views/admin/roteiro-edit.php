@@ -58,7 +58,7 @@ if (isPost()) {
         ];
         $data['slug'] = $roteiro['slug'] ?? slugify($data['title']);
 
-        if (!empty($_POST['remove_cover_image'])) {
+        if (($_POST['remove_cover_image'] ?? '') === '1') {
             $data['cover_image'] = null;
         }
 
@@ -78,8 +78,11 @@ if (isPost()) {
             $dec = json_decode($roteiro['gallery'], true);
             if (is_array($dec)) $existingGallery = $dec;
         }
+        $galleryKeepPresent = isset($_POST['gallery_keep_present']) && $_POST['gallery_keep_present'] === '1';
         $keep = $_POST['gallery_keep'] ?? [];
         if (!is_array($keep)) $keep = [];
+        // Se o marcador não veio no POST, preserva a galeria inteira para evitar limpeza acidental.
+        if (!$galleryKeepPresent) $keep = $existingGallery;
         // Preserva ordem e quantidade (array_intersect por valor nao funciona com duplicadas)
         $keepCounts = [];
         foreach ($keep as $k) $keepCounts[$k] = ($keepCounts[$k] ?? 0) + 1;
@@ -366,6 +369,7 @@ $msg = flash('success');
                     </div>
                     <?php if ($existing): ?>
                     <div class="gallery-editor-grid">
+                        <input type="hidden" name="gallery_keep_present" value="1">
                         <?php foreach ($existing as $img): ?>
                         <div class="gallery-editor-item" data-gallery-item>
                             <input type="hidden" name="gallery_keep[]" value="<?= e($img) ?>">
@@ -377,6 +381,7 @@ $msg = flash('success');
                         <?php endforeach; ?>
                     </div>
                     <?php endif; ?>
+                        <?php if (!$existing): ?><input type="hidden" name="gallery_keep_present" value="1"><?php endif; ?>
                     <label class="upload-zone block">
                         <input type="file" name="gallery_new[]" accept="image/*" multiple>
                         <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
