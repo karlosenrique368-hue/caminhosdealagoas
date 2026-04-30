@@ -61,8 +61,11 @@ if (isPost()) {
         // Cover upload
         if (!empty($_FILES['cover_image']['name'])) {
             $path = handleImageUpload($_FILES['cover_image'], 'roteiros');
-            if ($path) $data['cover_image'] = $path;
-            else $error = 'Falha no upload da capa. Use JPG/PNG/WEBP e no máximo 20MB.';
+            if ($path) {
+                $data['cover_image'] = $path;
+            } else {
+                $error = 'A imagem de capa não foi enviada. Use JPG, PNG ou WebP com até 5MB.';
+            }
         }
 
         // Gallery: manter existentes + remover selecionadas + adicionar novas
@@ -73,23 +76,20 @@ if (isPost()) {
         }
         $keep = $_POST['gallery_keep'] ?? [];
         if (!is_array($keep)) $keep = [];
-        $hasKeepField = array_key_exists('gallery_keep', $_POST);
-        $keptGallery = $hasKeepField ? array_values(array_intersect($existingGallery, $keep)) : $existingGallery;
-        if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
+        $keptGallery = array_values(array_intersect($existingGallery, $keep));
+        $hasNewGalleryFiles = !empty($_FILES['gallery_new']['name'][0] ?? null);
+        if ($hasNewGalleryFiles) {
             $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'roteiros');
-            $attempted = count(array_filter((array)($_FILES['gallery_new']['name'] ?? []), fn($n) => trim((string)$n) !== ''));
-            if ($attempted > 0 && count($newPaths) === 0) {
-                $error = 'Nenhuma imagem da galeria foi aceita. Use JPG/PNG/WEBP e até 20MB por arquivo.';
-            } elseif ($attempted > count($newPaths)) {
-                $error = 'Algumas imagens da galeria foram recusadas (formato/tamanho).';
-            }
             $keptGallery = array_merge($keptGallery, $newPaths);
+            if (!$newPaths) {
+                $error = 'Nenhuma foto da galeria foi enviada. Use JPG, PNG ou WebP com até 5MB por imagem.';
+            }
         }
         $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
 
-        if (!$data['title']) {
+        if (!$error && !$data['title']) {
             $error = 'O título é obrigatório.';
-        } else {
+        } elseif (!$error) {
             if ($isNew) {
                 $fields = array_keys($data);
                 $placeholders = array_fill(0, count($fields), '?');

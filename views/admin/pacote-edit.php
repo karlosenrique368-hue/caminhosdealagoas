@@ -7,7 +7,10 @@ $pageTitle = $isNew ? 'Novo Pacote' : 'Editar Pacote';
 $categories = dbAll("SELECT * FROM categories WHERE type='pacote' AND active=1 ORDER BY sort_order");
 
 $error = null;
-if (isPost() && csrfVerify()) {
+if (isPost()) {
+    if (!csrfVerify()) {
+        $error = 'Token inválido.';
+    } else {
     $linesToJson = function($txt) {
         $lines = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)$txt)), fn($v) => $v !== ''));
         return $lines ? json_encode($lines, JSON_UNESCAPED_UNICODE) : null;
@@ -49,8 +52,11 @@ if (isPost() && csrfVerify()) {
     $data['slug'] = $pacote['slug'] ?? slugify($data['title']);
     if (!empty($_FILES['cover_image']['name'])) {
         $path = handleImageUpload($_FILES['cover_image'], 'pacotes');
-        if ($path) $data['cover_image'] = $path;
-        else $error = 'Falha no upload da capa. Use JPG/PNG/WEBP e no máximo 20MB.';
+        if ($path) {
+            $data['cover_image'] = $path;
+        } else {
+            $error = 'A imagem de capa não foi enviada. Use JPG, PNG ou WebP com até 5MB.';
+        }
     }
 
     // Galeria
@@ -58,22 +64,19 @@ if (isPost() && csrfVerify()) {
     if (!empty($pacote['gallery'])) { $d = json_decode($pacote['gallery'], true); if (is_array($d)) $existingGallery = $d; }
     $keep = $_POST['gallery_keep'] ?? [];
     if (!is_array($keep)) $keep = [];
-    $hasKeepField = array_key_exists('gallery_keep', $_POST);
-    $keptGallery = $hasKeepField ? array_values(array_intersect($existingGallery, $keep)) : $existingGallery;
-    if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
+    $keptGallery = array_values(array_intersect($existingGallery, $keep));
+    $hasNewGalleryFiles = !empty($_FILES['gallery_new']['name'][0] ?? null);
+    if ($hasNewGalleryFiles) {
         $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'pacotes');
-        $attempted = count(array_filter((array)($_FILES['gallery_new']['name'] ?? []), fn($n) => trim((string)$n) !== ''));
-        if ($attempted > 0 && count($newPaths) === 0) {
-            $error = 'Nenhuma imagem da galeria foi aceita. Use JPG/PNG/WEBP e até 20MB por arquivo.';
-        } elseif ($attempted > count($newPaths)) {
-            $error = 'Algumas imagens da galeria foram recusadas (formato/tamanho).';
-        }
         $keptGallery = array_merge($keptGallery, $newPaths);
+        if (!$newPaths) {
+            $error = 'Nenhuma foto da galeria foi enviada. Use JPG, PNG ou WebP com até 5MB por imagem.';
+        }
     }
     $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
 
-    if (!$data['title']) $error = 'O título é obrigatório.';
-    else {
+    if (!$error && !$data['title']) $error = 'O título é obrigatório.';
+    else if (!$error) {
         if ($isNew) {
             $fields = array_keys($data);
             $placeholders = array_fill(0, count($fields), '?');
@@ -87,6 +90,7 @@ if (isPost() && csrfVerify()) {
             flash('success', 'Pacote atualizado.');
             redirect('/admin/pacotes/'.$id);
         }
+    }
     }
 }
 
