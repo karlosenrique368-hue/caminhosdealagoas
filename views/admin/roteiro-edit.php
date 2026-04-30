@@ -58,6 +58,10 @@ if (isPost()) {
         ];
         $data['slug'] = $roteiro['slug'] ?? slugify($data['title']);
 
+        if (!empty($_POST['remove_cover_image'])) {
+            $data['cover_image'] = null;
+        }
+
         // Cover upload
         if (!empty($_FILES['cover_image']['name'])) {
             $path = handleImageUpload($_FILES['cover_image'], 'roteiros');
@@ -331,51 +335,62 @@ $msg = flash('success');
                 </div>
             </div>
 
-            <!-- Imagem -->
-            <div class="admin-card p-6 space-y-3">
-                <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>
-                <?php if (!empty($roteiro['cover_image'])): ?>
-                    <img src="<?= storageUrl($roteiro['cover_image']) ?>" class="w-full aspect-[4/3] object-cover rounded-xl" style="border:1px solid var(--border-default)">
-                <?php endif; ?>
-                <label class="upload-zone block">
-                    <input type="file" name="cover_image" accept="image/*">
-                    <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
-                    <div class="upload-zone-title"><?= !empty($roteiro['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
-                    <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1200×800px</div>
-                </label>
-            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <!-- Imagem -->
+                <div class="admin-card p-6 space-y-3">
+                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>
+                    <?php if (!empty($roteiro['cover_image'])): ?>
+                        <img src="<?= storageUrl($roteiro['cover_image']) ?>" class="w-full aspect-[4/3] object-cover rounded-xl" style="border:1px solid var(--border-default)">
+                        <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer" style="color:#B91C1C">
+                            <input type="checkbox" name="remove_cover_image" value="1" class="w-4 h-4 rounded" style="accent-color:#DC2626">
+                            Remover imagem de capa atual
+                        </label>
+                    <?php endif; ?>
+                    <label class="upload-zone block">
+                        <input type="file" name="cover_image" accept="image/*">
+                        <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
+                        <div class="upload-zone-title"><?= !empty($roteiro['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
+                        <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1200×800px</div>
+                    </label>
+                </div>
 
-            <!-- Galeria -->
-            <div class="admin-card p-6 space-y-3">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Galeria de imagens</h3>
-                    <?php
-                        $existing = [];
-                        if (!empty($roteiro['gallery'])) { $d = json_decode($roteiro['gallery'], true); if (is_array($d)) $existing = $d; }
-                    ?>
-                    <span class="text-[11px] font-semibold" style="color:var(--text-muted)"><?= count($existing) ?> foto<?= count($existing)===1?'':'s' ?></span>
-                </div>
-                <?php if ($existing): ?>
-                <div class="gallery-editor-grid">
-                    <?php foreach ($existing as $img): ?>
-                    <div class="gallery-editor-item" data-gallery-item>
-                        <input type="hidden" name="gallery_keep[]" value="<?= e($img) ?>">
-                        <img src="<?= storageUrl($img) ?>" alt="">
-                        <button type="button" class="gallery-editor-remove" onclick="this.closest('[data-gallery-item]').remove()" title="Remover">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
+                <!-- Galeria -->
+                <div class="admin-card p-6 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Galeria de imagens</h3>
+                        <?php
+                            $existing = [];
+                            if (!empty($roteiro['gallery'])) { $d = json_decode($roteiro['gallery'], true); if (is_array($d)) $existing = $d; }
+                        ?>
+                        <span class="text-[11px] font-semibold" style="color:var(--text-muted)"><?= count($existing) ?> foto<?= count($existing)===1?'':'s' ?></span>
                     </div>
-                    <?php endforeach; ?>
+                    <?php if ($existing): ?>
+                    <div class="gallery-editor-grid">
+                        <?php foreach ($existing as $img): ?>
+                        <div class="gallery-editor-item" data-gallery-item>
+                            <input type="hidden" name="gallery_keep[]" value="<?= e($img) ?>">
+                            <img src="<?= storageUrl($img) ?>" alt="">
+                            <button type="button" class="gallery-editor-remove" onclick="this.closest('[data-gallery-item]').remove()" title="Remover">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                    <label class="upload-zone block">
+                        <input type="file" name="gallery_new[]" accept="image/*" multiple>
+                        <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
+                        <div class="upload-zone-title">Adicionar mais fotos</div>
+                        <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
+                    </label>
                 </div>
-                <?php endif; ?>
-                <label class="upload-zone block">
-                    <input type="file" name="gallery_new[]" accept="image/*" multiple>
-                    <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
-                    <div class="upload-zone-title">Adicionar mais fotos</div>
-                    <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
-                </label>
             </div>
         </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 sticky bottom-0 admin-card p-4">
+        <a href="<?= url('/admin/roteiros') ?>" class="admin-btn">Cancelar</a>
+        <button type="submit" class="admin-btn admin-btn-primary"><i data-lucide="save" class="w-4 h-4"></i><?= $isNew ? 'Criar Passeio' : 'Salvar Alterações' ?></button>
     </div>
 </form>
 
