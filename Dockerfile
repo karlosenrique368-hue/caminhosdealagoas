@@ -2,6 +2,8 @@ FROM php:8.3-cli-alpine
 
 RUN docker-php-ext-install pdo_mysql
 
+RUN printf "file_uploads=On\nupload_max_filesize=20M\npost_max_size=20M\nmax_file_uploads=20\n" > /usr/local/etc/php/conf.d/uploads.ini
+
 WORKDIR /app
 COPY . .
 
