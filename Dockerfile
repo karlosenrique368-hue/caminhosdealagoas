@@ -1,6 +1,7 @@
 FROM php:8.3-cli-alpine
 
-RUN docker-php-ext-install pdo_mysql
+RUN docker-php-ext-install pdo_mysql \
+    && cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini 2>/dev/null || true
 
 WORKDIR /app
 COPY . .

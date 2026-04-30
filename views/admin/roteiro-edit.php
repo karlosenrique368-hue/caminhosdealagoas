@@ -58,6 +58,7 @@ if (isPost()) {
         ];
         $data['slug'] = $roteiro['slug'] ?? slugify($data['title']);
 
+        $warnings = [];
         if (($_POST['remove_cover_image'] ?? '') === '1') {
             $data['cover_image'] = null;
         }
@@ -68,7 +69,8 @@ if (isPost()) {
             if ($path) {
                 $data['cover_image'] = $path;
             } else {
-                $error = 'A imagem de capa não foi enviada. Use JPG, PNG ou WebP com até 5MB.';
+                $errCode = (int)($_FILES['cover_image']['error'] ?? 0);
+                $warnings[] = 'Imagem de capa não salva (erro ' . $errCode . '). Use JPG/PNG/WebP até 20MB.';
             }
         }
 
@@ -98,7 +100,7 @@ if (isPost()) {
             $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'roteiros');
             $keptGallery = array_merge($keptGallery, $newPaths);
             if (!$newPaths) {
-                $error = 'Nenhuma foto da galeria foi enviada. Use JPG, PNG ou WebP com até 5MB por imagem.';
+                $warnings[] = 'Fotos da galeria não salvas. Use JPG/PNG/WebP até 20MB cada.';
             }
         }
         $data['gallery'] = $keptGallery ? json_encode(array_values($keptGallery)) : null;
@@ -106,11 +108,12 @@ if (isPost()) {
         if (!$error && !$data['title']) {
             $error = 'O título é obrigatório.';
         } elseif (!$error) {
+            $successMsg = empty($warnings) ? null : implode(' | ', $warnings);
             if ($isNew) {
                 $fields = array_keys($data);
                 $placeholders = array_fill(0, count($fields), '?');
                 $newId = dbInsert("INSERT INTO roteiros (".implode(',', array_map(fn($f)=>"`$f`", $fields)).") VALUES (".implode(',', $placeholders).")", array_values($data));
-                flash('success', 'Passeio criado com sucesso.');
+                flash('success', 'Passeio criado com sucesso.' . ($successMsg ? ' Aviso: ' . $successMsg : ''));
                 redirect('/admin/roteiros/' . $newId);
             } else {
                 $sets = [];
@@ -118,7 +121,7 @@ if (isPost()) {
                 $values = array_values($data);
                 $values[] = $id;
                 dbExec("UPDATE roteiros SET ".implode(',', $sets)." WHERE id = ?", $values);
-                flash('success', 'Passeio atualizado com sucesso.');
+                flash('success', 'Passeio atualizado com sucesso.' . ($successMsg ? ' Aviso: ' . $successMsg : ''));
                 redirect('/admin/roteiros/' . $id);
             }
         }

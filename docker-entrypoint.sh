@@ -17,4 +17,4 @@ if [ ! -f /app/storage/uploads/.runtime-write-check ]; then
   date -u +"%Y-%m-%dT%H:%M:%SZ" > /app/storage/uploads/.runtime-write-check 2>/dev/null || true
 fi
 
-exec php -S 0.0.0.0:${PORT:-8080} -t public public/index.php
+exec php -c /app/php.ini -S 0.0.0.0:${PORT:-8080} -t public public/index.php
