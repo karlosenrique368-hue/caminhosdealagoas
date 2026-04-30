@@ -64,7 +64,16 @@ if (isPost()) {
     if (!empty($pacote['gallery'])) { $d = json_decode($pacote['gallery'], true); if (is_array($d)) $existingGallery = $d; }
     $keep = $_POST['gallery_keep'] ?? [];
     if (!is_array($keep)) $keep = [];
-    $keptGallery = array_values(array_intersect($existingGallery, $keep));
+    // Preserva ordem e quantidade (array_intersect por valor nao funciona com duplicadas)
+    $keepCounts = [];
+    foreach ($keep as $k) $keepCounts[$k] = ($keepCounts[$k] ?? 0) + 1;
+    $keptGallery = [];
+    foreach ($existingGallery as $img) {
+        if (($keepCounts[$img] ?? 0) > 0) {
+            $keptGallery[] = $img;
+            $keepCounts[$img]--;
+        }
+    }
     $hasNewGalleryFiles = !empty($_FILES['gallery_new']['name'][0] ?? null);
     if ($hasNewGalleryFiles) {
         $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'pacotes');

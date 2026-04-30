@@ -1009,6 +1009,18 @@ window.cart = (function () {
 })();
 
 // ============================================================
+// Gallery editor remove buttons (admin forms)
+// ============================================================
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.gallery-editor-remove');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const item = btn.closest('[data-gallery-item]');
+    if (item) item.remove();
+});
+
+// ============================================================
 // Auto-grow textareas
 // ============================================================
 (function initAutoGrow() {
