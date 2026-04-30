@@ -289,6 +289,10 @@ $msg = flash('success');
             </div>
         </div>
     </div>
+    <div class="flex items-center justify-end gap-3 sticky bottom-0 admin-card p-4">
+        <a href="<?= url('/admin/pacotes') ?>" class="admin-btn">Cancelar</a>
+        <button type="submit" class="admin-btn admin-btn-primary"><i data-lucide="save" class="w-4 h-4"></i><?= $isNew ? 'Criar Pacote' : 'Salvar Alterações' ?></button>
+    </div>
 </form>
 
 <script>
