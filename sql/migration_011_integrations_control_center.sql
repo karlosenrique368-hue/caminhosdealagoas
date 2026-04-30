@@ -2,7 +2,7 @@
 
 INSERT IGNORE INTO settings (`key`, value) VALUES
 ('payment_enabled', '0'),
-('payment_provider', 'manual'),
+('payment_provider', 'mercadopago'),
 ('payment_sandbox', '1'),
 ('payment_public_key', ''),
 ('payment_secret_key', ''),

@@ -192,8 +192,8 @@ tailwind.config = {
             </div>
 
             <!-- Cart button -->
-            <button type="button" onclick="window.cart && window.cart.open()"
-                    class="relative p-2.5 rounded-xl transition hover:scale-105 nav-link-tr"
+            <button type="button" data-cart-open onclick="window.cart && window.cart.open()"
+                    class="cart-open-btn relative p-2.5 rounded-xl transition hover:scale-105 nav-link-tr"
                     aria-label="Carrinho">
                 <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                 <span class="cart-badge" id="cart-count" style="display:none">0</span>

@@ -31,8 +31,10 @@ $flashError = flash('error');
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 <style>
 body { font-family: Inter, system-ui, sans-serif; }
+[x-cloak]{display:none!important}
 .bg-scene { background: linear-gradient(135deg, #1E3A52 0%, #2D5470 50%, #C96B4A 100%); }
 .bg-scene::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(244,228,193,0.15) 0%, transparent 50%); }
 </style>
@@ -99,9 +101,10 @@ body { font-family: Inter, system-ui, sans-serif; }
                 <label class="block text-sm font-semibold mb-1.5" style="color:var(--sepia)">Senha</label>
                 <div class="relative" x-data="{show:false}">
                     <i data-lucide="lock" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style="color:var(--text-muted)"></i>
-                    <input :type="show?'text':'password'" name="password" required class="admin-input pl-11 pr-11" placeholder="••••••••">
-                    <button type="button" @click="show=!show" class="absolute right-3 top-1/2 -translate-y-1/2 p-1" style="color:var(--text-muted)">
-                        <i :data-lucide="show?'eye-off':'eye'" class="w-4 h-4"></i>
+                    <input type="password" x-bind:type="show ? 'text' : 'password'" name="password" required class="admin-input pl-11 pr-11" placeholder="••••••••" autocomplete="current-password">
+                    <button type="button" @click="show=!show; $nextTick(() => window.lucide && window.lucide.createIcons())" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-100" style="color:var(--text-muted)" :aria-label="show ? 'Esconder senha' : 'Mostrar senha'">
+                        <i x-show="!show" data-lucide="eye" class="w-4 h-4"></i>
+                        <i x-show="show" x-cloak data-lucide="eye-off" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>

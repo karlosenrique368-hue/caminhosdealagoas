@@ -203,6 +203,10 @@ switch (true) {
         require VIEWS_DIR . '/admin/dashboard.php';
         break;
 
+    case $path === '/admin/relatorios':
+        require VIEWS_DIR . '/admin/relatorios.php';
+        break;
+
     case $path === '/admin/roteiros':
         require VIEWS_DIR . '/admin/roteiros.php';
         break;

@@ -1,10 +1,10 @@
 <?php
 $pageTitle = 'Integrações';
 
-$secretKeys = ['payment_secret_key','payment_webhook_secret','payment_pagseguro_token','payment_pagseguro_app_key','email_api_key','email_smtp_pass','ops_webhook_secret','whatsapp_token'];
+$secretKeys = ['payment_secret_key','payment_webhook_secret','email_api_key','email_smtp_pass','ops_webhook_secret','whatsapp_token'];
 $checkboxKeys = ['payment_enabled','payment_sandbox','email_enabled','ops_webhook_enabled','whatsapp_api_enabled','production_mode','security_headers_enabled','hsts_enabled','backup_enabled'];
 $fields = [
-    'payment_enabled','payment_provider','payment_sandbox','payment_public_key','payment_secret_key','payment_webhook_secret','payment_pagseguro_email','payment_pagseguro_token','payment_pagseguro_public_key','payment_pagseguro_app_id','payment_pagseguro_app_key',
+    'payment_enabled','payment_provider','payment_sandbox','payment_public_key','payment_secret_key','payment_webhook_secret',
     'email_enabled','email_provider','email_from','email_from_name','email_api_key','email_smtp_host','email_smtp_port','email_smtp_user','email_smtp_pass',
     'analytics_ga4_id','analytics_gtm_id','analytics_meta_pixel_id','analytics_tiktok_pixel_id','analytics_hotjar_id','analytics_utmify_id',
     'ops_webhook_enabled','ops_webhook_url','ops_webhook_secret','whatsapp_api_enabled','whatsapp_phone_id','whatsapp_token','whatsapp_admin_phone',
@@ -22,6 +22,7 @@ if (isPost() && csrfVerify()) {
         if (in_array($field, $secretKeys, true) && $value === '') continue;
         setSetting($field, $value);
     }
+    setSetting('payment_provider', 'mercadopago');
     if (isset($_POST['analytics_ga4_id'])) setSetting('ga_id', trim($_POST['analytics_ga4_id'] ?? ''));
     if (isset($_POST['analytics_meta_pixel_id'])) setSetting('fb_pixel_id', trim($_POST['analytics_meta_pixel_id'] ?? ''));
     flash('success', 'Integrações salvas.');
@@ -36,7 +37,7 @@ function adminSecretHint(string $key): string { return adminIntegrationValue($ke
 function adminCheck(string $key): string { return integrationEnabled($key) ? 'checked' : ''; }
 
 $cards = [
-    ['Pagamento', integrationEnabled('payment_enabled'), integrationSetting('payment_secret_key') !== '' || integrationSetting('payment_provider', 'manual') === 'manual', 'credit-card'],
+    ['Mercado Pago', integrationEnabled('payment_enabled'), integrationSetting('payment_secret_key') !== '', 'credit-card'],
     ['Email', integrationEnabled('email_enabled'), in_array(integrationSetting('email_provider', 'log'), ['log','mail'], true) || integrationSetting('email_api_key') !== '', 'mail-check'],
     ['Conversões', true, integrationSetting('analytics_ga4_id', integrationSetting('ga_id', '')) !== '' || integrationSetting('analytics_meta_pixel_id', integrationSetting('fb_pixel_id', '')) !== '', 'chart-no-axes-combined'],
     ['Operação', integrationEnabled('ops_webhook_enabled') || integrationEnabled('whatsapp_api_enabled'), integrationSetting('ops_webhook_url') !== '' || integrationSetting('whatsapp_token') !== '', 'bell-ring'],
@@ -67,27 +68,29 @@ $cards = [
     <div class="admin-card p-6 space-y-5">
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div>
-                <h3 class="font-display text-xl font-bold flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="credit-card" class="w-5 h-5" style="color:var(--terracota)"></i>Pagamento e webhook</h3>
+                <h3 class="font-display text-xl font-bold flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="credit-card" class="w-5 h-5" style="color:var(--terracota)"></i>Mercado Pago e webhook</h3>
                 <p class="text-sm mt-1" style="color:var(--text-muted)">URL pública do webhook: <span class="font-mono"><?= e(paymentWebhookUrl()) ?></span></p>
             </div>
-            <button type="button" onclick="testIntegration('payment_webhook_info')" class="admin-btn admin-btn-secondary"><i data-lucide="radio" class="w-4 h-4"></i>Verificar webhook</button>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="testIntegration('payment_webhook_info')" class="admin-btn admin-btn-secondary"><i data-lucide="radio" class="w-4 h-4"></i>Verificar webhook</button>
+                <button type="button" onclick="testIntegration('test_payment_webhook')" class="admin-btn admin-btn-secondary"><i data-lucide="send-horizontal" class="w-4 h-4"></i>Testar pagamento</button>
+            </div>
         </div>
-        <label class="flex items-center gap-3"><input type="checkbox" name="payment_enabled" value="1" <?= adminCheck('payment_enabled') ?> class="w-4 h-4" style="accent-color:var(--terracota)"><span class="text-sm font-semibold" style="color:var(--sepia)">Ativar gateway externo</span></label>
+        <input type="hidden" name="payment_provider" value="mercadopago">
+        <label class="flex items-center gap-3"><input type="checkbox" name="payment_enabled" value="1" <?= adminCheck('payment_enabled') ?> class="w-4 h-4" style="accent-color:var(--terracota)"><span class="text-sm font-semibold" style="color:var(--sepia)">Ativar checkout Mercado Pago</span></label>
         <div class="grid md:grid-cols-3 gap-4">
-            <label><span class="admin-label">Provedor</span><select name="payment_provider" class="admin-input"><option value="manual" <?= adminIntegrationValue('payment_provider','manual')==='manual'?'selected':'' ?>>Manual / sandbox</option><option value="pagseguro" <?= adminIntegrationValue('payment_provider')==='pagseguro'?'selected':'' ?>>PagSeguro / PagBank</option><option value="mercadopago" <?= adminIntegrationValue('payment_provider')==='mercadopago'?'selected':'' ?>>Mercado Pago</option><option value="stripe" <?= adminIntegrationValue('payment_provider')==='stripe'?'selected':'' ?>>Stripe</option><option value="pagarme" <?= adminIntegrationValue('payment_provider')==='pagarme'?'selected':'' ?>>Pagar.me</option><option value="blackcat" <?= adminIntegrationValue('payment_provider')==='blackcat'?'selected':'' ?>>BlackCat PIX</option></select><span class="admin-hint">Escolha o gateway principal. Em manual/sandbox a reserva fica pendente e a equipe confirma depois.</span></label>
-            <label><span class="admin-label">Chave pública</span><input name="payment_public_key" value="<?= e(adminIntegrationValue('payment_public_key')) ?>" class="admin-input" autocomplete="off"><span class="admin-hint">Usada por gateways que geram pagamento no navegador.</span></label>
-            <label><span class="admin-label">Chave secreta</span><input type="password" name="payment_secret_key" class="admin-input" placeholder="<?= e(adminSecretHint('payment_secret_key')) ?>" autocomplete="new-password"><span class="admin-hint">Nunca compartilhe. Deixe vazio para manter a chave já salva.</span></label>
+            <div class="rounded-2xl p-4" style="background:rgba(0,113,206,.07);border:1px solid rgba(0,113,206,.18)">
+                <span class="admin-label">Provedor único</span>
+                <div class="flex items-center gap-2 font-display text-lg font-bold" style="color:var(--sepia)"><i data-lucide="badge-check" class="w-5 h-5" style="color:#0071CE"></i>Mercado Pago</div>
+                <span class="admin-hint">PIX, cartão e boleto ficam centralizados no Mercado Pago.</span>
+            </div>
+            <label><span class="admin-label">Public Key Mercado Pago</span><input name="payment_public_key" value="<?= e(adminIntegrationValue('payment_public_key')) ?>" class="admin-input" autocomplete="off" placeholder="TEST-... ou APP_USR-..."><span class="admin-hint">Usada no navegador quando o checkout transparente for ativado.</span></label>
+            <label><span class="admin-label">Access Token Mercado Pago</span><input type="password" name="payment_secret_key" class="admin-input" placeholder="<?= e(adminSecretHint('payment_secret_key')) ?>" autocomplete="new-password"><span class="admin-hint">Token secreto da aplicação Mercado Pago. Deixe vazio para manter.</span></label>
             <label class="md:col-span-2"><span class="admin-label">Segredo do webhook</span><input type="password" name="payment_webhook_secret" class="admin-input" placeholder="<?= e(adminSecretHint('payment_webhook_secret')) ?>" autocomplete="new-password"><span class="admin-hint">O gateway usa este segredo para provar que a notificação de pagamento é real.</span></label>
             <label class="flex items-center gap-3 pt-7"><input type="checkbox" name="payment_sandbox" value="1" <?= adminCheck('payment_sandbox') ?> class="w-4 h-4" style="accent-color:var(--terracota)"><span class="text-sm font-semibold" style="color:var(--sepia)">Usar sandbox</span></label>
-            <div class="md:col-span-3 rounded-2xl p-4" style="background:rgba(58,107,138,0.06);border:1px solid rgba(58,107,138,0.14)">
-                <div class="font-display font-bold mb-3 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="landmark" class="w-4 h-4" style="color:var(--horizonte)"></i>PagSeguro / PagBank pré-pronto</div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <label><span class="admin-label">Email da conta PagSeguro</span><input name="payment_pagseguro_email" value="<?= e(adminIntegrationValue('payment_pagseguro_email')) ?>" class="admin-input" autocomplete="off"><span class="admin-hint">Email da conta onde ficam as credenciais PagBank/PagSeguro.</span></label>
-                    <label><span class="admin-label">Public Key PagBank</span><input name="payment_pagseguro_public_key" value="<?= e(adminIntegrationValue('payment_pagseguro_public_key')) ?>" class="admin-input" autocomplete="off"><span class="admin-hint">Chave pública para gerar cartão/token no front quando a integração for ativada.</span></label>
-                    <label><span class="admin-label">Token / Access Token</span><input type="password" name="payment_pagseguro_token" class="admin-input" placeholder="<?= e(adminSecretHint('payment_pagseguro_token')) ?>" autocomplete="new-password"><span class="admin-hint">Token secreto da API PagBank. Necessário para criar cobranças reais.</span></label>
-                    <label><span class="admin-label">App ID</span><input name="payment_pagseguro_app_id" value="<?= e(adminIntegrationValue('payment_pagseguro_app_id')) ?>" class="admin-input" autocomplete="off"><span class="admin-hint">Use se sua conta PagSeguro fornecer App ID/App Key.</span></label>
-                    <label class="md:col-span-2"><span class="admin-label">App Key</span><input type="password" name="payment_pagseguro_app_key" class="admin-input" placeholder="<?= e(adminSecretHint('payment_pagseguro_app_key')) ?>" autocomplete="new-password"><span class="admin-hint">Chave complementar do aplicativo, quando exigida pela conta.</span></label>
-                </div>
+            <div class="md:col-span-3 rounded-2xl p-4" style="background:rgba(122,157,110,0.07);border:1px solid rgba(122,157,110,0.18)">
+                <div class="font-display font-bold mb-2 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="shield-check" class="w-4 h-4" style="color:var(--maresia-dark)"></i>Fluxo oficial Mercado Pago</div>
+                <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">A reserva fica pendente no checkout, recebe um identificador Mercado Pago e o webhook confirma automaticamente quando o status chegar como <b>approved</b>. Para produção, mantenha esta URL cadastrada em Notificações/Webhooks no painel do Mercado Pago.</p>
             </div>
         </div>
     </div>

@@ -23,7 +23,6 @@ function paymentWebhookUrl(): string {
 }
 
 function paymentGatewaySecretForProvider(string $provider): string {
-    if ($provider === 'pagseguro') return integrationSetting('payment_pagseguro_token', integrationSetting('payment_secret_key', ''));
     return integrationSetting('payment_secret_key', '');
 }
 
@@ -152,20 +151,64 @@ function prepareBookingPayment(int $bookingId): array {
     $booking = bookingWithCustomer($bookingId);
     if (!$booking) return ['ok' => false, 'mode' => 'missing_booking'];
 
-    $provider = strtolower(preg_replace('/[^a-z0-9_\-]/i', '', integrationSetting('payment_provider', 'manual')) ?: 'manual');
+    $provider = 'mercadopago';
     if (!integrationEnabled('payment_enabled')) {
         logActivity(null, 'payment_skipped', 'booking', $bookingId, 'Pagamento externo desativado para reserva ' . $booking['code']);
         return ['ok' => true, 'mode' => 'disabled', 'provider' => $provider];
     }
 
-    $transactionId = $booking['gateway_tx_id'] ?: strtoupper(substr($provider, 0, 4)) . '-' . $booking['code'] . '-' . strtoupper(substr(hash('sha256', $booking['code'] . microtime(true)), 0, 8));
+    $transactionId = $booking['gateway_tx_id'] ?: 'MP-' . $booking['code'] . '-' . strtoupper(substr(hash('sha256', $booking['code'] . microtime(true)), 0, 8));
     dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = COALESCE(gateway_tx_id, ?) WHERE id = ?', [$provider, $transactionId, $bookingId]);
 
     $secret = paymentGatewaySecretForProvider($provider);
-    $mode = in_array($provider, ['manual', 'sandbox'], true) ? 'sandbox_ready' : ($secret !== '' ? 'credentials_ready' : 'missing_credentials');
+    $mode = $secret !== '' ? 'credentials_ready' : (integrationEnabled('payment_sandbox', true) ? 'sandbox_ready' : 'missing_credentials');
     logActivity(null, 'payment_prepared', 'booking', $bookingId, 'Gateway ' . $provider . ' preparado para reserva ' . $booking['code']);
 
     return ['ok' => true, 'mode' => $mode, 'provider' => $provider, 'transaction_id' => $transactionId, 'webhook_url' => paymentWebhookUrl()];
+}
+
+function sendMercadoPagoTestWebhook(?string $bookingCode = null): array {
+    $bookingCode = preg_replace('/[^A-Z0-9\-]/', '', strtoupper((string)$bookingCode));
+    if ($bookingCode !== '') {
+        $booking = dbOne('SELECT * FROM bookings WHERE code = ? LIMIT 1', [$bookingCode]);
+    } else {
+        $booking = dbOne("SELECT * FROM bookings WHERE payment_status='pending' ORDER BY id DESC LIMIT 1");
+    }
+    if (!$booking) return ['ok' => false, 'msg' => 'Nenhuma reserva pendente encontrada para testar.'];
+
+    $transactionId = $booking['gateway_tx_id'] ?: 'MP-TEST-' . $booking['code'];
+    $payload = [
+        'provider' => 'mercadopago',
+        'type' => 'payment',
+        'action' => 'payment.updated',
+        'external_reference' => $booking['code'],
+        'payment_id' => $transactionId,
+        'status' => 'approved',
+        'data' => ['id' => $transactionId, 'status' => 'approved'],
+        'metadata' => ['booking_code' => $booking['code'], 'test' => true],
+    ];
+
+    $secret = integrationSetting('payment_webhook_secret', '');
+    $headers = [];
+    if ($secret !== '') {
+        $raw = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $headers[] = 'X-Caminhos-Signature: ' . hash_hmac('sha256', $raw, $secret);
+    }
+
+    $result = integrationPostJson(paymentWebhookUrl(), $payload, $headers, 10);
+    $body = json_decode($result['body'] ?? '', true);
+    if (!empty($result['ok']) && (!is_array($body) || !empty($body['ok']))) {
+        return ['ok' => true, 'msg' => 'Webhook Mercado Pago enviado e processado.', 'booking' => $booking['code'], 'data' => $body ?: $result];
+    }
+
+    $fresh = dbOne('SELECT * FROM bookings WHERE id = ? LIMIT 1', [$booking['id']]);
+    if (!$fresh) return ['ok' => false, 'msg' => 'Reserva não encontrada após o teste.'];
+    $previousStatus = $fresh['payment_status'];
+    dbExec("UPDATE bookings SET payment_status='paid', payment_gateway='mercadopago', gateway_tx_id=COALESCE(NULLIF(gateway_tx_id, ''), ?), paid_at=COALESCE(paid_at, NOW()) WHERE id=?", [$transactionId, $fresh['id']]);
+    handleBookingPaymentStatusChanged((int)$fresh['id'], $previousStatus, 'paid', 'payment_webhook_test');
+    logActivity(null, 'payment_webhook_test', 'booking', (int)$fresh['id'], 'Webhook Mercado Pago de teste confirmou ' . $fresh['code']);
+
+    return ['ok' => true, 'msg' => 'Webhook Mercado Pago simulado localmente e reserva marcada como paga.', 'booking' => $fresh['code'], 'data' => ['http' => $result]];
 }
 
 function sendTransactionalEmail(string $to, string $subject, string $html, string $text = '', array $meta = []): array {

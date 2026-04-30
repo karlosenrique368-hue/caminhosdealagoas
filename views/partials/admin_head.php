@@ -5,6 +5,7 @@ $pageTitle = $pageTitle ?? 'Dashboard';
 $adminPath = currentPath();
 $adminHelps = [
     '/admin/dashboard' => ['Visão geral do negócio', 'Use esta tela para acompanhar reservas pendentes, receita confirmada e os principais movimentos recentes.', ['Receita só considera reservas pagas.', 'Reservas pendentes precisam de conferência ou confirmação de pagamento.']],
+    '/admin/relatorios' => ['Relatórios comerciais', 'Acompanhe receita, conversão, métodos de pagamento e experiências com maior desempenho por período.', ['Use o filtro de datas para fechar caixa e campanhas.', 'O CSV exporta o ranking do período para análise externa.']],
     '/admin/roteiros' => ['Gestão de passeios', 'Cadastre e revise experiências vendidas individualmente, com fotos, preços, datas e regras de disponibilidade.', ['Mantenha título, descrição curta e imagem principal bem preenchidos.', 'Use destaque apenas nos passeios que devem aparecer na home.']],
     '/admin/pacotes' => ['Gestão de pacotes', 'Monte ofertas completas com hospedagem, transporte e passeios combinados.', ['Revise valores antes de publicar.', 'Descrições claras reduzem dúvidas no WhatsApp.']],
     '/admin/transfers' => ['Gestão de transfers', 'Controle rotas, capacidade máxima e valores de deslocamento.', ['Capacidade é o máximo de passageiros.', 'Use nomes simples para origem e destino.']],
@@ -77,6 +78,7 @@ body { background: var(--bg-surface); }
             <?php
             $menu = [
                 ['path' => '/admin/dashboard', 'icon' => 'layout-dashboard', 'label' => 'Dashboard'],
+                ['path' => '/admin/relatorios', 'icon' => 'chart-no-axes-combined', 'label' => 'Relatórios'],
                 ['heading' => 'Conteúdo'],
                 ['path' => '/admin/roteiros', 'icon' => 'compass', 'label' => 'Passeios'],
                 ['path' => '/admin/pacotes', 'icon' => 'package', 'label' => 'Pacotes'],

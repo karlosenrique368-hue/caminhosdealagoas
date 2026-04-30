@@ -228,8 +228,8 @@ function cartDateModal(){
         },
         prevYear(){ this.viewYear--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         nextYear(){ this.viewYear++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
-        prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; },
-        nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; },
+        prevMonth(){ if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
+        nextMonth(){ if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); },
         toggle(cell){ if(!cell.available) return; const i=this.selectedDates.indexOf(cell.iso); if(i>=0) this.selectedDates.splice(i,1); else this.selectedDates.push(cell.iso); this.selectedDates.sort(); },
         selectedLabel(){ return this.selectedDates.length === 1 ? '1 data selecionada' : this.selectedDates.length + ' datas selecionadas'; },
         selectedDatesText(){ return this.selectedDates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})).join(', '); },
@@ -291,9 +291,9 @@ function reviewSection(opts){
                 <label class="block text-xs font-bold uppercase tracking-wider" style="color:var(--text-secondary)">Datas disponíveis *</label>
                 <div class="flex items-center gap-1">
                     <button type="button" @click.stop="prevYear()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Ano anterior"><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>
-                    <button type="button" @click="prevMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <button type="button" @click.stop="prevMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Mês anterior"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                     <div class="min-w-[120px] text-center text-sm font-bold" style="color:var(--sepia)" x-text="monthLabel"></div>
-                    <button type="button" @click="nextMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    <button type="button" @click.stop="nextMonth()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Próximo mês"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     <button type="button" @click.stop="nextYear()" class="w-8 h-8 rounded-lg border flex items-center justify-center" style="border-color:var(--border-default);color:var(--text-secondary)" aria-label="Próximo ano"><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>
                 </div>
             </div>

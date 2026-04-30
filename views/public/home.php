@@ -111,7 +111,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 ================================================ -->
 <?php
 $trustItems = [
-    ['icon'=>'shield-check','title'=>'Pagamento seguro','sub'=>'Pix ou cartão até 12x','bg'=>'rgba(201,107,74,0.1)','color'=>'var(--terracota)'],
+    ['icon'=>'shield-check','title'=>'Mercado Pago seguro','sub'=>'Pix, cartão ou boleto','bg'=>'rgba(201,107,74,0.1)','color'=>'var(--terracota)'],
     ['icon'=>'map-pin','title'=>'Curadoria local','sub'=>'Feito por alagoanos','bg'=>'rgba(58,107,138,0.1)','color'=>'var(--horizonte)'],
     ['icon'=>'headphones','title'=>'Suporte 24/7','sub'=>'Durante sua viagem','bg'=>'rgba(16,185,129,0.1)','color'=>'#10B981'],
     ['icon'=>'badge-check','title'=>'Melhor preço','sub'=>'Garantido ou devolvemos','bg'=>'rgba(245,158,11,0.1)','color'=>'#F59E0B'],
@@ -138,6 +138,9 @@ $trustItems = [
     DESTAQUES — Passeios
 ================================================ -->
 <section id="destaques" class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
+    <img src="<?= asset('brand/selo-azul.png') ?>" class="featured-seal featured-seal-left" alt="" aria-hidden="true">
+    <img src="<?= asset('brand/selo-terracota.png') ?>" class="featured-seal featured-seal-right seal-reverse" alt="" aria-hidden="true">
+    <img src="<?= asset('brand/selo-areia.png') ?>" class="featured-seal featured-seal-bottom" alt="" aria-hidden="true">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>
             <div class="inline-block mb-3">
@@ -396,7 +399,7 @@ $trustItems = [
             <div class="timeline-line hidden md:block"></div>
             <?php foreach ([
                 ['step'=>'01','icon'=>'search','title'=>'Escolha seu passeio','desc'=>'Navegue pelos passeios e pacotes curados. Filtre por data, destino ou estilo.'],
-                ['step'=>'02','icon'=>'credit-card','title'=>'Reserve com segurança','desc'=>'Pague com Pix ou cartão em até 12x. Confirmação imediata e voucher por email.'],
+                ['step'=>'02','icon'=>'credit-card','title'=>'Reserve com segurança','desc'=>'Pague por Mercado Pago com Pix, cartão ou boleto. Confirmação por webhook e voucher por email.'],
                 ['step'=>'03','icon'=>'plane-takeoff','title'=>'Viva a experiência','desc'=>'Nossa equipe cuida de tudo. Você só precisa aproveitar cada momento.'],
             ] as $i => $st): ?>
             <div class="step-card" data-reveal style="animation-delay:<?= $i*120 ?>ms">

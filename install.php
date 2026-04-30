@@ -1,6 +1,6 @@
 <?php
 /**
- * Instalador automático — cria o banco, importa schema e seed.
+ * Instalador automático — cria o banco, importa schema, seed e migrations.
  * Acesse: http://localhost/caminhosdealagoas/install.php
  */
 
@@ -29,14 +29,24 @@ if (isset($_POST['install'])) {
         // 3. Importar schema
         $schema = file_get_contents(__DIR__ . '/sql/schema.sql');
         $pdo->exec($schema);
-        $messages[] = '✅ Schema importado (13 tabelas).';
+        $messages[] = 'Schema base importado.';
 
         // 4. Importar seed
         $seed = file_get_contents(__DIR__ . '/sql/seed.sql');
         $pdo->exec($seed);
-        $messages[] = '✅ Dados de exemplo inseridos.';
+        $messages[] = 'Dados de exemplo inseridos.';
 
-        // 5. Criar pastas de storage
+        // 5. Aplicar migrations do projeto em ordem natural
+        $migrationFiles = glob(__DIR__ . '/sql/migration_*.sql') ?: [];
+        sort($migrationFiles, SORT_NATURAL);
+        foreach ($migrationFiles as $file) {
+            $sql = trim((string)file_get_contents($file));
+            if ($sql === '') continue;
+            $pdo->exec($sql);
+            $messages[] = 'Migration aplicada: ' . basename($file);
+        }
+
+        // 6. Criar pastas de storage
         $dirs = [
             __DIR__ . '/storage',
             __DIR__ . '/storage/uploads',
@@ -47,7 +57,7 @@ if (isset($_POST['install'])) {
         foreach ($dirs as $d) {
             if (!is_dir($d)) mkdir($d, 0775, true);
         }
-        $messages[] = '✅ Diretórios de storage criados.';
+        $messages[] = 'Diretórios de storage criados.';
 
         $done = true;
     } catch (PDOException $e) {

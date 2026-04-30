@@ -385,6 +385,21 @@ include VIEWS_DIR . '/partials/public_head.php';
                     </template>
                 </div>
 
+                <?php if (!IS_PRODUCTION): ?>
+                <div class="mb-4 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3" style="background:rgba(0,113,206,.07);border:1px solid rgba(0,113,206,.18)">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fff;color:#0071CE"><i data-lucide="radio" class="w-5 h-5"></i></div>
+                        <div>
+                            <div class="font-semibold text-sm" style="color:var(--sepia)">Teste local do webhook Mercado Pago</div>
+                            <div class="text-[11px]" style="color:var(--text-muted)">Envia um evento aprovado para a última reserva pendente.</div>
+                        </div>
+                    </div>
+                    <button type="button" @click="testWebhook()" class="admin-btn admin-btn-secondary justify-center" :disabled="webhookTesting" :class="webhookTesting && 'opacity-60'">
+                        <i data-lucide="send-horizontal" class="w-4 h-4"></i><span x-text="webhookTesting ? 'Enviando...' : 'Enviar webhook'"></span>
+                    </button>
+                </div>
+                <?php endif; ?>
+
                 <!-- PIX à vista: lotes -->
                 <div x-show="form.payment_method==='pix'" x-transition>
                     <div class="text-[10px] uppercase tracking-widest font-bold mt-5 mb-3" style="color:var(--terracota)">Selecione o lote</div>
@@ -548,7 +563,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
                 <?php endif; ?>
                 <div class="mt-4 text-[11px] flex items-center gap-1.5" style="color:var(--text-muted)">
-                    <i data-lucide="lock" class="w-3 h-3"></i> Pagamento 100% seguro · SSL / PIX / Cartão
+                    <i data-lucide="lock" class="w-3 h-3"></i> Pagamento 100% seguro · Mercado Pago
                 </div>
             </div>
         </aside>
@@ -561,6 +576,7 @@ function checkoutWizard() {
     return {
         step: 0,
         loading: false,
+        webhookTesting: false,
         today: new Date().toISOString().split('T')[0],
         steps: ['Seus dados', 'Sua viagem', 'Pagamento', 'Revisão'],
         priceAdult:  <?= json_encode($priceAdult) ?>,
@@ -605,10 +621,10 @@ function checkoutWizard() {
             {id:'outro',     label:'Outro',      icon:'more-horizontal',   detailLabel:'Conta pra gente:',         placeholder:'TikTok, blog, anúncio...'}
         ],
         paymentMethods: [
-            {id:'pix',              label:'PIX à vista',          hint:'Confirmação em segundos',                icon:'qr-code',         badge:'Recomendado'},
-            {id:'pix_installments', label:'PIX parcelado',        hint:'Mensal sem juros, até a viagem',         icon:'calendar-clock',  badge:'Sem juros',  requiresInstallment:true},
-            {id:'credit_card',      label:'Cartão de crédito',    hint:'Parcele em até 12×',                     icon:'credit-card',     badge:''},
-            {id:'boleto',           label:'Boleto bancário',      hint:'Compensação em 1-3 dias úteis',          icon:'file-text',       badge:''}
+            {id:'pix',              label:'PIX Mercado Pago',          hint:'Confirmação em segundos',                icon:'qr-code',         badge:'Recomendado'},
+            {id:'pix_installments', label:'PIX parcelado Mercado Pago', hint:'Mensal sem juros, até a viagem',         icon:'calendar-clock',  badge:'Sem juros',  requiresInstallment:true},
+            {id:'credit_card',      label:'Cartão Mercado Pago',        hint:'Parcele em até 12×',                     icon:'credit-card',     badge:''},
+            {id:'boleto',           label:'Boleto Mercado Pago',        hint:'Compensação em 1-3 dias úteis',          icon:'file-text',       badge:''}
         ],
         init() {
             if (this.form.travel_dates.length && !this.form.travel_date) this.form.travel_date = this.form.travel_dates[0];
@@ -750,6 +766,18 @@ function checkoutWizard() {
         },
         next(){ if(!this.canProceed()){ showToast('Complete os campos obrigatórios.', 'error'); return; } if(this.step<this.steps.length-1){ this.step++; window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>window.lucide && window.lucide.createIcons(), 50); } },
         prev(){ if(this.step>0){ this.step--; window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>window.lucide && window.lucide.createIcons(), 50); } },
+        async testWebhook(){
+            if (this.webhookTesting) return;
+            this.webhookTesting = true;
+            try {
+                const res = await caminhosApi('<?= url('/api/payment-test-webhook') ?>', { method:'POST', data: { test:'1' } });
+                showToast(res.msg || (res.ok ? 'Webhook enviado.' : 'Falha ao enviar webhook.'), res.ok ? 'success' : 'error');
+            } catch (e) {
+                showToast('Erro de rede ao testar webhook.', 'error');
+            } finally {
+                this.webhookTesting = false;
+            }
+        },
         async submit(){
             if(!this.form.accept_terms){ showToast('Aceite a política de desistência.', 'error'); return; }
             this.loading = true;

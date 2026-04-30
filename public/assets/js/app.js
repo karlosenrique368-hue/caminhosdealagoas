@@ -127,6 +127,16 @@ document.addEventListener('input', (e) => {
     e.target.value = v;
 });
 
+// CPF mask
+document.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('cpf-mask')) return;
+    let v = e.target.value.replace(/\D/g, '').slice(0, 11);
+    v = v.replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    e.target.value = v;
+});
+
 // ============================================================
 // PREMIUM: Generic visual datepicker for native date inputs
 // ============================================================
@@ -831,6 +841,13 @@ window.cart = (function () {
 
     document.addEventListener('DOMContentLoaded', refresh);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-cart-open]');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+    }, true);
 
     return { open, close, add, addSelectedOrAsk, askDate, remove, update, clear, refresh, get state() { return state; } };
 })();

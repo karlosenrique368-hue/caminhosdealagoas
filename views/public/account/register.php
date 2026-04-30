@@ -51,11 +51,11 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <div class="grid grid-cols-2 gap-3">
                     <label class="block">
                         <span class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">Telefone</span>
-                        <input type="tel" name="phone" class="input-field w-full" placeholder="(82) 9...">
+                        <input type="tel" name="phone" class="input-field w-full phone-mask" placeholder="(82) 98822-0546" maxlength="15" inputmode="tel" autocomplete="tel">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">CPF</span>
-                        <input type="text" name="document" class="input-field w-full">
+                        <input type="text" name="document" class="input-field w-full cpf-mask" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off">
                     </label>
                 </div>
                 <label class="block">

@@ -32,6 +32,10 @@ switch ($action) {
 
     case 'payment_webhook_info':
         jsonResponse(['ok' => true, 'msg' => 'Webhook pronto para receber eventos.', 'url' => paymentWebhookUrl(), 'secret_set' => integrationSetting('payment_webhook_secret', '') !== '']);
+
+    case 'test_payment_webhook':
+        $result = sendMercadoPagoTestWebhook($_POST['booking_code'] ?? null);
+        jsonResponse($result, !empty($result['ok']) ? 200 : 404);
 }
 
 jsonResponse(['ok' => false, 'msg' => 'Ação inválida.'], 404);
