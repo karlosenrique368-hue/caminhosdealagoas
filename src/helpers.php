@@ -296,7 +296,12 @@ function handleImageUpload(array $file, string $subdir = 'general'): ?string {
 }
 
 function storageUrl(string $path): string {
-    return url('storage/' . ltrim($path, '/'));
+    $clean = trim($path);
+    if ($clean === '') return url('storage/uploads/');
+    if (preg_match('#^https?://#i', $clean)) return $clean;
+    $clean = ltrim($clean, '/');
+    if (!str_starts_with($clean, 'uploads/')) $clean = 'uploads/' . $clean;
+    return url('storage/' . $clean);
 }
 
 // ============== Upload multiplo (galeria) ==============

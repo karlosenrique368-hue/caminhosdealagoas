@@ -2331,6 +2331,25 @@ textarea.input-field { resize: vertical; min-height: 96px; }
     backdrop-filter: blur(6px);
 }
 
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .admin-card.p-6 { padding: 1.15rem; }
+    .upload-zone { padding: 20px; }
+    .upload-zone-preview { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); }
+    .gallery-editor-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+    .admin-sticky-actions {
+        left: 0;
+        right: 0;
+        border-top: 1px solid var(--border-default);
+        border-radius: 12px 12px 0 0;
+    }
+}
+
+@media (min-width: 1280px) {
+    .admin-sticky-actions {
+        border-top: 1px solid rgba(0,0,0,0.03);
+    }
+}
+
 /* ============================================================
    PREMIUM OFF-CANVAS MENU DRAWER (right side, full height)
    ============================================================ */
