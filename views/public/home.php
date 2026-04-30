@@ -139,9 +139,6 @@ $trustItems = [
 ================================================ -->
 <div class="section-divider-seal" style="--seal-img: url('<?= asset('brand/selo-terracota.png') ?>')" aria-hidden="true"></div>
 <section id="destaques" class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
-    <img src="<?= asset('brand/selo-azul.png') ?>" class="featured-seal featured-seal-left" alt="" aria-hidden="true">
-    <img src="<?= asset('brand/selo-terracota.png') ?>" class="featured-seal featured-seal-right seal-reverse" alt="" aria-hidden="true">
-    <img src="<?= asset('brand/selo-areia.png') ?>" class="featured-seal featured-seal-bottom" alt="" aria-hidden="true">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>
             <div class="inline-block mb-3">
@@ -328,9 +325,6 @@ $trustItems = [
 ================================================ -->
 <div class="section-divider-seal" style="--seal-img: url('<?= asset('brand/selo-azul.png') ?>')" aria-hidden="true"></div>
 <section class="py-24 relative overflow-hidden" style="background:var(--bg-page)">
-    <img src="<?= asset('brand/selo-areia.png') ?>" class="featured-seal featured-seal-left" alt="" aria-hidden="true">
-    <img src="<?= asset('brand/selo-azul.png') ?>" class="featured-seal featured-seal-right seal-reverse" alt="" aria-hidden="true">
-    <img src="<?= asset('brand/selo-terracota.png') ?>" class="featured-seal featured-seal-bottom" alt="" aria-hidden="true">
     <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="text-center mb-16" data-reveal>
             <span class="text-xs font-bold tracking-[0.3em] uppercase" style="color:var(--terracota)">Experiências completas</span>
