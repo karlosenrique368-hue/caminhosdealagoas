@@ -48,7 +48,16 @@ if (isPost()) {
         }
         $keep = $_POST['gallery_keep'] ?? [];
         if (!is_array($keep)) $keep = [];
-        $keptGallery = array_values(array_intersect($existingGallery, $keep));
+        // Preserva ordem e quantidade (array_intersect por valor nao funciona com duplicadas)
+        $keepCounts = [];
+        foreach ($keep as $k) $keepCounts[$k] = ($keepCounts[$k] ?? 0) + 1;
+        $keptGallery = [];
+        foreach ($existingGallery as $img) {
+            if (($keepCounts[$img] ?? 0) > 0) {
+                $keptGallery[] = $img;
+                $keepCounts[$img]--;
+            }
+        }
         if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
             $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'transfers');
             $keptGallery = array_merge($keptGallery, $newPaths);
@@ -167,32 +176,43 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
         </div>
     </div>
 
-    <div class="admin-card p-6">
-        <h3 class="font-display font-bold text-lg mb-4" style="color:var(--sepia)">Imagens</h3>
-        <div class="grid md:grid-cols-2 gap-4">
-            <div>
-                <label class="admin-label">Imagem de capa</label>
-                <?php if (!empty($row['cover_image'])): ?>
-                    <img src="<?= storageUrl($row['cover_image']) ?>" class="w-full h-40 object-cover rounded-lg mb-2">
-                <?php endif; ?>
-                <input type="file" name="cover_image" accept="image/*" class="admin-input">
-            </div>
-            <div>
-                <label class="admin-label">Galeria (múltiplas)</label>
-                <input type="file" name="gallery_new[]" accept="image/*" multiple class="admin-input">
-                <?php if ($gallery): ?>
-                <div class="grid grid-cols-4 gap-2 mt-3">
-                    <?php foreach ($gallery as $g): ?>
-                    <label class="relative cursor-pointer">
-                        <input type="checkbox" name="gallery_keep[]" value="<?= e($g) ?>" checked class="absolute top-1 right-1 z-10">
-                        <img src="<?= storageUrl($g) ?>" class="w-full h-16 object-cover rounded">
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-                <p class="text-xs mt-2" style="color:var(--text-muted)">Desmarque as imagens para removê-las.</p>
-                <?php endif; ?>
-            </div>
+    <div class="admin-card p-6 space-y-3">
+        <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>
+        <?php if (!empty($row['cover_image'])): ?>
+            <img src="<?= storageUrl($row['cover_image']) ?>" class="w-full aspect-[16/10] object-cover rounded-xl" style="border:1px solid var(--border-default)">
+        <?php endif; ?>
+        <label class="upload-zone block">
+            <input type="file" name="cover_image" accept="image/*">
+            <div class="upload-zone-icon"><i data-lucide="image-plus" class="w-6 h-6"></i></div>
+            <div class="upload-zone-title"><?= !empty($row['cover_image']) ? 'Trocar imagem de capa' : 'Arraste ou clique para enviar' ?></div>
+            <div class="upload-zone-hint">JPG, PNG ou WebP · Máx 5MB · Recomendado 1600×900px</div>
+        </label>
+    </div>
+
+    <div class="admin-card p-6 space-y-3">
+        <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Galeria de imagens</h3>
+            <span class="text-[11px] font-semibold" style="color:var(--text-muted)"><?= count($gallery) ?> foto<?= count($gallery)===1?'':'s' ?></span>
         </div>
+        <?php if ($gallery): ?>
+        <div class="gallery-editor-grid">
+            <?php foreach ($gallery as $g): ?>
+            <div class="gallery-editor-item" data-gallery-item>
+                <input type="hidden" name="gallery_keep[]" value="<?= e($g) ?>">
+                <img src="<?= storageUrl($g) ?>" alt="">
+                <button type="button" class="gallery-editor-remove" onclick="this.closest('[data-gallery-item]').remove()" title="Remover">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <label class="upload-zone block">
+            <input type="file" name="gallery_new[]" accept="image/*" multiple>
+            <div class="upload-zone-icon"><i data-lucide="images" class="w-6 h-6"></i></div>
+            <div class="upload-zone-title">Adicionar mais fotos</div>
+            <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
+        </label>
     </div>
 
     <div class="admin-card p-6">
