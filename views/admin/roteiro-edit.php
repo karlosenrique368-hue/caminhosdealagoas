@@ -73,7 +73,8 @@ if (isPost()) {
         }
         $keep = $_POST['gallery_keep'] ?? [];
         if (!is_array($keep)) $keep = [];
-        $keptGallery = array_values(array_intersect($existingGallery, $keep));
+        $hasKeepField = array_key_exists('gallery_keep', $_POST);
+        $keptGallery = $hasKeepField ? array_values(array_intersect($existingGallery, $keep)) : $existingGallery;
         if (!empty($_FILES['gallery_new']['name'][0] ?? null)) {
             $newPaths = handleMultipleImageUpload($_FILES['gallery_new'], 'roteiros');
             $attempted = count(array_filter((array)($_FILES['gallery_new']['name'] ?? []), fn($n) => trim((string)$n) !== ''));

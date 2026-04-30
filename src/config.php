@@ -86,7 +86,7 @@ define('PASSWORD_MIN_LENGTH', (int)envValue('PASSWORD_MIN_LENGTH', 8));
 
 // Uploads
 define('MAX_UPLOAD_SIZE', 20 * 1024 * 1024); // 20MB
-define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/jpg', 'image/pjpeg', 'image/png', 'image/webp']);
+define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/jpg', 'image/pjpeg', 'image/png', 'image/webp', 'image/avif']);
 
 // Locale
 setlocale(LC_TIME, 'pt_BR.UTF-8', 'Portuguese_Brazil.UTF-8');
