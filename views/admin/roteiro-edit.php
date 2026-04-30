@@ -338,7 +338,7 @@ $msg = flash('success');
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-4">
+            <div class="space-y-4">
                 <!-- Imagem -->
                 <div class="admin-card p-6 space-y-3">
                     <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>
@@ -393,7 +393,7 @@ $msg = flash('success');
         </div>
     </div>
 
-    <div class="flex items-center justify-end gap-3 sticky bottom-0 admin-card p-4">
+    <div class="flex items-center justify-end gap-3 sticky bottom-0 admin-card p-4 admin-sticky-actions">
         <a href="<?= url('/admin/roteiros') ?>" class="admin-btn">Cancelar</a>
         <button type="submit" class="admin-btn admin-btn-primary"><i data-lucide="save" class="w-4 h-4"></i><?= $isNew ? 'Criar Passeio' : 'Salvar Alterações' ?></button>
     </div>

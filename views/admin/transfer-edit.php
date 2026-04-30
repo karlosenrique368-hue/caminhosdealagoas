@@ -124,6 +124,8 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
 <form method="post" enctype="multipart/form-data" class="space-y-6">
     <?= csrfField() ?>
 
+    <div class="grid lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
     <div class="admin-card p-6">
         <h3 class="font-display font-bold text-lg mb-4" style="color:var(--sepia)">Informações principais</h3>
         <div class="grid md:grid-cols-2 gap-4">
@@ -183,7 +185,10 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
         </div>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-4">
+    </div>
+
+    <div class="space-y-6">
+
         <div class="admin-card p-6 space-y-3">
             <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Imagem de capa</h3>
             <?php if (!empty($row['cover_image'])): ?>
@@ -228,7 +233,6 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
                 <div class="upload-zone-hint">Selecione ou arraste várias imagens · JPG, PNG ou WebP · Máx 5MB cada</div>
             </label>
         </div>
-    </div>
 
     <div class="admin-card p-6">
         <h3 class="font-display font-bold text-lg mb-4" style="color:var(--sepia)">SEO & publicação</h3>
@@ -267,7 +271,10 @@ $gallery = !empty($row['gallery']) ? (json_decode($row['gallery'], true) ?: []) 
         </div>
     </div>
 
-    <div class="flex items-center justify-end gap-3 sticky bottom-0 admin-card p-4">
+    </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 sticky bottom-0 admin-card p-4 admin-sticky-actions">
         <a href="<?= url('/admin/transfers') ?>" class="admin-btn">Cancelar</a>
         <button type="submit" class="admin-btn admin-btn-primary"><i data-lucide="save" class="w-4 h-4"></i><?= $isNew ? 'Criar Transfer' : 'Salvar Alterações' ?></button>
     </div>

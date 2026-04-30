@@ -978,6 +978,13 @@ window.cart = (function () {
             showToast('Uploads concluídos!', 'success');
         }
 
+        zone.addEventListener('click', (e) => {
+            if (!input) return;
+            if (e.target.closest('.upload-zone-preview') || e.target.closest('.remove-btn')) return;
+            e.preventDefault();
+            input.click();
+        });
+
         input.addEventListener('change', () => handleFiles(input.files));
         zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
         zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
@@ -986,10 +993,16 @@ window.cart = (function () {
             zone.classList.remove('drag-over');
             handleFiles(e.dataTransfer.files);
         });
+        preview.addEventListener('pointerdown', (e) => {
+            if (!e.target.closest('.remove-btn')) return;
+            e.preventDefault();
+            e.stopPropagation();
+        });
         preview.addEventListener('click', (e) => {
             const btn = e.target.closest('.remove-btn[data-idx]');
             if (!btn) return;
             e.preventDefault();
+            e.stopPropagation();
             const idx = parseInt(btn.dataset.idx, 10);
             files.splice(idx, 1);
             syncInputFiles();
