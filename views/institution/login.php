@@ -1,5 +1,11 @@
 <?php
-if (isInstitutionUser()) redirect('/parceiro/dashboard');
+$loginPath = currentPath();
+$isMacaiokLogin = str_starts_with($loginPath, '/macaiok');
+$portalBase = $isMacaiokLogin ? '/macaiok' : '/parceiro';
+$portalTitle = $isMacaiokLogin ? 'Macaiok Vivências Pedagógicas' : 'Área do Parceiro';
+$portalSubtitle = $isMacaiokLogin ? 'Acesso para escolas acompanharem responsáveis, reservas e pagamentos' : 'Acesso para parceiros cadastrados';
+$portalIcon = $isMacaiokLogin ? 'graduation-cap' : 'handshake';
+if (isInstitutionUser()) redirect(institutionPortalBasePath(currentInstitution()) . '/dashboard');
 $error = null;
 
 if (isPost()) {
@@ -11,15 +17,26 @@ if (isPost()) {
         if (loginThrottleBlocked($throttleKey)) {
             $error = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
         } elseif (institutionLogin($email, $pass)) {
+            $current = currentInstitution();
+            if ($isMacaiokLogin && (($current['program'] ?? 'parceiros') !== 'macaiok')) {
+                institutionLogout();
+                loginThrottleFail($throttleKey);
+                $error = 'Este login pertence à área de parceiros. Solicite o acesso Macaiok da escola.';
+            } elseif (!$isMacaiokLogin && (($current['program'] ?? 'parceiros') === 'macaiok')) {
+                institutionLogout();
+                loginThrottleFail($throttleKey);
+                $error = 'Este acesso é da Macaiok Vivências Pedagógicas. Use a área Macaiok.';
+            } else {
             loginThrottleClear($throttleKey);
-            redirect('/parceiro/dashboard');
+                redirect($portalBase . '/dashboard');
+            }
         } else {
             loginThrottleFail($throttleKey);
             $error = 'E-mail ou senha inválidos.';
         }
     }
 }
-$pageTitle = 'Entrar · Área do Parceiro';
+$pageTitle = 'Entrar · ' . $portalTitle;
 ?><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -36,10 +53,10 @@ $pageTitle = 'Entrar · Área do Parceiro';
 <div class="w-full max-w-md">
     <div class="text-center mb-8">
         <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.15)">
-            <i data-lucide="handshake" class="w-8 h-8 text-white"></i>
+            <i data-lucide="<?= e($portalIcon) ?>" class="w-8 h-8 text-white"></i>
         </div>
-        <h1 class="font-display text-3xl font-bold text-white">Área do Parceiro</h1>
-        <p class="text-white/70 text-sm mt-2">Acesso para parceiros cadastrados</p>
+        <h1 class="font-display text-3xl font-bold text-white"><?= e($portalTitle) ?></h1>
+        <p class="text-white/70 text-sm mt-2"><?= e($portalSubtitle) ?></p>
     </div>
 
     <div class="rounded-2xl p-8" style="background:var(--bg-card);box-shadow:0 20px 60px rgba(0,0,0,0.3)">
@@ -61,7 +78,7 @@ $pageTitle = 'Entrar · Área do Parceiro';
             <button type="submit" class="admin-btn admin-btn-primary w-full justify-center"><i data-lucide="log-in" class="w-4 h-4"></i>Entrar</button>
         </form>
         <p class="text-center text-xs mt-6" style="color:var(--text-muted)">
-            Ainda não é parceiro? <a href="<?= url('/parceiro/cadastro') ?>" class="font-semibold" style="color:var(--terracota)">Criar parceria grátis</a>
+            <?php if ($isMacaiokLogin): ?>Acesso liberado pela coordenação Macaiok.<?php else: ?>Ainda não é parceiro? <a href="<?= url('/parceiro/cadastro') ?>" class="font-semibold" style="color:var(--terracota)">Criar parceria grátis</a><?php endif; ?>
         </p>
     </div>
     <p class="text-center text-xs mt-6 text-white/50">

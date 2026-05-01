@@ -23,6 +23,7 @@ function paymentWebhookUrl(): string {
 }
 
 function paymentGatewaySecretForProvider(string $provider): string {
+    if ($provider === 'pagseguro') return integrationSetting('payment_pagseguro_token', integrationSetting('payment_secret_key', ''));
     return integrationSetting('payment_secret_key', '');
 }
 
@@ -110,19 +111,28 @@ function renderAnalyticsConversion(): string {
     return '<script>window.addEventListener(\'load\',function(){var data=' . json_encode($payload, JSON_UNESCAPED_SLASHES) . ';if(window.gtag)gtag(\'event\',' . json_encode($isPaid ? 'purchase' : 'generate_lead') . ',data);if(window.fbq)fbq(\'track\',' . json_encode($isPaid ? 'Purchase' : 'Lead') . ',{value:data.value,currency:data.currency},{eventID:data.transaction_id});if(window.ttq)ttq.track(' . json_encode($isPaid ? 'CompletePayment' : 'SubmitForm') . ',{value:data.value,currency:data.currency,content_id:data.transaction_id});});</script>';
 }
 
-function integrationPostJson(string $url, array $payload, array $headers = [], int $timeout = 8): array {
-    $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    $headerLines = array_merge(['Content-Type: application/json'], $headers);
+function paymentWebhookUrlWithSecret(): string {
+    $url = paymentWebhookUrl();
+    $secret = integrationSetting('payment_webhook_secret', '');
+    if ($secret === '') return $url;
+    return $url . (str_contains($url, '?') ? '&' : '?') . 'secret=' . rawurlencode($secret);
+}
+
+function integrationHttpJson(string $method, string $url, ?array $payload = null, array $headers = [], int $timeout = 8): array {
+    $method = strtoupper($method);
+    $body = $payload !== null ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
+    $headerLines = $payload !== null ? array_merge(['Content-Type: application/json'], $headers) : $headers;
 
     if (function_exists('curl_init')) {
         $curl = curl_init($url);
-        curl_setopt_array($curl, [
+        $opts = [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => $headerLines,
             CURLOPT_TIMEOUT => $timeout,
-        ]);
+        ];
+        if ($payload !== null) $opts[CURLOPT_POSTFIELDS] = $body;
+        curl_setopt_array($curl, $opts);
         $response = curl_exec($curl);
         $status = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $error = curl_error($curl);
@@ -132,7 +142,15 @@ function integrationPostJson(string $url, array $payload, array $headers = [], i
 
     $context = stream_context_create([
         'http' => [
-            'method' => 'POST',
+            'method' => $method,
+            'header' => implode("\r\n", $headerLines),
+            'timeout' => $timeout,
+            'ignore_errors' => true,
+        ],
+    ]);
+    if ($payload !== null) $context = stream_context_create([
+        'http' => [
+            'method' => $method,
             'header' => implode("\r\n", $headerLines),
             'content' => $body,
             'timeout' => $timeout,
@@ -140,28 +158,154 @@ function integrationPostJson(string $url, array $payload, array $headers = [], i
         ],
     ]);
     $response = @file_get_contents($url, false, $context);
-    return ['ok' => $response !== false, 'status' => 0, 'body' => (string)$response, 'error' => $response === false ? 'Falha HTTP' : ''];
+    $status = 0;
+    foreach (($http_response_header ?? []) as $line) {
+        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $line, $m)) { $status = (int)$m[1]; break; }
+    }
+    return ['ok' => $status >= 200 && $status < 300, 'status' => $status, 'body' => (string)$response, 'error' => $response === false ? 'Falha HTTP' : ''];
+}
+
+function integrationPostJson(string $url, array $payload, array $headers = [], int $timeout = 8): array {
+    return integrationHttpJson('POST', $url, $payload, $headers, $timeout);
+}
+
+function integrationGetJson(string $url, array $headers = [], int $timeout = 8): array {
+    return integrationHttpJson('GET', $url, null, $headers, $timeout);
+}
+
+function mercadoPagoApiHeaders(): array {
+    $token = paymentGatewaySecretForProvider('mercadopago');
+    return $token !== '' ? ['Authorization: Bearer ' . $token] : [];
+}
+
+function mercadoPagoCreatePreference(array $booking): array {
+    $headers = mercadoPagoApiHeaders();
+    if (!$headers) return ['ok' => false, 'mode' => 'missing_credentials', 'provider' => 'mercadopago', 'msg' => 'Access Token Mercado Pago não configurado.'];
+
+    $baseUrl = integrationAppUrl();
+    $bookingCode = (string)$booking['code'];
+    $amount = round(max(0.01, (float)$booking['total']), 2);
+    $description = mb_substr((string)($booking['entity_title'] ?: 'Reserva ' . $bookingCode), 0, 250);
+    $payer = [
+        'name' => (string)($booking['customer_name'] ?? ''),
+        'email' => (string)($booking['customer_email'] ?? ''),
+    ];
+    $document = preg_replace('/\D/', '', (string)($booking['customer_document'] ?? ''));
+    if (strlen($document) === 11) $payer['identification'] = ['type' => 'CPF', 'number' => $document];
+
+    $payload = [
+        'items' => [[
+            'id' => $bookingCode,
+            'title' => $description,
+            'description' => 'Caminhos de Alagoas',
+            'quantity' => 1,
+            'currency_id' => 'BRL',
+            'unit_price' => $amount,
+        ]],
+        'payer' => $payer,
+        'external_reference' => $bookingCode,
+        'notification_url' => paymentWebhookUrlWithSecret(),
+        'back_urls' => [
+            'success' => $baseUrl . '/?booking=' . rawurlencode($bookingCode) . '&payment=success',
+            'pending' => $baseUrl . '/?booking=' . rawurlencode($bookingCode) . '&payment=pending',
+            'failure' => $baseUrl . '/?booking=' . rawurlencode($bookingCode) . '&payment=failure',
+        ],
+        'statement_descriptor' => 'CAMINHOSALAGOAS',
+        'metadata' => [
+            'booking_code' => $bookingCode,
+            'booking_id' => (int)$booking['id'],
+            'entity_type' => (string)$booking['entity_type'],
+        ],
+    ];
+
+    if (!preg_match('#^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)#i', $baseUrl)) {
+        $payload['auto_return'] = 'approved';
+    }
+
+    $headers[] = 'X-Idempotency-Key: mp-pref-' . $bookingCode;
+    $response = integrationPostJson('https://api.mercadopago.com/checkout/preferences', $payload, $headers, 20);
+    $body = json_decode($response['body'] ?? '', true);
+    if (!$response['ok'] || !is_array($body) || empty($body['id'])) {
+        error_log('[mercadopago] falha ao criar preferencia booking=' . $bookingCode . ' status=' . (int)($response['status'] ?? 0) . ' body=' . mb_substr((string)($response['body'] ?? ''), 0, 500));
+        return ['ok' => false, 'mode' => 'preference_failed', 'provider' => 'mercadopago', 'msg' => 'Não foi possível criar o pagamento Mercado Pago agora.'];
+    }
+
+    $sandbox = integrationEnabled('payment_sandbox', true);
+    $checkoutUrl = $sandbox ? ($body['sandbox_init_point'] ?? '') : ($body['init_point'] ?? '');
+    if ($checkoutUrl === '') $checkoutUrl = $body['init_point'] ?? ($body['sandbox_init_point'] ?? '');
+    dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = ? WHERE id = ?', ['mercadopago', $body['id'], $booking['id']]);
+
+    return [
+        'ok' => true,
+        'mode' => $sandbox ? 'sandbox_checkout' : 'production_checkout',
+        'provider' => 'mercadopago',
+        'transaction_id' => $body['id'],
+        'preference_id' => $body['id'],
+        'checkout_url' => $checkoutUrl,
+        'webhook_url' => paymentWebhookUrl(),
+    ];
+}
+
+function mercadoPagoPaymentDetails(string $paymentId): array {
+    $paymentId = preg_replace('/[^0-9]/', '', $paymentId);
+    if ($paymentId === '') return ['ok' => false, 'data' => null];
+    $headers = mercadoPagoApiHeaders();
+    if (!$headers) return ['ok' => false, 'data' => null];
+    $response = integrationGetJson('https://api.mercadopago.com/v1/payments/' . rawurlencode($paymentId), $headers, 15);
+    $body = json_decode($response['body'] ?? '', true);
+    return ['ok' => $response['ok'] && is_array($body), 'data' => is_array($body) ? $body : null, 'status' => $response['status'] ?? 0];
+}
+
+function mercadoPagoPayloadValue(array $payload, string $path): string {
+    $value = $payload;
+    foreach (explode('.', $path) as $part) {
+        if (!is_array($value) || !array_key_exists($part, $value)) return '';
+        $value = $value[$part];
+    }
+    return is_scalar($value) ? trim((string)$value) : '';
+}
+
+function mercadoPagoWebhookSignatureValid(array $payload, string $secret): bool {
+    $signatureHeader = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
+    $requestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
+    if ($signatureHeader === '' || $requestId === '') return false;
+    $parts = [];
+    foreach (explode(',', $signatureHeader) as $part) {
+        [$key, $value] = array_pad(explode('=', trim($part), 2), 2, '');
+        if ($key !== '') $parts[$key] = $value;
+    }
+    $ts = $parts['ts'] ?? '';
+    $signature = $parts['v1'] ?? '';
+    $dataId = $_GET['data.id'] ?? $_GET['id'] ?? mercadoPagoPayloadValue($payload, 'data.id');
+    if ($dataId === '') $dataId = mercadoPagoPayloadValue($payload, 'id');
+    if ($ts === '' || $signature === '' || $dataId === '') return false;
+    $manifest = 'id:' . $dataId . ';request-id:' . $requestId . ';ts:' . $ts . ';';
+    return hash_equals(hash_hmac('sha256', $manifest, $secret), $signature);
 }
 
 function bookingWithCustomer(int $bookingId): ?array {
-    return dbOne('SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone FROM bookings b JOIN customers c ON c.id = b.customer_id WHERE b.id = ? LIMIT 1', [$bookingId]);
+    return dbOne('SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone, c.document AS customer_document FROM bookings b JOIN customers c ON c.id = b.customer_id WHERE b.id = ? LIMIT 1', [$bookingId]);
 }
 
 function prepareBookingPayment(int $bookingId): array {
     $booking = bookingWithCustomer($bookingId);
     if (!$booking) return ['ok' => false, 'mode' => 'missing_booking'];
 
-    $provider = 'mercadopago';
+    $provider = strtolower(preg_replace('/[^a-z0-9_\-]/i', '', integrationSetting('payment_provider', 'manual')) ?: 'manual');
     if (!integrationEnabled('payment_enabled')) {
         logActivity(null, 'payment_skipped', 'booking', $bookingId, 'Pagamento externo desativado para reserva ' . $booking['code']);
         return ['ok' => true, 'mode' => 'disabled', 'provider' => $provider];
     }
 
-    $transactionId = $booking['gateway_tx_id'] ?: 'MP-' . $booking['code'] . '-' . strtoupper(substr(hash('sha256', $booking['code'] . microtime(true)), 0, 8));
+    if ($provider === 'mercadopago') {
+        return mercadoPagoCreatePreference($booking);
+    }
+
+    $transactionId = $booking['gateway_tx_id'] ?: strtoupper(substr($provider, 0, 4)) . '-' . $booking['code'] . '-' . strtoupper(substr(hash('sha256', $booking['code'] . microtime(true)), 0, 8));
     dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = COALESCE(gateway_tx_id, ?) WHERE id = ?', [$provider, $transactionId, $bookingId]);
 
     $secret = paymentGatewaySecretForProvider($provider);
-    $mode = $secret !== '' ? 'credentials_ready' : (integrationEnabled('payment_sandbox', true) ? 'sandbox_ready' : 'missing_credentials');
+    $mode = in_array($provider, ['manual', 'sandbox'], true) ? 'sandbox_ready' : ($secret !== '' ? 'credentials_ready' : 'missing_credentials');
     logActivity(null, 'payment_prepared', 'booking', $bookingId, 'Gateway ' . $provider . ' preparado para reserva ' . $booking['code']);
 
     return ['ok' => true, 'mode' => $mode, 'provider' => $provider, 'transaction_id' => $transactionId, 'webhook_url' => paymentWebhookUrl()];

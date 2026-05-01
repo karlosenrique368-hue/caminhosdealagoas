@@ -43,9 +43,11 @@ window.caminhosApi = async function (url, opts = {}) {
     } else if (cfg.data && cfg.data instanceof URLSearchParams) {
         cfg.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
         cfg.body = cfg.data.toString();
+    } else if (cfg.data && typeof cfg.data === 'object') {
+        cfg.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+        cfg.body = new URLSearchParams(cfg.data).toString();
     } else if (cfg.data) {
-        cfg.headers['Content-Type'] = 'application/json';
-        cfg.body = JSON.stringify(cfg.data);
+        cfg.body = cfg.data;
     }
 
     const res = await fetch(url, cfg);

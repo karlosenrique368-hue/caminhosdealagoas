@@ -3,6 +3,10 @@ $i = currentInstitution();
 $pageTitle = $pageTitle ?? 'Portal do Parceiro';
 $_curPartner = dbOne('SELECT referral_code, partner_type, free_spots_earned, free_spots_used FROM institutions WHERE id=?', [$i['id']]);
 $_partnerIcon = ['individual'=>'user','familia'=>'users','grupo'=>'users-round','instituicao'=>'building-2','revendedor'=>'store'][$_curPartner['partner_type'] ?? 'individual'] ?? 'user';
+$portalBase = institutionPortalBasePath($i);
+$isMacaiok = institutionPortalProgram($i) === 'macaiok';
+$portalLabel = $isMacaiok ? 'Macaiok Vivências' : 'Área do parceiro';
+$portalIcon = $isMacaiok ? 'graduation-cap' : $_partnerIcon;
 ?><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -31,33 +35,34 @@ tailwind.config = { theme: { extend: { colors: {
     <aside class="admin-sidebar fixed lg:sticky lg:top-0 inset-y-0 lg:inset-y-auto left-0 z-40 flex-shrink-0 transition-transform lg:h-screen lg:self-start"
            :class="sidebarOpen?'translate-x-0':'-translate-x-full lg:translate-x-0'" style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="<?= $_partnerIcon ?>" class="w-5 h-5"></i></div>
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="<?= e($portalIcon) ?>" class="w-5 h-5"></i></div>
             <div class="min-w-0">
                 <div class="font-display text-base font-bold text-white truncate"><?= e($i['name']) ?></div>
-                <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60">Área do parceiro</div>
+                <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60"><?= e($portalLabel) ?></div>
             </div>
         </div>
         <nav class="p-4 space-y-1">
             <?php
             $menu = [
-                ['path'=>'/parceiro/dashboard','icon'=>'layout-dashboard','label'=>'Visão geral'],
-                ['path'=>'/parceiro/reservas','icon'=>'calendar-check','label'=>'Minhas indicações'],
-                ['path'=>'/parceiro/link','icon'=>'link-2','label'=>'Meu link'],
-                ['path'=>'/parceiro/catalogo','icon'=>'compass','label'=>'Catálogo'],
-                ['path'=>'/parceiro/perfil','icon'=>'settings','label'=>'Minha conta'],
+                ['path'=>$portalBase . '/dashboard','icon'=>'layout-dashboard','label'=>'Visão geral'],
+                ['path'=>$portalBase . '/reservas','icon'=>'calendar-check','label'=>$isMacaiok ? 'Pagamentos dos pais' : 'Minhas indicações'],
+                ['path'=>$portalBase . '/link','icon'=>'link-2','label'=>$isMacaiok ? 'Links para responsáveis' : 'Meu link'],
+                ['path'=>$portalBase . '/catalogo','icon'=>'compass','label'=>$isMacaiok ? 'Vivências disponíveis' : 'Catálogo'],
+                ['path'=>$portalBase . '/perfil','icon'=>'settings','label'=>'Minha conta'],
             ];
             // Parceiros com modo grupo habilitado ganham atalho para reservar um grupo inteiro
             try {
                 $_partnerRow = dbOne('SELECT allow_group_checkout FROM institutions WHERE id=?', [$i['id']]);
                 if (!empty($_partnerRow['allow_group_checkout'])) {
-                    array_splice($menu, 2, 0, [['path'=>'/checkout/grupo','icon'=>'users','label'=>'Reservar grupo']]);
+                    array_splice($menu, 2, 0, [['path'=>'/checkout/grupo','icon'=>'users','label'=>$isMacaiok ? 'Reserva em grupo' : 'Reservar grupo']]);
                 }
             } catch (\Throwable $e) {}
             $cur = currentPath();
             foreach ($menu as $m):
                 // compat: reconhece /instituicao/... como ativo na entrada correspondente
                 $altPath = str_replace('/parceiro/', '/instituicao/', $m['path']);
-                $active = strpos($cur, $m['path']) === 0 || strpos($cur, $altPath) === 0;
+                $legacyPartnerPath = str_replace('/macaiok/', '/parceiro/', $m['path']);
+                $active = strpos($cur, $m['path']) === 0 || strpos($cur, $altPath) === 0 || strpos($cur, $legacyPartnerPath) === 0;
             ?>
                 <a href="<?= url($m['path']) ?>" class="admin-sidebar-link <?= $active?'active':'' ?>">
                     <i data-lucide="<?= $m['icon'] ?>" class="w-4 h-4 flex-shrink-0"></i>
@@ -72,7 +77,7 @@ tailwind.config = { theme: { extend: { colors: {
                     <div class="text-sm font-semibold text-white truncate"><?= e($i['user_name']) ?></div>
                     <div class="text-[11px] text-white/50 truncate"><?= e($i['user_email']) ?></div>
                 </div>
-                <a href="<?= url('/parceiro/logout') ?>" class="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition" title="Sair"><i data-lucide="log-out" class="w-4 h-4"></i></a>
+                <a href="<?= url($portalBase . '/logout') ?>" class="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition" title="Sair"><i data-lucide="log-out" class="w-4 h-4"></i></a>
             </div>
         </div>
     </aside>

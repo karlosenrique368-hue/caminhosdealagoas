@@ -1,15 +1,17 @@
 <?php
 requireInstitution();
 $i = currentInstitution();
-$pageTitle = 'Nossas reservas';
+$isMacaiok = institutionPortalProgram($i) === 'macaiok';
+$pageTitle = $isMacaiok ? 'Pagamentos dos responsáveis' : 'Nossas reservas';
+$partner = dbOne('SELECT referral_code FROM institutions WHERE id=?', [$i['id']]);
 
 $pag = paginate(
-    "SELECT COUNT(*) AS c FROM bookings WHERE institution_id=?",
+    "SELECT COUNT(*) AS c FROM bookings WHERE institution_id=? OR referral_code=?",
     "SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone
      FROM bookings b LEFT JOIN customers c ON c.id=b.customer_id
-     WHERE b.institution_id=?
+     WHERE b.institution_id=? OR b.referral_code=?
      ORDER BY b.created_at DESC",
-    [$i['id']]
+    [$i['id'], $partner['referral_code'] ?? '']
 );
 $items = $pag['rows'];
 
@@ -19,13 +21,13 @@ include VIEWS_DIR . '/partials/institution_head.php';
     <?php if (!$items): ?>
         <div class="p-12 text-center">
             <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4" style="color:var(--text-muted)"></i>
-            <h3 class="font-semibold mb-1" style="color:var(--sepia)">Nenhuma reserva ainda</h3>
-            <p class="text-sm" style="color:var(--text-muted)">Compartilhe o link parceiro com seu público para começar a acumular.</p>
+            <h3 class="font-semibold mb-1" style="color:var(--sepia)"><?= $isMacaiok ? 'Nenhum responsável pagou ainda' : 'Nenhuma reserva ainda' ?></h3>
+            <p class="text-sm" style="color:var(--text-muted)"><?= $isMacaiok ? 'Compartilhe os links de vivências com os pais para começar o controle da turma.' : 'Compartilhe o link parceiro com seu público para começar a acumular.' ?></p>
         </div>
     <?php else: ?>
     <div class="overflow-x-auto">
         <table class="admin-table">
-            <thead><tr><th>Código</th><th>Produto</th><th>Cliente</th><th>Contato</th><th>Data</th><th>Pax</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Código</th><th><?= $isMacaiok ? 'Vivência' : 'Produto' ?></th><th><?= $isMacaiok ? 'Responsável' : 'Cliente' ?></th><th>Contato</th><th>Data</th><th>Pax</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
             <?php foreach ($items as $b): ?>
             <tr>

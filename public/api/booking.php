@@ -2,6 +2,14 @@
 require_once __DIR__ . '/../../src/bootstrap.php';
 
 if (!isPost()) jsonResponse(['ok' => false, 'msg' => 'Método inválido.'], 405);
+
+$contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? ''));
+if (str_contains($contentType, 'application/json')) {
+    $rawBody = file_get_contents('php://input') ?: '';
+    $jsonBody = json_decode($rawBody, true);
+    if (is_array($jsonBody)) $_POST = array_replace($_POST, $jsonBody);
+}
+
 if (!csrfVerify()) jsonResponse(['ok' => false, 'msg' => 'Token inválido.'], 403);
 
 $name  = trim($_POST['name'] ?? '');
@@ -236,7 +244,7 @@ if (!$code) $code = "CA-{$year}-" . strtoupper(uniqid());
 
 $bookingId = dbInsert(
     "INSERT INTO bookings (code, customer_id, customer_user_id, entity_type, entity_id, booking_mode, entity_title, adults, children, infants, travel_date, subtotal, discount, total, currency, payment_method, installments, installment_amount, payment_status, notes, institution_id, referral_code, source, source_detail, comorbidity, booking_answers, participants, responsible_name, responsible_cpf, responsible_phone)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [$code, $customerId, $customerId, $entityType, $entityId, $bookingMode, $entity['title'], $adults, $children, $infants, $travelDate ?: null, $subtotal, $discount, $total, $currencyCode, $paymentMethod, $installments ?: null, $installmentAmount, $notes ?: null,
      $instPartnerId ?: $partnerId, $refCode, $source, $sourceDetail ?: null, $hasComorbid ? $comorbidity : null, json_encode($answers, JSON_UNESCAPED_UNICODE),
      $participants ? json_encode($participants, JSON_UNESCAPED_UNICODE) : null,
@@ -267,13 +275,18 @@ if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
 }
 
 $payment = prepareBookingPayment($bookingId);
+if (integrationEnabled('payment_enabled') && empty($payment['ok'])) {
+    jsonResponse(['ok' => false, 'msg' => $payment['msg'] ?? 'Não foi possível iniciar o pagamento agora.', 'booking' => ['id' => $bookingId, 'code' => $code]], 502);
+}
 sendBookingEmail($bookingId, 'booking_created');
 notifyBookingEvent($bookingId, 'booking_created', ['source' => 'checkout']);
+
+$redirect = $payment['checkout_url'] ?? url('/?booking=' . urlencode($code));
 
 jsonResponse([
     'ok' => true,
     'msg' => 'Reserva criada com sucesso!',
     'booking' => ['id' => $bookingId, 'code' => $code, 'total' => $total],
     'payment' => $payment,
-    'redirect' => url('/?booking=' . urlencode($code)),
+    'redirect' => $redirect,
 ]);

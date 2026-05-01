@@ -9,6 +9,7 @@ if (isPost() && csrfVerify()) {
         $data = [
             'name'=>trim($_POST['name'] ?? ''),
             'partner_type'=>$_POST['partner_type'] ?? 'individual',
+            'program'=>'parceiros',
             'type'=>$_POST['type'] ?? 'outro',
             'cnpj'=>trim($_POST['cnpj'] ?? ''),
             'cpf'=>trim($_POST['cpf'] ?? ''),
@@ -53,7 +54,7 @@ if (isPost() && csrfVerify()) {
 require VIEWS_DIR . '/partials/admin_head.php';
 
 $filterType = $_GET['tipo'] ?? '';
-$where = '1=1';
+$where = "program='parceiros'";
 $params = [];
 if ($filterType && in_array($filterType, ['individual','familia','grupo','instituicao','revendedor'])) {
     $where .= ' AND partner_type=?';
@@ -68,7 +69,7 @@ $edit = $editId ? dbOne('SELECT * FROM institutions WHERE id=?', [$editId]) : nu
 $partnerTypes = ['individual'=>'Individual','familia'=>'Família & amigos','grupo'=>'Grupo / comunidade','instituicao'=>'Instituição','revendedor'=>'Revenda / agência'];
 $typeIcons = ['individual'=>'user','familia'=>'users','grupo'=>'users-round','instituicao'=>'building-2','revendedor'=>'store'];
 
-$totals = dbOne("SELECT COUNT(*) AS n, COALESCE(SUM(commission_pending),0) AS pend, COALESCE(SUM(commission_paid),0) AS pago, COALESCE(SUM(free_spots_earned),0) AS vagas FROM institutions WHERE active=1");
+$totals = dbOne("SELECT COUNT(*) AS n, COALESCE(SUM(commission_pending),0) AS pend, COALESCE(SUM(commission_paid),0) AS pago, COALESCE(SUM(free_spots_earned),0) AS vagas FROM institutions WHERE active=1 AND program='parceiros'");
 ?>
 
 <!-- KPIs -->

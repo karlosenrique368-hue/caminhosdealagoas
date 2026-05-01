@@ -26,7 +26,7 @@ define('SRC_DIR', ROOT_DIR . '/src');
 define('VIEWS_DIR', ROOT_DIR . '/views');
 define('PUBLIC_DIR', ROOT_DIR . '/public');
 define('STORAGE_DIR', ROOT_DIR . '/storage');
-define('UPLOADS_DIR', PUBLIC_DIR . '/storage/uploads');
+define('UPLOADS_DIR', STORAGE_DIR . '/uploads');
 
 // Ambiente
 $defaultEnv = envValue('RAILWAY_ENVIRONMENT') ? 'production' : 'local';

@@ -1,7 +1,9 @@
 <?php
 requireInstitution();
 $i = currentInstitution();
-$pageTitle = 'Conta da instituição';
+$isMacaiok = institutionPortalProgram($i) === 'macaiok';
+$portalBase = institutionPortalBasePath($i);
+$pageTitle = $isMacaiok ? 'Conta da escola' : 'Conta da instituição';
 
 if (isPost() && csrfVerify()) {
     if (!institutionRoleCan('manage_users')) {
@@ -24,7 +26,7 @@ if (isPost() && csrfVerify()) {
             }
         }
     }
-    redirect('/instituicao/perfil');
+    redirect($portalBase . '/perfil');
 }
 
 $user = dbOne("SELECT * FROM institution_users WHERE id=?", [$i['user_id']]);
@@ -63,14 +65,14 @@ include VIEWS_DIR . '/partials/institution_head.php';
     </div>
 
     <div class="admin-card p-6 lg:col-span-2">
-        <h2 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)">Instituição</h2>
+        <h2 class="font-display text-lg font-bold mb-4" style="color:var(--sepia)"><?= $isMacaiok ? 'Escola' : 'Instituição' ?></h2>
         <div class="grid md:grid-cols-2 gap-4 text-sm">
             <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)">Nome</span><div class="font-semibold"><?= e($inst['name']) ?></div></div>
             <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)">Tipo</span><div><?= e($inst['type']) ?></div></div>
             <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)">CNPJ</span><div class="font-mono"><?= e($inst['cnpj'] ?: '—') ?></div></div>
             <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)">Site</span><div><?= $inst['website'] ? '<a href="'.e($inst['website']).'" target="_blank" style="color:var(--horizonte)">'.e($inst['website']).'</a>' : '—' ?></div></div>
-            <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)">Desconto parceiro</span><div class="font-semibold" style="color:var(--maresia-dark)"><?= number_format($inst['discount_percent'],0) ?>%</div></div>
-            <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)">Comissão</span><div class="font-semibold" style="color:var(--terracota)"><?= number_format($inst['commission_percent'],0) ?>%</div></div>
+            <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)"><?= $isMacaiok ? 'Desconto escolar' : 'Desconto parceiro' ?></span><div class="font-semibold" style="color:var(--maresia-dark)"><?= number_format($inst['discount_percent'],0) ?>%</div></div>
+            <div><span class="text-xs uppercase font-semibold" style="color:var(--text-muted)"><?= $isMacaiok ? 'Programa' : 'Comissão' ?></span><div class="font-semibold" style="color:var(--terracota)"><?= $isMacaiok ? 'Macaiok' : number_format($inst['commission_percent'],0) . '%' ?></div></div>
         </div>
         <p class="text-xs mt-4" style="color:var(--text-muted)">Para alterar dados da instituição, fale com a equipe Caminhos.</p>
     </div>

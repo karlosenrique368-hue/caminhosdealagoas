@@ -17,6 +17,7 @@ function institutionLogin(string $email, string $password): bool {
     $_SESSION['inst_id']          = (int)$inst['id'];
     $_SESSION['inst_name']        = $inst['name'];
     $_SESSION['inst_type']        = $inst['type'];
+    $_SESSION['inst_program']     = $inst['program'] ?? 'parceiros';
     $_SESSION['inst_discount']    = (float)$inst['discount_percent'];
 
     dbExec('UPDATE institution_users SET last_login_at=NOW() WHERE id=?', [$u['id']]);
@@ -24,7 +25,7 @@ function institutionLogin(string $email, string $password): bool {
 }
 
 function institutionLogout(): void {
-    foreach (['inst_user_id','inst_user_name','inst_user_email','inst_user_role','inst_id','inst_name','inst_type','inst_discount'] as $k) {
+    foreach (['inst_user_id','inst_user_name','inst_user_email','inst_user_role','inst_id','inst_name','inst_type','inst_program','inst_discount'] as $k) {
         unset($_SESSION[$k]);
     }
     session_regenerate_id(true);
@@ -38,8 +39,12 @@ function requireInstitution(): void {
     if (!isInstitutionUser()) {
         if (isAjax()) jsonResponse(['ok'=>false,'msg'=>'Não autenticado.'], 401);
         flash('error','Faça login para continuar.');
-        redirect('/parceiro/login');
+        redirect(str_starts_with(currentPath(), '/macaiok') ? '/macaiok/login' : '/parceiro/login');
     }
+    $path = currentPath();
+    $program = $_SESSION['inst_program'] ?? 'parceiros';
+    if (str_starts_with($path, '/macaiok') && $program !== 'macaiok') redirect('/parceiro/dashboard');
+    if ((str_starts_with($path, '/parceiro') || str_starts_with($path, '/instituicao')) && $program === 'macaiok') redirect('/macaiok/dashboard');
 }
 
 function currentInstitution(): ?array {
@@ -52,8 +57,20 @@ function currentInstitution(): ?array {
         'id'        => $_SESSION['inst_id'],
         'name'      => $_SESSION['inst_name'],
         'type'      => $_SESSION['inst_type'],
+        'program'   => $_SESSION['inst_program'] ?? 'parceiros',
         'discount'  => $_SESSION['inst_discount'] ?? 0.0,
     ];
+}
+
+function institutionPortalProgram(?array $institution = null): string {
+    $path = currentPath();
+    if (str_starts_with($path, '/macaiok')) return 'macaiok';
+    $program = $institution['program'] ?? ($_SESSION['inst_program'] ?? 'parceiros');
+    return $program === 'macaiok' ? 'macaiok' : 'parceiros';
+}
+
+function institutionPortalBasePath(?array $institution = null): string {
+    return institutionPortalProgram($institution) === 'macaiok' ? '/macaiok' : '/parceiro';
 }
 
 function institutionRoleCan(string $perm): bool {

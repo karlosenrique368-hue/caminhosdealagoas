@@ -4,9 +4,12 @@ $i = currentInstitution();
 $pageTitle = 'Visão geral';
 $stats = partnerStats($i['id']);
 $partner = $stats['partner'] ?? null;
+$isMacaiok = institutionPortalProgram($i) === 'macaiok';
+$portalBase = institutionPortalBasePath($i);
 
 $recent = dbAll("SELECT b.*, c.name AS customer_name FROM bookings b LEFT JOIN customers c ON c.id=b.customer_id WHERE b.institution_id=? OR b.referral_code=? ORDER BY b.created_at DESC LIMIT 8", [$i['id'], $partner['referral_code'] ?? '']);
-$peopleTraveled = (int) (dbOne("SELECT COALESCE(SUM(adults+children),0) AS p FROM bookings WHERE (institution_id=? OR referral_code=?) AND payment_status='paid'", [$i['id'], $partner['referral_code'] ?? ''])['p'] ?? 0);
+$peopleTraveled = (int) (dbOne("SELECT COALESCE(SUM(adults+children+infants),0) AS p FROM bookings WHERE (institution_id=? OR referral_code=?) AND payment_status='paid'", [$i['id'], $partner['referral_code'] ?? ''])['p'] ?? 0);
+$macaiokStats = $isMacaiok ? dbOne("SELECT COALESCE(SUM(CASE WHEN payment_status='paid' THEN total ELSE 0 END),0) AS revenue, SUM(payment_status='pending') AS pending FROM bookings WHERE institution_id=? OR referral_code=?", [$i['id'], $partner['referral_code'] ?? '']) : ['revenue' => 0, 'pending' => 0];
 $shareUrl = referralShareUrl($partner['referral_code'] ?? '', '/');
 
 // Atividade dos últimos 6 meses — conta indicações por mês
@@ -26,9 +29,9 @@ include VIEWS_DIR . '/partials/institution_head.php';
     <div class="absolute -top-10 -right-10 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.08)"></div>
     <div class="relative grid lg:grid-cols-[1fr_auto] gap-6 items-center">
         <div>
-            <div class="text-[11px] uppercase tracking-widest font-bold mb-2 text-white/80"><i data-lucide="handshake" class="w-3.5 h-3.5 inline -mt-0.5"></i> Olá, parceiro(a)</div>
+            <div class="text-[11px] uppercase tracking-widest font-bold mb-2 text-white/80"><i data-lucide="<?= $isMacaiok ? 'graduation-cap' : 'handshake' ?>" class="w-3.5 h-3.5 inline -mt-0.5"></i> <?= $isMacaiok ? 'Portal da escola' : 'Olá, parceiro(a)' ?></div>
             <h1 class="font-display text-2xl sm:text-3xl font-bold mb-2">Oi, <?= e(explode(' ', $i['user_name'])[0]) ?>! 👋</h1>
-            <p class="text-sm sm:text-base text-white/90 max-w-xl">Seu código de indicação está ativo. Compartilhe com quem você ama viajar junto.</p>
+            <p class="text-sm sm:text-base text-white/90 max-w-xl"><?= $isMacaiok ? 'Acompanhe pagamentos dos responsáveis, compartilhe links de vivências e mantenha a escola alinhada com a Macaiok.' : 'Seu código de indicação está ativo. Compartilhe com quem você ama viajar junto.' ?></p>
         </div>
         <div class="bg-white/10 backdrop-blur p-4 rounded-xl border border-white/20">
             <div class="text-[10px] uppercase tracking-widest font-bold text-white/70 mb-1">Seu código</div>
@@ -41,35 +44,35 @@ include VIEWS_DIR . '/partials/institution_head.php';
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
     <div class="admin-card p-5">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Indicações</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)"><?= $isMacaiok ? 'Responsáveis' : 'Indicações' ?></span>
             <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5" style="color:var(--horizonte)"></i>
         </div>
         <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--sepia)"><?= (int)$stats['total_bookings'] ?></div>
-        <div class="text-[11px] mt-1" style="color:var(--text-muted)">no total</div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)"><?= $isMacaiok ? 'com reserva registrada' : 'no total' ?></div>
     </div>
     <div class="admin-card p-5">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Confirmadas</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)"><?= $isMacaiok ? 'Pagamentos' : 'Confirmadas' ?></span>
             <i data-lucide="check-circle-2" class="w-4 h-4 sm:w-5 sm:h-5" style="color:var(--maresia-dark)"></i>
         </div>
         <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--maresia-dark)"><?= (int)$stats['paid_bookings'] ?></div>
-        <div class="text-[11px] mt-1" style="color:var(--text-muted)"><?= $peopleTraveled ?> pessoas já foram</div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)"><?= $peopleTraveled ?> participante<?= $peopleTraveled===1?'':'s' ?> confirmado<?= $peopleTraveled===1?'':'s' ?></div>
     </div>
     <div class="admin-card p-5">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Bônus disponível</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)"><?= $isMacaiok ? 'Recebido Macaiok' : 'Bônus disponível' ?></span>
             <i data-lucide="wallet" class="w-4 h-4 sm:w-5 sm:h-5" style="color:var(--terracota)"></i>
         </div>
-        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--terracota)"><?= formatBRL($stats['commission_pending']) ?></div>
-        <div class="text-[11px] mt-1" style="color:var(--text-muted)">a receber</div>
+        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:var(--terracota)"><?= $isMacaiok ? formatBRL($macaiokStats['revenue'] ?? 0) : formatBRL($stats['commission_pending']) ?></div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)"><?= $isMacaiok ? 'em pagamentos confirmados' : 'a receber' ?></div>
     </div>
     <div class="admin-card p-5">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Vagas-cortesia</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)"><?= $isMacaiok ? 'Pendentes' : 'Vagas-cortesia' ?></span>
             <i data-lucide="ticket" class="w-4 h-4 sm:w-5 sm:h-5" style="color:#F59E0B"></i>
         </div>
-        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:#F59E0B"><?= (int)$stats['free_available'] ?></div>
-        <div class="text-[11px] mt-1" style="color:var(--text-muted)">para usar</div>
+        <div class="font-display text-2xl sm:text-3xl font-bold" style="color:#F59E0B"><?= $isMacaiok ? (int)($macaiokStats['pending'] ?? 0) : (int)$stats['free_available'] ?></div>
+        <div class="text-[11px] mt-1" style="color:var(--text-muted)"><?= $isMacaiok ? 'aguardando pagamento' : 'para usar' ?></div>
     </div>
 </div>
 
@@ -78,7 +81,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
     <div class="flex items-center justify-between mb-5">
         <div>
             <h2 class="font-display text-lg font-bold" style="color:var(--sepia)">Atividade dos últimos 6 meses</h2>
-            <p class="text-xs mt-0.5" style="color:var(--text-muted)">Indicações totais · confirmadas</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted)"><?= $isMacaiok ? 'Reservas de responsáveis · pagamentos confirmados' : 'Indicações totais · confirmadas' ?></p>
         </div>
         <div class="hidden sm:flex items-center gap-3 text-[11px]">
             <span class="flex items-center gap-1.5" style="color:var(--text-secondary)"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--terracota)"></span>Confirmadas</span>
@@ -109,13 +112,13 @@ include VIEWS_DIR . '/partials/institution_head.php';
     <!-- RESERVAS RECENTES -->
     <div class="admin-card p-5 sm:p-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="font-display text-lg font-bold" style="color:var(--sepia)">Reservas via seu link</h2>
-            <a href="<?= url('/parceiro/reservas') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Ver todas →</a>
+            <h2 class="font-display text-lg font-bold" style="color:var(--sepia)"><?= $isMacaiok ? 'Pagamentos recentes dos responsáveis' : 'Reservas via seu link' ?></h2>
+            <a href="<?= url($portalBase . '/reservas') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Ver todas →</a>
         </div>        <?php if (!$recent): ?>
             <div class="py-10 text-center">
                 <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted)"></i>
-                <p class="text-sm font-semibold mb-1" style="color:var(--sepia)">Ainda sem indicações confirmadas</p>
-                <p class="text-xs max-w-sm mx-auto" style="color:var(--text-muted)">Copie o link ao lado e compartilhe nas suas redes, grupos ou no WhatsApp.</p>
+                <p class="text-sm font-semibold mb-1" style="color:var(--sepia)"><?= $isMacaiok ? 'Ainda sem pagamentos de responsáveis' : 'Ainda sem indicações confirmadas' ?></p>
+                <p class="text-xs max-w-sm mx-auto" style="color:var(--text-muted)"><?= $isMacaiok ? 'Use a área de links para enviar a vivência certa aos pais dos alunos.' : 'Copie o link ao lado e compartilhe nas suas redes, grupos ou no WhatsApp.' ?></p>
             </div>
         <?php else: ?>
         <div class="overflow-x-auto">
@@ -143,9 +146,9 @@ include VIEWS_DIR . '/partials/institution_head.php';
 
     <!-- SIDEBAR: LINK + PROGRESSO -->
     <div class="space-y-5">
-        <!-- Link de indicação -->
+        <!-- Link de indicação / responsáveis -->
         <div class="admin-card p-5" x-data="{copied:false}">
-            <h3 class="font-display text-base font-bold mb-3 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="link-2" class="w-5 h-5" style="color:var(--terracota)"></i> Seu link</h3>
+            <h3 class="font-display text-base font-bold mb-3 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="link-2" class="w-5 h-5" style="color:var(--terracota)"></i> <?= $isMacaiok ? 'Link da escola' : 'Seu link' ?></h3>
             <div class="p-3 rounded-lg font-mono text-[11px] break-all mb-3" style="background:var(--bg-surface);color:var(--text-primary)"><?= e($shareUrl) ?></div>
             <div class="grid grid-cols-2 gap-2">
                 <button type="button" @click="navigator.clipboard.writeText('<?= e(addslashes($shareUrl)) ?>'); copied=true; setTimeout(()=>copied=false,2000)" class="admin-btn admin-btn-primary justify-center">
@@ -153,7 +156,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
                     <i data-lucide="check" class="w-4 h-4" x-show="copied" x-cloak></i>
                     <span x-text="copied?'Copiado!':'Copiar'"></span>
                 </button>
-                <a href="https://wa.me/?text=<?= urlencode('Vem viver Alagoas com a Caminhos de Alagoas! '.$shareUrl) ?>" target="_blank" class="admin-btn admin-btn-secondary justify-center">
+                <a href="https://wa.me/?text=<?= urlencode(($isMacaiok ? 'Segue o link da vivência pedagógica Macaiok: ' : 'Vem viver Alagoas com a Caminhos de Alagoas! ') . $shareUrl) ?>" target="_blank" class="admin-btn admin-btn-secondary justify-center">
                     <i data-lucide="send" class="w-4 h-4"></i>WhatsApp
                 </a>
             </div>
@@ -165,7 +168,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
         </div>
 
         <!-- Progresso gratuidade -->
-        <?php if ($stats['threshold'] > 0): ?>
+        <?php if (!$isMacaiok && $stats['threshold'] > 0): ?>
         <div class="admin-card p-5">
             <h3 class="font-display text-base font-bold mb-1" style="color:var(--sepia)">Próxima vaga-cortesia</h3>
             <p class="text-xs mb-4" style="color:var(--text-muted)">A cada <?= (int)$stats['threshold'] ?> indicações confirmadas, 1 vaga fica disponível pra você viajar.</p>
@@ -185,7 +188,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
         </div>
         <?php endif; ?>
 
-        <!-- Tipo de parceria -->
+        <!-- Tipo de parceria / escola -->
         <?php
         $typeLabels = ['individual'=>'Parceria individual','familia'=>'Família & amigos','grupo'=>'Grupo / comunidade','instituicao'=>'Instituição','revendedor'=>'Revenda / agência'];
         $typeIcons  = ['individual'=>'user','familia'=>'users','grupo'=>'users-round','instituicao'=>'building-2','revendedor'=>'store'];
@@ -196,8 +199,8 @@ include VIEWS_DIR . '/partials/institution_head.php';
                 <i data-lucide="<?= $typeIcons[$pt] ?? 'user' ?>" class="w-5 h-5"></i>
             </div>
             <div>
-                <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Tipo de parceria</div>
-                <div class="font-semibold text-sm" style="color:var(--sepia)"><?= e($typeLabels[$pt] ?? 'Parceiro') ?></div>
+                <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)"><?= $isMacaiok ? 'Portal' : 'Tipo de parceria' ?></div>
+                <div class="font-semibold text-sm" style="color:var(--sepia)"><?= $isMacaiok ? 'Escola Macaiok' : e($typeLabels[$pt] ?? 'Parceiro') ?></div>
             </div>
         </div>
     </div>

@@ -96,6 +96,39 @@ switch (true) {
         require VIEWS_DIR . '/public/checkout-grupo.php';
         break;
 
+    // ============== MACAIOK VIVÊNCIAS ==============
+    case $path === '/macaiok' || $path === '/macaiok/':
+        require VIEWS_DIR . '/public/macaiok.php';
+        break;
+
+    case $path === '/macaiok/login':
+        require VIEWS_DIR . '/institution/login.php';
+        break;
+
+    case $path === '/macaiok/logout':
+        institutionLogout();
+        redirect('/macaiok/login');
+
+    case $path === '/macaiok/dashboard':
+        require VIEWS_DIR . '/institution/dashboard.php';
+        break;
+
+    case $path === '/macaiok/reservas':
+        require VIEWS_DIR . '/institution/reservas.php';
+        break;
+
+    case $path === '/macaiok/link':
+        require VIEWS_DIR . '/institution/link-share.php';
+        break;
+
+    case $path === '/macaiok/catalogo':
+        require VIEWS_DIR . '/institution/catalogo.php';
+        break;
+
+    case $path === '/macaiok/perfil':
+        require VIEWS_DIR . '/institution/perfil.php';
+        break;
+
     // ============== CUSTOMER ACCOUNT ==============
     case $path === '/conta/login':
         require VIEWS_DIR . '/public/account/login.php';
@@ -287,6 +320,9 @@ switch (true) {
         break;
     case $path === '/admin/instituicoes':
         require VIEWS_DIR . '/admin/instituicoes.php';
+        break;
+    case $path === '/admin/macaiok':
+        require VIEWS_DIR . '/admin/macaiok.php';
         break;
     case $path === '/admin/traducoes':
         require VIEWS_DIR . '/admin/traducoes.php';
