@@ -73,6 +73,19 @@ if (isPost() && csrfVerify()) {
         flash('success', 'Escola removida do Macaiok.');
     }
 
+    if ($action === 'save_curated') {
+        $sel = ['roteiros' => $_POST['roteiros'] ?? [], 'pacotes' => $_POST['pacotes'] ?? [], 'transfers' => $_POST['transfers'] ?? []];
+        foreach ($sel as $table => $ids) {
+            $ids = array_map('intval', (array)$ids);
+            dbExec("UPDATE `$table` SET macaiok_featured=0");
+            if ($ids) {
+                $ph = implode(',', array_fill(0, count($ids), '?'));
+                dbExec("UPDATE `$table` SET macaiok_featured=1 WHERE id IN ($ph)", $ids);
+            }
+        }
+        flash('success', 'Vivências curadas atualizadas.');
+    }
+
     redirect('/admin/macaiok');
 }
 
@@ -84,6 +97,9 @@ $totals = dbOne("SELECT COUNT(*) AS schools, SUM(active=1) AS active_schools FRO
 $bookingStats = dbOne("SELECT COUNT(b.id) AS bookings, SUM(b.payment_status='paid') AS paid, SUM(b.payment_status='pending') AS pending, COALESCE(SUM(CASE WHEN b.payment_status='paid' THEN b.total ELSE 0 END),0) AS revenue, COALESCE(SUM(CASE WHEN b.payment_status='paid' THEN b.adults+b.children+b.infants ELSE 0 END),0) AS people FROM bookings b JOIN institutions i ON i.id=b.institution_id WHERE i.program='macaiok'");
 $schools = dbAll("SELECT i.*, COUNT(DISTINCT u.id) AS users_count, COUNT(b.id) AS bookings_count, SUM(b.payment_status='paid') AS paid_count, SUM(b.payment_status='pending') AS pending_count, COALESCE(SUM(CASE WHEN b.payment_status='paid' THEN b.total ELSE 0 END),0) AS revenue FROM institutions i LEFT JOIN institution_users u ON u.institution_id=i.id LEFT JOIN bookings b ON b.institution_id=i.id WHERE i.program='macaiok' GROUP BY i.id ORDER BY i.created_at DESC");
 $recent = dbAll("SELECT b.*, c.name AS customer_name, c.email AS customer_email, i.name AS school_name FROM bookings b JOIN institutions i ON i.id=b.institution_id LEFT JOIN customers c ON c.id=b.customer_id WHERE i.program='macaiok' ORDER BY b.created_at DESC LIMIT 8");
+$curatedRoteiros  = dbAll("SELECT id, title, macaiok_featured, status FROM roteiros ORDER BY title");
+$curatedPacotes   = dbAll("SELECT id, title, macaiok_featured, status FROM pacotes ORDER BY title");
+$curatedTransfers = dbAll("SELECT id, title, macaiok_featured, status FROM transfers ORDER BY title");
 ?>
 
 <?php if ($flashOk): ?><div class="mb-6 p-4 rounded-xl flex items-center gap-3" style="background:rgba(122,157,110,0.08);border:1px solid rgba(122,157,110,0.3)"><i data-lucide="check-circle" class="w-5 h-5" style="color:var(--maresia-dark)"></i><span class="text-sm" style="color:var(--maresia-dark)"><?= e($flashOk) ?></span></div><?php endif; ?>
@@ -165,7 +181,7 @@ $recent = dbAll("SELECT b.*, c.name AS customer_name, c.email AS customer_email,
         <input type="hidden" name="id" value="<?= (int)($edit['id'] ?? 0) ?>">
         <div><h3 class="font-display text-lg font-bold" style="color:var(--sepia)"><?= $edit ? 'Editar escola' : 'Nova escola Macaiok' ?></h3><p class="text-xs" style="color:var(--text-muted)">O acesso criado entra pelo endereço /macaiok/login.</p></div>
         <label class="block"><span class="admin-label">Nome da escola *</span><input name="name" required value="<?= e($edit['name'] ?? '') ?>" class="admin-input"></label>
-        <div class="grid grid-cols-2 gap-3"><label><span class="admin-label">Código interno</span><input name="school_code" value="<?= e($edit['school_code'] ?? '') ?>" class="admin-input" placeholder="MACAIOK01"></label><label><span class="admin-label">CNPJ</span><input name="cnpj" value="<?= e($edit['cnpj'] ?? '') ?>" class="admin-input"></label></div>
+        <div class="grid grid-cols-2 gap-3"><label><span class="admin-label">Código interno</span><input name="school_code" value="<?= e($edit['school_code'] ?? '') ?>" class="admin-input" placeholder="MACAIOK01"></label><label><span class="admin-label">CNPJ</span><input name="cnpj" value="<?= e($edit['cnpj'] ?? '') ?>" class="admin-input" data-mask="cnpj" placeholder="00.000.000/0000-00"></label></div>
         <div class="grid grid-cols-2 gap-3"><label><span class="admin-label">Coordenação</span><input name="coordinator_name" value="<?= e($edit['coordinator_name'] ?? '') ?>" class="admin-input"></label><label><span class="admin-label">Contato</span><input name="contact_name" value="<?= e($edit['contact_name'] ?? '') ?>" class="admin-input"></label></div>
         <div class="grid grid-cols-2 gap-3"><label><span class="admin-label">E-mail</span><input type="email" name="contact_email" value="<?= e($edit['contact_email'] ?? '') ?>" class="admin-input"></label><label><span class="admin-label">WhatsApp</span><input name="whatsapp" value="<?= e($edit['whatsapp'] ?? '') ?>" class="admin-input"></label></div>
         <label class="block"><span class="admin-label">Site</span><input name="website" value="<?= e($edit['website'] ?? '') ?>" class="admin-input"></label>
@@ -179,5 +195,36 @@ $recent = dbAll("SELECT b.*, c.name AS customer_name, c.email AS customer_email,
         <button class="admin-btn admin-btn-primary w-full justify-center"><i data-lucide="save" class="w-4 h-4"></i><?= $edit ? 'Salvar escola' : 'Criar escola' ?></button>
     </form>
 </div>
+
+<form method="POST" class="admin-card p-5 sm:p-6 mt-6" x-data="{ tab: 'roteiros' }">
+    <?= csrfField() ?>
+    <input type="hidden" name="action" value="save_curated">
+    <div class="flex items-start justify-between gap-3 mb-4 flex-wrap">
+        <div>
+            <h3 class="font-display text-lg font-bold" style="color:var(--sepia)">Vivências curadas Macaiok</h3>
+            <p class="text-xs" style="color:var(--text-muted)">Apenas as vivências marcadas aparecem no portal das escolas e nos links enviados aos responsáveis.</p>
+        </div>
+        <button class="admin-btn admin-btn-primary"><i data-lucide="save" class="w-4 h-4"></i>Salvar curadoria</button>
+    </div>
+    <div class="flex gap-2 mb-4 border-b" style="border-color:var(--border-default)">
+        <?php foreach ([['roteiros','Passeios','compass'],['pacotes','Pacotes','package'],['transfers','Transfers','car']] as $t): ?>
+            <button type="button" @click="tab='<?= $t[0] ?>'" :class="tab==='<?= $t[0] ?>'?'border-terracota text-terracota':'border-transparent'" class="px-4 py-2 text-sm font-semibold border-b-2 flex items-center gap-2" style="color:var(--text-secondary)"><i data-lucide="<?= $t[2] ?>" class="w-4 h-4"></i><?= $t[1] ?></button>
+        <?php endforeach; ?>
+    </div>
+    <?php foreach ([['roteiros',$curatedRoteiros],['pacotes',$curatedPacotes],['transfers',$curatedTransfers]] as $set): [$tname,$rows]=$set; ?>
+        <div x-show="tab==='<?= $tname ?>'" x-cloak class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <?php foreach ($rows as $row): ?>
+                <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-gray-50" style="border:1px solid var(--border-default)">
+                    <input type="checkbox" name="<?= $tname ?>[]" value="<?= (int)$row['id'] ?>" <?= $row['macaiok_featured'] ? 'checked' : '' ?> class="w-4 h-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-sm font-semibold truncate" style="color:var(--sepia)"><?= e($row['title']) ?></div>
+                        <div class="text-[10px] uppercase tracking-wider" style="color:var(--text-muted)"><?= e($row['status']) ?></div>
+                    </div>
+                </label>
+            <?php endforeach; ?>
+            <?php if (!$rows): ?><div class="text-sm col-span-full text-center py-6" style="color:var(--text-muted)">Nada cadastrado.</div><?php endif; ?>
+        </div>
+    <?php endforeach; ?>
+</form>
 
 <?php require VIEWS_DIR . '/partials/admin_foot.php'; ?>

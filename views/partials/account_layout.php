@@ -21,13 +21,14 @@ $links = [
 // Initials
 $parts = preg_split('/\s+/', trim($cust['name'] ?? 'U'));
 $initials = mb_strtoupper(mb_substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? mb_substr($parts[1], 0, 1) : ''));
+$avatarUrl = function_exists('avatarUrl') ? avatarUrl($cust['avatar'] ?? null) : null;
 ?>
 <section class="pt-24 pb-16 min-h-screen" style="background:var(--bg-surface)">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <!-- Premium hero banner -->
         <div class="account-hero mb-8" data-reveal>
             <div class="relative z-10 flex flex-col md:flex-row md:items-center gap-5">
-                <div class="account-hero-avatar"><?= e($initials) ?></div>
+                <div class="account-hero-avatar"><?php if ($avatarUrl): ?><img src="<?= e($avatarUrl) ?>" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover"><?php else: ?><?= e($initials) ?><?php endif; ?></div>
                 <div class="flex-1 min-w-0">
                     <div class="account-hero-eyebrow">Olá, viajante</div>
                     <h1 class="account-hero-name"><?= e($cust['name']) ?></h1>

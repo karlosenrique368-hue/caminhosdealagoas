@@ -5,8 +5,8 @@ $isMacaiok = institutionPortalProgram($i) === 'macaiok';
 $pageTitle = $isMacaiok ? 'Vivências disponíveis' : 'Catálogo exclusivo';
 $partner = dbOne('SELECT referral_code FROM institutions WHERE id=?', [$i['id']]);
 
-$roteiros = dbAll("SELECT * FROM roteiros WHERE status='published' ORDER BY featured DESC, title");
-$pacotes  = dbAll("SELECT * FROM pacotes WHERE status='published' ORDER BY featured DESC, title");
+$roteiros = dbAll("SELECT * FROM roteiros WHERE status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "") . " ORDER BY featured DESC, title");
+$pacotes  = dbAll("SELECT * FROM pacotes WHERE status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "") . " ORDER BY featured DESC, title");
 
 include VIEWS_DIR . '/partials/institution_head.php';
 ?>

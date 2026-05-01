@@ -3,7 +3,49 @@ $accountTitle = 'Perfil';
 $accountTab = 'perfil';
 include VIEWS_DIR . '/partials/account_layout.php';
 $cust = currentCustomer();
+$avatarUrl = avatarUrl($cust['avatar'] ?? null);
+$initials  = userInitials($cust['name'] ?? 'U');
 ?>
+
+<div class="glass-card p-6 mb-6">
+    <div class="flex flex-col sm:flex-row items-center gap-5">
+        <div class="relative">
+            <?php if ($avatarUrl): ?>
+                <img id="avatar-preview" src="<?= e($avatarUrl) ?>" alt="Avatar" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--terracota)">
+            <?php else: ?>
+                <div id="avatar-preview" class="font-display font-bold text-3xl flex items-center justify-center" style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--terracota),var(--horizonte));color:#fff;border:3px solid var(--terracota)"><?= e($initials) ?></div>
+            <?php endif; ?>
+            <form id="avatar-form" data-ajax data-after-ajax="reload" action="<?= url('/api/profile?action=avatar') ?>" method="POST" enctype="multipart/form-data" style="position:absolute;bottom:-4px;right:-4px">
+                <?= csrfField() ?>
+                <label class="cursor-pointer flex items-center justify-center" style="width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid var(--terracota);box-shadow:0 4px 12px rgba(0,0,0,0.15)" title="Trocar foto">
+                    <i data-lucide="camera" class="w-4 h-4" style="color:var(--terracota)"></i>
+                    <input type="file" name="avatar" accept="image/*" class="hidden" onchange="if(this.files[0]){this.form.requestSubmit();}">
+                </label>
+            </form>
+        </div>
+        <div class="text-center sm:text-left">
+            <h1 class="font-display text-2xl font-bold mb-1" style="color:var(--sepia)"><?= e($cust['name']) ?></h1>
+            <p class="text-sm" style="color:var(--text-secondary)"><?= e($cust['email']) ?></p>
+            <?php if ($avatarUrl): ?>
+                <button type="button" onclick="removeAvatar()" class="mt-2 text-xs font-bold flex items-center gap-1.5 mx-auto sm:mx-0" style="color:var(--text-muted)">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i> Remover foto
+                </button>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<script>
+async function removeAvatar() {
+    if (!confirm('Remover sua foto?')) return;
+    const fd = new FormData();
+    fd.append('csrf_token', document.querySelector('input[name=csrf_token]').value);
+    const r = await fetch('<?= url('/api/profile?action=avatar_remove') ?>', { method:'POST', body:fd, credentials:'same-origin' });
+    const j = await r.json();
+    if (j.ok) { showToast('Foto removida','info'); setTimeout(()=>location.reload(),600); }
+    else { showToast(j.msg || 'Erro','error'); }
+}
+</script>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Dados pessoais -->
@@ -34,14 +76,14 @@ $cust = currentCustomer();
                     <label class="form-field-label">Telefone</label>
                     <div class="form-input-group">
                         <i data-lucide="phone" class="form-input-icon w-4 h-4"></i>
-                        <input type="tel" name="phone" value="<?= e($cust['phone']) ?>" class="form-input" placeholder="(82) 98800-0000">
+                        <input type="tel" name="phone" value="<?= e($cust['phone']) ?>" class="form-input" placeholder="(82) 98800-0000" data-mask="phone">
                     </div>
                 </div>
                 <div class="form-field">
                     <label class="form-field-label">CPF</label>
                     <div class="form-input-group">
                         <i data-lucide="id-card" class="form-input-icon w-4 h-4"></i>
-                        <input type="text" name="document" value="<?= e($cust['document']) ?>" class="form-input" placeholder="000.000.000-00">
+                        <input type="text" name="document" value="<?= e(formatCpfCnpj($cust['document'])) ?>" class="form-input" placeholder="000.000.000-00" data-mask="cpfcnpj">
                     </div>
                 </div>
             </div>

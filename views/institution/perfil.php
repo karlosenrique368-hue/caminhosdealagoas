@@ -14,6 +14,31 @@ if (isPost() && csrfVerify()) {
             dbExec("UPDATE institution_users SET name=? WHERE id=?", [trim($_POST['name'] ?? ''), $i['user_id']]);
             $_SESSION['inst_user_name'] = trim($_POST['name'] ?? '');
             flash('success','Perfil atualizado.');
+        } elseif ($action === 'avatar') {
+            if (!empty($_FILES['avatar']) && ($_FILES['avatar']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $rel = handleImageUpload($_FILES['avatar'], 'avatars');
+                if ($rel) {
+                    $old = dbOne('SELECT avatar FROM institution_users WHERE id=?', [$i['user_id']])['avatar'] ?? null;
+                    if ($old && str_starts_with($old, 'uploads/')) {
+                        $oldPath = UPLOADS_DIR . '/' . substr($old, strlen('uploads/'));
+                        if (is_file($oldPath)) @unlink($oldPath);
+                    }
+                    dbExec("UPDATE institution_users SET avatar=?, updated_at=NOW() WHERE id=?", [$rel, $i['user_id']]);
+                    flash('success','Foto atualizada.');
+                } else {
+                    flash('error','Falha ao enviar imagem.');
+                }
+            } else {
+                flash('error','Selecione uma imagem válida.');
+            }
+        } elseif ($action === 'avatar_remove') {
+            $old = dbOne('SELECT avatar FROM institution_users WHERE id=?', [$i['user_id']])['avatar'] ?? null;
+            if ($old && str_starts_with($old, 'uploads/')) {
+                $oldPath = UPLOADS_DIR . '/' . substr($old, strlen('uploads/'));
+                if (is_file($oldPath)) @unlink($oldPath);
+            }
+            dbExec("UPDATE institution_users SET avatar=NULL, updated_at=NOW() WHERE id=?", [$i['user_id']]);
+            flash('success','Foto removida.');
         } elseif ($action === 'password') {
             $cur = dbOne("SELECT password_hash FROM institution_users WHERE id=?", [$i['user_id']]);
             $old = $_POST['current_password'] ?? '';
@@ -39,6 +64,43 @@ include VIEWS_DIR . '/partials/institution_head.php';
 ?>
 <?php if ($flashOk): ?><div class="mb-4 p-3 rounded-xl flex items-center gap-2 text-sm" style="background:rgba(122,157,110,0.08);border:1px solid rgba(122,157,110,0.3);color:var(--maresia-dark)"><i data-lucide="check-circle" class="w-4 h-4"></i><?= e($flashOk) ?></div><?php endif; ?>
 <?php if ($flashErr): ?><div class="mb-4 p-3 rounded-xl flex items-center gap-2 text-sm" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#B91C1C"><i data-lucide="alert-circle" class="w-4 h-4"></i><?= e($flashErr) ?></div><?php endif; ?>
+
+<?php
+$avatarUrl = avatarUrl($user['avatar'] ?? null);
+$initials  = userInitials($user['name'] ?? 'U');
+?>
+<div class="admin-card p-6 mb-6">
+    <div class="flex flex-col sm:flex-row items-center gap-5">
+        <div class="relative">
+            <?php if ($avatarUrl): ?>
+                <img src="<?= e($avatarUrl) ?>" alt="Avatar" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--terracota)">
+            <?php else: ?>
+                <div class="font-display font-bold text-3xl flex items-center justify-center" style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--terracota),var(--horizonte));color:#fff;border:3px solid var(--terracota)"><?= e($initials) ?></div>
+            <?php endif; ?>
+            <form method="POST" enctype="multipart/form-data" style="position:absolute;bottom:-4px;right:-4px">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="avatar">
+                <label class="cursor-pointer flex items-center justify-center" style="width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid var(--terracota);box-shadow:0 4px 12px rgba(0,0,0,0.15)" title="Trocar foto">
+                    <i data-lucide="camera" class="w-4 h-4" style="color:var(--terracota)"></i>
+                    <input type="file" name="avatar" accept="image/*" class="hidden" onchange="if(this.files[0]){this.form.submit();}">
+                </label>
+            </form>
+        </div>
+        <div class="text-center sm:text-left">
+            <h1 class="font-display text-2xl font-bold mb-1" style="color:var(--sepia)"><?= e($user['name']) ?></h1>
+            <p class="text-sm" style="color:var(--text-secondary)"><?= e($user['email']) ?></p>
+            <?php if ($avatarUrl): ?>
+                <form method="POST" class="mt-2 inline">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="avatar_remove">
+                    <button type="submit" onclick="return confirm('Remover sua foto?')" class="text-xs font-bold flex items-center gap-1.5" style="color:var(--text-muted)">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i> Remover foto
+                    </button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
 <div class="grid lg:grid-cols-2 gap-6">
     <div class="admin-card p-6">

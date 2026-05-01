@@ -159,8 +159,8 @@ $totals = dbOne("SELECT COUNT(*) AS n, COALESCE(SUM(commission_pending),0) AS pe
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">CPF</span><input type="text" name="cpf" :value="editing?editing.cpf:''" class="admin-input w-full"></label>
-                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">CNPJ</span><input type="text" name="cnpj" :value="editing?editing.cnpj:''" class="admin-input w-full"></label>
+                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">CPF</span><input type="text" name="cpf" :value="editing?editing.cpf:''" class="admin-input w-full" data-mask="cpf" placeholder="000.000.000-00"></label>
+                    <label class="block"><span class="text-xs font-semibold uppercase tracking-wider mb-1 block" style="color:var(--text-secondary)">CNPJ</span><input type="text" name="cnpj" :value="editing?editing.cnpj:''" class="admin-input w-full" data-mask="cnpj" placeholder="00.000.000/0000-00"></label>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">

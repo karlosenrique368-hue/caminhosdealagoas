@@ -47,9 +47,10 @@ $pageTitle = 'Entrar · ' . $portalTitle;
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
+<?php if ($isMacaiokLogin): ?><link rel="stylesheet" href="<?= asset('css/macaiok.css') ?>"><?php endif; ?>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4" style="background:linear-gradient(135deg,var(--horizonte),var(--sepia))">
+<body class="<?= $isMacaiokLogin ? 'theme-macaiok ' : '' ?>min-h-screen flex items-center justify-center p-4" style="background:linear-gradient(135deg,var(--horizonte),var(--sepia))">
 <div class="w-full max-w-md">
     <div class="text-center mb-8">
         <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.15)">
@@ -77,6 +78,9 @@ $pageTitle = 'Entrar · ' . $portalTitle;
             </div>
             <button type="submit" class="admin-btn admin-btn-primary w-full justify-center"><i data-lucide="log-in" class="w-4 h-4"></i>Entrar</button>
         </form>
+        <div class="text-center mt-4">
+            <a href="<?= url($portalBase . '/esqueci-senha') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Esqueci minha senha</a>
+        </div>
         <p class="text-center text-xs mt-6" style="color:var(--text-muted)">
             <?php if ($isMacaiokLogin): ?>Acesso liberado pela coordenação Macaiok.<?php else: ?>Ainda não é parceiro? <a href="<?= url('/parceiro/cadastro') ?>" class="font-semibold" style="color:var(--terracota)">Criar parceria grátis</a><?php endif; ?>
         </p>

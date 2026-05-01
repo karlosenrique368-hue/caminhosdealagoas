@@ -18,6 +18,32 @@ $action = $_GET['action'] ?? ($_POST['action'] ?? 'update');
 $cid = currentCustomerId();
 
 try {
+    if ($action === 'avatar') {
+        if (empty($_FILES['avatar']) || ($_FILES['avatar']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            jsonResponse(['ok' => false, 'msg' => 'Selecione uma imagem.'], 422);
+        }
+        $rel = handleImageUpload($_FILES['avatar'], 'avatars');
+        if (!$rel) jsonResponse(['ok' => false, 'msg' => 'Falha ao enviar imagem.'], 422);
+        // remove old avatar
+        $old = dbOne('SELECT avatar FROM customers WHERE id=?', [$cid])['avatar'] ?? null;
+        if ($old && str_starts_with($old, 'uploads/')) {
+            $oldPath = UPLOADS_DIR . '/' . substr($old, strlen('uploads/'));
+            if (is_file($oldPath)) @unlink($oldPath);
+        }
+        dbExec('UPDATE customers SET avatar=?, updated_at=NOW() WHERE id=?', [$rel, $cid]);
+        jsonResponse(['ok' => true, 'msg' => 'Foto atualizada!', 'data' => ['avatar' => storageUrl($rel)]]);
+    }
+
+    if ($action === 'avatar_remove') {
+        $old = dbOne('SELECT avatar FROM customers WHERE id=?', [$cid])['avatar'] ?? null;
+        if ($old && str_starts_with($old, 'uploads/')) {
+            $oldPath = UPLOADS_DIR . '/' . substr($old, strlen('uploads/'));
+            if (is_file($oldPath)) @unlink($oldPath);
+        }
+        dbExec('UPDATE customers SET avatar=NULL, updated_at=NOW() WHERE id=?', [$cid]);
+        jsonResponse(['ok' => true, 'msg' => 'Foto removida.']);
+    }
+
     if ($action === 'password') {
         $current = (string)($_POST['current_password'] ?? '');
         $new = (string)($_POST['new_password'] ?? '');

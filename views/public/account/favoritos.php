@@ -4,7 +4,9 @@ $accountTab = 'favoritos';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
-$items = dbAll("
+$pag = paginate(
+    'SELECT COUNT(*) c FROM wishlist WHERE customer_id=?',
+    "
     SELECT w.id AS wid, w.entity_type, w.entity_id,
         COALESCE(r.title, p.title) AS title,
         COALESCE(r.slug, p.slug) AS slug,
@@ -17,14 +19,18 @@ $items = dbAll("
     LEFT JOIN pacotes p ON w.entity_type='pacote' AND w.entity_id=p.id
     WHERE w.customer_id=?
     ORDER BY w.created_at DESC
-", [$cid]);
+    ",
+    [$cid, $cid],
+    ['allowed' => [5, 10, 20], 'default' => 10]
+);
+$items = $pag['rows'];
 ?>
 
 <div class="glass-card p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
             <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Seus favoritos</h2>
-            <p class="text-xs" style="color:var(--text-muted)"><?= count($items) ?> item<?= count($items)===1?'':'s' ?> salvo<?= count($items)===1?'':'s' ?></p>
+            <p class="text-xs" style="color:var(--text-muted)"><?= (int)$pag['total'] ?> item<?= (int)$pag['total']===1?'':'s' ?> salvo<?= (int)$pag['total']===1?'':'s' ?></p>
         </div>
     </div>
 
@@ -72,6 +78,7 @@ $items = dbAll("
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
     <?php endif; ?>
 </div>
 

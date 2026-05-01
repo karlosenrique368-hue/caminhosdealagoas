@@ -9,7 +9,16 @@ $totalWishlist = (int)(dbOne('SELECT COUNT(*) c FROM wishlist WHERE customer_id=
 $totalSpent = (float)(dbOne("SELECT COALESCE(SUM(total),0) s FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='paid'", [$cid, $cid])['s'] ?? 0);
 $paidCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='paid'", [$cid, $cid])['c'] ?? 0);
 $pendingCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='pending'", [$cid, $cid])['c'] ?? 0);
-$recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.customer_id=? OR b.customer_user_id=? ORDER BY b.created_at DESC LIMIT 5", [$cid, $cid]);
+$recent = dbAll("
+    SELECT b.*, b.entity_title AS title,
+        COALESCE(r.cover_image, p.cover_image, t.cover_image) AS cover_image,
+        COALESCE(r.slug, p.slug, t.slug) AS slug
+    FROM bookings b
+    LEFT JOIN roteiros  r ON b.entity_type='roteiro'  AND b.entity_id=r.id
+    LEFT JOIN pacotes   p ON b.entity_type='pacote'   AND b.entity_id=p.id
+    LEFT JOIN transfers t ON b.entity_type='transfer' AND b.entity_id=t.id
+    WHERE b.customer_id=? OR b.customer_user_id=?
+    ORDER BY b.created_at DESC LIMIT 5", [$cid, $cid]);
 ?>
 
 <!-- Premium stat grid -->
@@ -71,9 +80,16 @@ $recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.cus
             <?php foreach ($recent as $b): $title = $b['title'] ?: ($b['entity_title'] ?? 'Reserva');
                 $iconName = $b['entity_type']==='roteiro' ? 'mountain' : ($b['entity_type']==='pacote' ? 'package' : 'car');
                 $statusPill = ['paid'=>'pill-success','pending'=>'pill-warning','failed'=>'pill-danger','refunded'=>'pill-info'][$b['payment_status']] ?? 'pill-info';
+                $detailType = $b['entity_type']==='roteiro' ? 'passeios' : ($b['entity_type']==='pacote' ? 'pacotes' : 'transfers');
+                $detailUrl = !empty($b['slug']) ? url('/' . $detailType . '/' . $b['slug']) : null;
+                $cover = !empty($b['cover_image']) ? storageUrl($b['cover_image']) : null;
             ?>
-                <div class="booking-row">
-                    <div class="booking-icon"><i data-lucide="<?= $iconName ?>" class="w-5 h-5"></i></div>
+                <a href="<?= e($detailUrl ?? '#') ?>" class="booking-row<?= $detailUrl ? ' booking-row-link' : '' ?>" style="<?= $detailUrl ? 'cursor:pointer' : '' ?>">
+                    <?php if ($cover): ?>
+                        <img src="<?= e($cover) ?>" alt="" class="booking-thumb" style="width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0">
+                    <?php else: ?>
+                        <div class="booking-icon"><i data-lucide="<?= $iconName ?>" class="w-5 h-5"></i></div>
+                    <?php endif; ?>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap mb-1">
                             <span class="pill pill-primary"><?= e($b['entity_type']) ?></span>
@@ -85,10 +101,11 @@ $recent = dbAll("SELECT b.*, b.entity_title AS title FROM bookings b WHERE b.cus
                             <?php if (!empty($b['code'])): ?> · <code style="font-size:11px"><?= e($b['code']) ?></code><?php endif; ?>
                         </p>
                     </div>
-                    <div class="text-right md:ml-auto">
+                    <div class="text-right md:ml-auto flex items-center gap-2">
                         <p class="font-display font-bold text-lg" style="color:var(--terracota)"><?= formatPrice((float)$b['total']) ?></p>
+                        <?php if ($detailUrl): ?><i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--text-muted)"></i><?php endif; ?>
                     </div>
-                </div>
+                </a>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>

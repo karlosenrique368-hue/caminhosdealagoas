@@ -105,6 +105,11 @@ switch (true) {
         require VIEWS_DIR . '/institution/login.php';
         break;
 
+    case $path === '/macaiok/esqueci-senha':
+    case $path === '/macaiok/redefinir-senha':
+        require VIEWS_DIR . '/institution/forgot.php';
+        break;
+
     case $path === '/macaiok/logout':
         institutionLogout();
         redirect('/macaiok/login');
@@ -129,9 +134,22 @@ switch (true) {
         require VIEWS_DIR . '/institution/perfil.php';
         break;
 
+    case $path === '/macaiok/checkout':
+        $macaiokMode = true;
+        require VIEWS_DIR . '/public/checkout.php';
+        break;
+
+    case $path === '/macaiok/responsaveis':
+        require VIEWS_DIR . '/public/macaiok-responsaveis.php';
+        break;
+
     // ============== CUSTOMER ACCOUNT ==============
     case $path === '/conta/login':
         require VIEWS_DIR . '/public/account/login.php';
+        break;
+    case $path === '/conta/esqueci-senha':
+    case $path === '/conta/redefinir-senha':
+        require VIEWS_DIR . '/public/account/forgot.php';
         break;
     case $path === '/conta/registrar':
     case $path === '/conta/cadastro':
@@ -166,6 +184,11 @@ switch (true) {
 
     case $path === '/instituicao/login':
         require VIEWS_DIR . '/institution/login.php';
+        break;
+
+    case $path === '/instituicao/esqueci-senha':
+    case $path === '/instituicao/redefinir-senha':
+        require VIEWS_DIR . '/institution/forgot.php';
         break;
 
     case $path === '/instituicao/logout':
@@ -205,6 +228,11 @@ switch (true) {
         require VIEWS_DIR . '/institution/login.php';
         break;
 
+    case $path === '/parceiro/esqueci-senha':
+    case $path === '/parceiro/redefinir-senha':
+        require VIEWS_DIR . '/institution/forgot.php';
+        break;
+
     case $path === '/parceiro/logout':
         institutionLogout();
         redirect('/parceiro/login');
@@ -235,6 +263,11 @@ switch (true) {
 
     case $path === '/admin/login':
         require VIEWS_DIR . '/admin/login.php';
+        break;
+
+    case $path === '/admin/esqueci-senha':
+    case $path === '/admin/redefinir-senha':
+        require VIEWS_DIR . '/admin/forgot.php';
         break;
 
     case $path === '/admin/logout':

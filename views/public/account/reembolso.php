@@ -4,12 +4,19 @@ $accountTab = 'reembolso';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
-$refunds = dbAll('
+$pagRefunds = paginate(
+    'SELECT COUNT(*) c FROM refund_requests WHERE customer_id=?',
+    '
     SELECT rr.*, b.total AS total, b.entity_title, b.code
     FROM refund_requests rr
     LEFT JOIN bookings b ON rr.booking_id=b.id
     WHERE rr.customer_id=?
-    ORDER BY rr.created_at DESC', [$cid]);
+    ORDER BY rr.created_at DESC',
+    [$cid, $cid],
+    ['allowed' => [5, 10, 20], 'default' => 10]
+);
+$refunds = $pagRefunds['rows'];
+$pag = $pagRefunds;
 $eligibleBookings = dbAll("
     SELECT b.id, b.total, b.entity_title AS title, b.code
     FROM bookings b
@@ -103,6 +110,7 @@ $preselect = (int)($_GET['booking'] ?? 0);
                     </div>
                 <?php endforeach; ?>
             </div>
+            <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
         <?php endif; ?>
     </div>
 </div>

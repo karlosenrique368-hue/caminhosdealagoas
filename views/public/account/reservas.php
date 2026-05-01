@@ -4,21 +4,28 @@ $accountTab = 'reservas';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
-$bookings = dbAll("
-    SELECT b.*, r.slug AS roteiro_slug, p.slug AS pacote_slug, t.slug AS transfer_slug
+$pag = paginate(
+    'SELECT COUNT(*) c FROM bookings WHERE customer_id=? OR customer_user_id=?',
+    "
+    SELECT b.*, r.slug AS roteiro_slug, p.slug AS pacote_slug, t.slug AS transfer_slug,
+        COALESCE(r.cover_image, p.cover_image, t.cover_image) AS cover_image
     FROM bookings b
     LEFT JOIN roteiros r ON b.entity_type='roteiro' AND b.entity_id=r.id
     LEFT JOIN pacotes p ON b.entity_type='pacote' AND b.entity_id=p.id
     LEFT JOIN transfers t ON b.entity_type='transfer' AND b.entity_id=t.id
     WHERE b.customer_id=? OR b.customer_user_id=?
-    ORDER BY b.created_at DESC", [$cid, $cid]);
+    ORDER BY b.created_at DESC",
+    [$cid, $cid],
+    ['allowed' => [5, 10, 20], 'default' => 10]
+);
+$bookings = $pag['rows'];
 ?>
 
 <div class="glass-card p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
             <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Suas viagens</h2>
-            <p class="text-xs" style="color:var(--text-muted)"><?= count($bookings) ?> reserva<?= count($bookings)===1?'':'s' ?> no total</p>
+            <p class="text-xs" style="color:var(--text-muted)"><?= (int)$pag['total'] ?> reserva<?= (int)$pag['total']===1?'':'s' ?> no total</p>
         </div>
         <a href="<?= url('/passeios') ?>" class="btn-primary" style="padding:10px 18px;font-size:13px">
             <i data-lucide="plus" class="w-4 h-4"></i> Nova reserva
@@ -70,7 +77,13 @@ $bookings = dbAll("
                 }
             ?>
                 <div class="booking-row">
-                    <div class="booking-icon"><i data-lucide="<?= $iconName ?>" class="w-6 h-6"></i></div>
+                    <?php if (!empty($b['cover_image'])): ?>
+                        <a href="<?= $slug ? url('/' . $type . '/' . $slug) : '#' ?>" class="block flex-shrink-0">
+                            <img src="<?= e(storageUrl($b['cover_image'])) ?>" alt="" style="width:88px;height:88px;border-radius:14px;object-fit:cover">
+                        </a>
+                    <?php else: ?>
+                        <div class="booking-icon"><i data-lucide="<?= $iconName ?>" class="w-6 h-6"></i></div>
+                    <?php endif; ?>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-2 flex-wrap">
                             <span class="pill pill-primary"><?= e($typeLabel) ?></span>
@@ -79,7 +92,13 @@ $bookings = dbAll("
                                 <span class="pill" style="background:rgba(58,107,138,.1);color:var(--horizonte)"><i data-lucide="calendar-clock" class="w-3 h-3"></i> <?= $installmentsPaid ?>/<?= $installmentsTotal ?> parcelas</span>
                             <?php endif; ?>
                         </div>
-                        <h3 class="font-display font-bold text-lg" style="color:var(--sepia)"><?= e($title) ?></h3>
+                        <h3 class="font-display font-bold text-lg" style="color:var(--sepia)">
+                            <?php if ($slug): ?>
+                                <a href="<?= url('/' . $type . '/' . $slug) ?>" class="hover:underline" style="color:inherit"><?= e($title) ?></a>
+                            <?php else: ?>
+                                <?= e($title) ?>
+                            <?php endif; ?>
+                        </h3>
                         <p class="text-xs mt-1" style="color:var(--text-muted)">
                             Reservado em <?= date('d/m/Y', strtotime($b['created_at'])) ?>
                             <?php if ($travelDateLabel): ?> · <?= count($travelDates) > 1 ? 'Viagens' : 'Viagem' ?>: <?= e($travelDateLabel) ?><?php endif; ?>
@@ -122,6 +141,7 @@ $bookings = dbAll("
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php include VIEWS_DIR . '/partials/pagination.php'; ?>
     <?php endif; ?>
 </div>
 

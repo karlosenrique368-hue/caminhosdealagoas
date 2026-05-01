@@ -1,0 +1,134 @@
+/* ============================================================
+   MACAIOK · Identidade Visual Oficial
+   Aplicado quando o portal/escola é do programa Macaiok.
+   Paleta oficial: sépia #2F1607 · terracota #DA4A34 · areia #FFFACF · origem #A9D750 · mangue #324500
+   ============================================================ */
+
+:root.theme-macaiok,
+body.theme-macaiok {
+    /* Cores oficiais Macaiok — sobrescrevem o tema padrão */
+    --terracota: #DA4A34;
+    --terracota-dark: #B83A26;
+    --horizonte: #324500;        /* mangue (verde escuro) como horizonte */
+    --horizonte-dark: #1F2C00;
+    --maresia: #A9D750;          /* origem (verde claro) como maresia */
+    --maresia-dark: #6E9E22;
+    --sepia: #2F1607;
+    --sepia-dark: #1A0D04;
+    --areia: #FFFACF;
+    --areia-light: #FFFDE8;
+    --bg-page: #FAF6E8;
+    --bg-card: #FFFFFF;
+    --bg-surface: #FFFAEC;
+
+    --mk-sepia: #2F1607;
+    --mk-terracota: #DA4A34;
+    --mk-areia: #FFFACF;
+    --mk-origem: #A9D750;
+    --mk-mangue: #324500;
+    --mk-creme: #FFFDE8;
+}
+
+/* Hero / fundos com tema Macaiok */
+body.theme-macaiok {
+    background: linear-gradient(180deg, var(--mk-creme) 0%, #FFFFFF 60%);
+}
+
+/* Botões primários ganham gradient mangue → origem */
+body.theme-macaiok .btn-primary,
+body.theme-macaiok .admin-btn-primary {
+    background: linear-gradient(135deg, var(--mk-mangue) 0%, #4F6A0E 50%, var(--mk-origem) 100%);
+    color: #fff;
+    border-color: var(--mk-mangue);
+}
+body.theme-macaiok .btn-primary:hover,
+body.theme-macaiok .admin-btn-primary:hover {
+    background: linear-gradient(135deg, #1F2C00 0%, var(--mk-mangue) 60%, #6E9E22 100%);
+    box-shadow: 0 8px 24px rgba(50, 69, 0, 0.32);
+}
+
+/* Pills e badges em tons Macaiok */
+body.theme-macaiok .pill-primary {
+    background: rgba(218, 74, 52, 0.12);
+    color: var(--mk-terracota);
+}
+body.theme-macaiok .pill-success {
+    background: rgba(169, 215, 80, 0.18);
+    color: var(--mk-mangue);
+}
+
+/* Cards com borda sutil em areia + sombra calorosa */
+body.theme-macaiok .glass-card,
+body.theme-macaiok .admin-card,
+body.theme-macaiok .stat-card {
+    background: #fff;
+    border: 1px solid rgba(255, 250, 207, 0.85);
+    box-shadow: 0 6px 24px rgba(47, 22, 7, 0.06), 0 1px 0 rgba(218, 74, 52, 0.04);
+}
+
+/* Sidebar Macaiok com fundo mangue */
+body.theme-macaiok .institution-sidebar,
+body.theme-macaiok .sidebar {
+    background: linear-gradient(180deg, var(--mk-mangue) 0%, #1F2C00 100%);
+}
+body.theme-macaiok .institution-sidebar .sidebar-link.active,
+body.theme-macaiok .sidebar .sidebar-link.active {
+    background: var(--mk-terracota);
+    color: #fff;
+}
+
+/* Header / Topbar com risco terracota */
+body.theme-macaiok .institution-topbar,
+body.theme-macaiok .topbar,
+body.theme-macaiok .admin-topbar {
+    border-bottom: 2px solid var(--mk-terracota);
+    background: #fff;
+}
+
+/* Hero Macaiok com folha + logo */
+body.theme-macaiok .account-hero,
+body.theme-macaiok .institution-hero {
+    background: linear-gradient(135deg, var(--mk-mangue) 0%, var(--mk-terracota) 100%);
+    color: #fff;
+}
+
+/* Inputs com foco mangue ao invés de terracota */
+body.theme-macaiok .input-field:focus,
+body.theme-macaiok .admin-input:focus,
+body.theme-macaiok .form-input:focus {
+    border-color: var(--mk-mangue);
+    box-shadow: 0 0 0 3px rgba(50, 69, 0, 0.15);
+}
+
+/* Tipografia: títulos em sépia */
+body.theme-macaiok h1,
+body.theme-macaiok h2,
+body.theme-macaiok h3,
+body.theme-macaiok .font-display {
+    color: var(--mk-sepia);
+}
+
+/* Selo discreto Macaiok no canto */
+body.theme-macaiok .macaiok-stamp {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    width: 64px;
+    height: 64px;
+    background: url('../img/macaiok/Adesivo7.png') center/contain no-repeat;
+    pointer-events: none;
+    opacity: 0.85;
+    z-index: 5;
+    filter: drop-shadow(0 4px 12px rgba(47, 22, 7, 0.18));
+}
+@media (max-width: 640px) {
+    body.theme-macaiok .macaiok-stamp { display: none; }
+}
+
+/* Logo no login Macaiok */
+body.theme-macaiok .macaiok-login-logo {
+    background: url('../img/macaiok/VerdeEscuro_Horizontal.png') center/contain no-repeat;
+    width: 220px;
+    height: 64px;
+    margin: 0 auto;
+}

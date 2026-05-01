@@ -102,7 +102,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <button type="button" x-show="participants.length > 1" @click="participants.splice(idx,1)" class="stu-remove"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                             <div class="grid sm:grid-cols-2 gap-3 mt-2">
                                 <div class="sm:col-span-2"><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Nome completo *</label><input x-model="p.name" class="admin-input w-full" placeholder="Nome completo do aluno"></div>
-                                <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">CPF *</label><input x-model="p.cpf" class="admin-input w-full cpf-mask" placeholder="000.000.000-00"></div>
+                                <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">CPF *</label><input x-model="p.cpf" class="admin-input w-full" data-mask="cpf" placeholder="000.000.000-00"></div>
                                 <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Data de nascimento *</label><?php $dobModel='p.birth_date'; include __DIR__.'/../partials/dob_picker.php'; ?></div>
                                 <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Ano / Turma *</label><input x-model="p.class" class="admin-input w-full" placeholder="ex: 3º Ano B"></div>
                                 <div>
@@ -127,8 +127,8 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
                 <div class="grid sm:grid-cols-2 gap-3">
                     <div class="sm:col-span-2"><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Nome completo *</label><input x-model="responsible.name" class="admin-input w-full"></div>
-                    <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">CPF *</label><input x-model="responsible.cpf" class="admin-input w-full cpf-mask" placeholder="000.000.000-00"></div>
-                    <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Telefone *</label><input x-model="responsible.phone" class="admin-input w-full phone-mask" placeholder="(00) 00000-0000"></div>
+                    <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">CPF *</label><input x-model="responsible.cpf" class="admin-input w-full" data-mask="cpf" placeholder="000.000.000-00"></div>
+                    <div><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">Telefone *</label><input x-model="responsible.phone" class="admin-input w-full" data-mask="phone" placeholder="(00) 00000-0000"></div>
                     <div class="sm:col-span-2"><label class="block text-[11px] font-bold uppercase tracking-wider mb-1" style="color:var(--text-secondary)">E-mail *</label><input type="email" x-model="responsible.email" class="admin-input w-full" placeholder="email@exemplo.com"></div>
                 </div>
             </div>

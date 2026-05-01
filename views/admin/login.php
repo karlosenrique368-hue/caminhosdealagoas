@@ -113,6 +113,10 @@ body { font-family: Inter, system-ui, sans-serif; }
             </button>
         </form>
 
+        <div class="text-center mt-4">
+            <a href="<?= url('/admin/esqueci-senha') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Esqueci minha senha</a>
+        </div>
+
         <?php if (!IS_PRODUCTION): ?>
             <div class="mt-8 p-4 rounded-xl text-xs" style="background:var(--bg-surface);border:1px dashed var(--border-default);color:var(--text-secondary)">
                 <strong style="color:var(--sepia)">Ambiente local:</strong> use a credencial definida no seed ou no banco de desenvolvimento.

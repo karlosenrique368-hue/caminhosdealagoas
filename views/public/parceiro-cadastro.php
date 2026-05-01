@@ -75,7 +75,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </label>
                 <label class="block">
                     <span class="text-xs font-bold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">CPF</span>
-                    <input type="text" name="cpf" class="admin-input w-full" placeholder="000.000.000-00">
+                    <input type="text" name="cpf" class="admin-input w-full" placeholder="000.000.000-00" data-mask="cpf">
                 </label>
                 <label class="block">
                     <span class="text-xs font-bold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">Email <span style="color:var(--terracota)">*</span></span>

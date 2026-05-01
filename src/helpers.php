@@ -361,3 +361,77 @@ function paginate(string $countSql, string $dataSql, array $params = [], array $
         'base_qs'    => $baseQs,
     ];
 }
+
+
+// ============== Documentos BR (CPF, CNPJ) ==============
+function formatCpf(?string $cpf): string {
+    $d = preg_replace('/\D/', '', (string)$cpf);
+    if (strlen($d) !== 11) return (string)$cpf;
+    return substr($d,0,3).'.'.substr($d,3,3).'.'.substr($d,6,3).'-'.substr($d,9,2);
+}
+
+function formatCnpj(?string $cnpj): string {
+    $d = preg_replace('/\D/', '', (string)$cnpj);
+    if (strlen($d) !== 14) return (string)$cnpj;
+    return substr($d,0,2).'.'.substr($d,2,3).'.'.substr($d,5,3).'/'.substr($d,8,4).'-'.substr($d,12,2);
+}
+
+function formatCpfCnpj(?string $doc): string {
+    $d = preg_replace('/\D/', '', (string)$doc);
+    if (strlen($d) === 11) return formatCpf($d);
+    if (strlen($d) === 14) return formatCnpj($d);
+    return (string)$doc;
+}
+
+function onlyDigits(?string $v): string {
+    return preg_replace('/\D/', '', (string)$v);
+}
+
+// ============== Avatar / Initials ==============
+function userInitials(?string $name): string {
+    $n = trim((string)$name);
+    if ($n === '') return '?';
+    $parts = preg_split('/\s+/', $n);
+    if (count($parts) >= 2) return mb_strtoupper(mb_substr($parts[0],0,1).mb_substr(end($parts),0,1));
+    return mb_strtoupper(mb_substr($n,0,1));
+}
+
+function avatarUrl(?string $avatarPath): ?string {
+    if (!$avatarPath) return null;
+    return storageUrl($avatarPath);
+}
+
+// ============== Password reset (cliente / parceiro / admin) ==============
+function passwordResetCreate(string $scope, int $userId, string $email): string {
+    if (!in_array($scope, ['customer','institution','admin'], true)) throw new InvalidArgumentException('scope invalido');
+    $token = bin2hex(random_bytes(32));
+    $hash = hash('sha256', $token);
+    $expires = date('Y-m-d H:i:s', time() + 60 * 60); // 1h
+    dbExec('INSERT INTO password_resets (scope,user_id,email,token_hash,expires_at,ip) VALUES (?,?,?,?,?,?)',
+        [$scope, $userId, strtolower(trim($email)), $hash, $expires, $_SERVER['REMOTE_ADDR'] ?? null]);
+    return $token;
+}
+
+function passwordResetConsume(string $scope, string $token, bool $consume = true): ?array {
+    $hash = hash('sha256', $token);
+    $row = dbOne('SELECT * FROM password_resets WHERE scope=? AND token_hash=? AND used_at IS NULL AND expires_at > NOW() LIMIT 1', [$scope, $hash]);
+    if (!$row) return null;
+    if ($consume) dbExec('UPDATE password_resets SET used_at=NOW() WHERE id=?', [(int)$row['id']]);
+    return $row;
+}
+
+function passwordResetSendEmail(string $scope, string $email, string $token, string $resetUrl): bool {
+    if (!function_exists('sendTransactionalEmail')) return false;
+    $brand = getSetting('platform_name', 'Caminhos de Alagoas');
+    $subject = 'Redefinir senha · ' . $brand;
+    $link = $resetUrl . (str_contains($resetUrl,'?') ? '&' : '?') . 'token=' . urlencode($token);
+    $html = '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fff;color:#3E2E1F">'
+        . '<h2 style="font-family:Georgia,serif;color:#3E2E1F">Redefinir sua senha</h2>'
+        . '<p>Recebemos um pedido para redefinir a sua senha. Clique no botao abaixo para criar uma nova. O link expira em 1 hora.</p>'
+        . '<p style="text-align:center;margin:28px 0"><a href="' . htmlspecialchars($link, ENT_QUOTES) . '" style="display:inline-block;padding:14px 28px;background:#C96B4A;color:#fff;text-decoration:none;border-radius:12px;font-weight:700">Redefinir senha</a></p>'
+        . '<p style="font-size:12px;color:#888">Se voce nao pediu, pode ignorar este e-mail. Sua senha atual permanece valida.</p>'
+        . '</div>';
+    $text = "Redefinir sua senha\n\nAcesse: " . $link . "\n\nSe voce nao pediu, ignore este e-mail.";
+    $r = sendTransactionalEmail($email, $subject, $html, $text, ['kind' => 'password_reset', 'scope' => $scope]);
+    return !empty($r['ok']);
+}

@@ -563,7 +563,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </div>
                 <?php endif; ?>
                 <div class="mt-4 text-[11px] flex items-center gap-1.5" style="color:var(--text-muted)">
-                    <i data-lucide="lock" class="w-3 h-3"></i> Pagamento 100% seguro · Mercado Pago
+                    <i data-lucide="lock" class="w-3 h-3"></i> Pagamento 100% seguro · ambiente criptografado
                 </div>
             </div>
         </aside>
@@ -621,10 +621,10 @@ function checkoutWizard() {
             {id:'outro',     label:'Outro',      icon:'more-horizontal',   detailLabel:'Conta pra gente:',         placeholder:'TikTok, blog, anúncio...'}
         ],
         paymentMethods: [
-            {id:'pix',              label:'PIX Mercado Pago',          hint:'Confirmação em segundos',                icon:'qr-code',         badge:'Recomendado'},
-            {id:'pix_installments', label:'PIX parcelado Mercado Pago', hint:'Mensal sem juros, até a viagem',         icon:'calendar-clock',  badge:'Sem juros',  requiresInstallment:true},
-            {id:'credit_card',      label:'Cartão Mercado Pago',        hint:'Parcele em até 12×',                     icon:'credit-card',     badge:''},
-            {id:'boleto',           label:'Boleto Mercado Pago',        hint:'Compensação em 1-3 dias úteis',          icon:'file-text',       badge:''}
+            {id:'pix',              label:'PIX',           hint:'Confirmação em segundos',                icon:'qr-code',         badge:'Recomendado'},
+            {id:'pix_installments', label:'PIX parcelado', hint:'Mensal sem juros, até a viagem',         icon:'calendar-clock',  badge:'Sem juros',  requiresInstallment:true},
+            {id:'credit_card',      label:'Cartão de crédito', hint:'Parcele em até 12×',                  icon:'credit-card',     badge:''},
+            {id:'boleto',           label:'Boleto bancário', hint:'Compensação em 1-3 dias úteis',         icon:'file-text',       badge:''}
         ],
         init() {
             if (this.form.travel_dates.length && !this.form.travel_date) this.form.travel_date = this.form.travel_dates[0];

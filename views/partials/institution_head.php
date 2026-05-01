@@ -26,11 +26,13 @@ tailwind.config = { theme: { extend: { colors: {
 }, fontFamily:{display:['"Playfair Display"','serif'],sans:['Inter','system-ui']} }}}
 </script>
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
+<?php if ($isMacaiok): ?><link rel="stylesheet" href="<?= asset('css/macaiok.css') ?>"><?php endif; ?>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 <style>body{background:var(--bg-surface)}[x-cloak]{display:none!important}</style>
 </head>
-<body x-data="{sidebarOpen: window.innerWidth>=1024}">
+<body class="<?= $isMacaiok ? 'theme-macaiok' : '' ?>" x-data="{sidebarOpen: window.innerWidth>=1024}">
+<?php if ($isMacaiok): ?><div class="macaiok-stamp" aria-hidden="true"></div><?php endif; ?>
 <div class="flex min-h-screen">
     <aside class="admin-sidebar fixed lg:sticky lg:top-0 inset-y-0 lg:inset-y-auto left-0 z-40 flex-shrink-0 transition-transform lg:h-screen lg:self-start"
            :class="sidebarOpen?'translate-x-0':'-translate-x-full lg:translate-x-0'" style="width:260px;min-width:260px">
@@ -72,7 +74,16 @@ tailwind.config = { theme: { extend: { colors: {
         </nav>
         <div class="absolute bottom-0 inset-x-0 p-4 border-t border-white/10" style="background:rgba(0,0,0,0.2)">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><?= e(mb_substr($i['user_name'],0,1)) ?></div>
+                <?php
+                    $instAvatarUrl = function_exists('avatarUrl') && function_exists('dbOne')
+                        ? avatarUrl(dbOne('SELECT avatar FROM institution_users WHERE id=?', [(int)($i['user_id'] ?? 0)])['avatar'] ?? null)
+                        : null;
+                ?>
+                <?php if ($instAvatarUrl): ?>
+                    <img src="<?= e($instAvatarUrl) ?>" alt="" class="w-10 h-10 rounded-full" style="object-fit:cover">
+                <?php else: ?>
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><?= e(mb_substr($i['user_name'],0,1)) ?></div>
+                <?php endif; ?>
                 <div class="min-w-0 flex-1">
                     <div class="text-sm font-semibold text-white truncate"><?= e($i['user_name']) ?></div>
                     <div class="text-[11px] text-white/50 truncate"><?= e($i['user_email']) ?></div>

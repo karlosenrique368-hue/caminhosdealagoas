@@ -873,7 +873,9 @@ window.cart = (function () {
                 // Clear password fields after success
                 form.querySelectorAll('input[type="password"]').forEach(i => i.value = '');
                 // Custom callback
-                if (form.dataset.afterAjax === 'reload') {
+                if (data.redirect) {
+                    setTimeout(() => { window.location.href = data.redirect; }, 900);
+                } else if (form.dataset.afterAjax === 'reload') {
                     setTimeout(() => location.reload(), 700);
                 } else if (form.dataset.afterAjax === 'reset') {
                     form.reset();
@@ -1037,4 +1039,29 @@ document.addEventListener('click', (e) => {
         e.target.style.height = 'auto';
         e.target.style.height = Math.min(400, e.target.scrollHeight) + 'px';
     });
+})();
+
+
+// ===== Máscaras BR (CPF, CNPJ, CPF/CNPJ auto, telefone, CEP) =====
+(function initMasks(){
+  function onlyDigits(v){ return (v||'').replace(/\D/g,''); }
+  function maskCPF(v){ v=onlyDigits(v).slice(0,11); return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); }
+  function maskCNPJ(v){ v=onlyDigits(v).slice(0,14); return v.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2'); }
+  function maskCpfCnpj(v){ const d=onlyDigits(v); return d.length>11?maskCNPJ(v):maskCPF(v); }
+  function maskPhone(v){ v=onlyDigits(v).slice(0,11); if(v.length<=10) return v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2'); return v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2'); }
+  function maskCEP(v){ v=onlyDigits(v).slice(0,8); return v.length>5?v.slice(0,5)+'-'+v.slice(5):v; }
+  const map={cpf:maskCPF,cnpj:maskCNPJ,cpfcnpj:maskCpfCnpj,phone:maskPhone,cep:maskCEP};
+  window.brMasks={CPF:maskCPF,CNPJ:maskCNPJ,CpfCnpj:maskCpfCnpj,Phone:maskPhone,CEP:maskCEP};
+  function apply(el){
+    const k=(el.dataset.mask||'').toLowerCase().replace(/[^a-z]/g,'');
+    if(!map[k]) return;
+    if(el._brMasked) return; el._brMasked=true;
+    if(el.value) el.value=map[k](el.value);
+    el.addEventListener('input',function(){ const s=el.selectionStart; el.value=map[k](el.value); try{ el.setSelectionRange(s,s); }catch(e){} });
+    el.addEventListener('blur',function(){ el.value=map[k](el.value); });
+  }
+  function scan(root){ (root||document).querySelectorAll('input[data-mask]').forEach(apply); }
+  if(document.readyState!=='loading') scan(); else document.addEventListener('DOMContentLoaded',function(){ scan(); });
+  const obs=new MutationObserver(function(muts){ muts.forEach(function(m){ m.addedNodes.forEach(function(n){ if(n.nodeType===1) scan(n); }); }); });
+  obs.observe(document.documentElement,{childList:true,subtree:true});
 })();

@@ -97,6 +97,7 @@ tailwind.config = {
 
 <!-- Theme CSS -->
 <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
+<?php if (!empty($GLOBALS['macaiokMode']) || !empty($macaiokMode)): ?><link rel="stylesheet" href="<?= asset('css/macaiok.css') ?>"><?php endif; ?>
 <style>
 [x-cloak]{display:none!important}
 .meeting-map,.meeting-map .leaflet-container{z-index:0!important}
@@ -115,7 +116,8 @@ tailwind.config = {
 
 <link rel="icon" type="image/png" href="<?= asset('brand/selo-azul.png') ?>">
 </head>
-<body<?= !empty($solidNav) ? ' class="has-solid-nav"' : '' ?>>
+<body<?= !empty($solidNav) ? ' class="has-solid-nav' . ((!empty($GLOBALS['macaiokMode']) || !empty($macaiokMode)) ? ' theme-macaiok' : '') . '"' : ((!empty($GLOBALS['macaiokMode']) || !empty($macaiokMode)) ? ' class="theme-macaiok"' : '') ?>>
+<?php if (!empty($GLOBALS['macaiokMode']) || !empty($macaiokMode)): ?><div class="macaiok-stamp" aria-hidden="true"></div><?php endif; ?>
 
 <!-- ============== NAVBAR ============== -->
 <nav data-navbar class="fixed top-0 inset-x-0 z-50 transition-all duration-300<?= !empty($solidNav) ? ' nav-scrolled' : '' ?>">

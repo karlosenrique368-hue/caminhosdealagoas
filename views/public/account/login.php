@@ -57,6 +57,10 @@ include VIEWS_DIR . '/partials/public_head.php';
                 </button>
             </form>
 
+            <div class="mt-4 text-center">
+                <a href="<?= url('/conta/esqueci-senha') ?>" class="text-xs font-semibold" style="color:var(--horizonte)">Esqueci minha senha</a>
+            </div>
+
             <div class="mt-6 pt-6 border-t text-center text-sm" style="border-color:var(--border-default);color:var(--text-secondary)">
                 Não tem uma conta?
                 <a href="<?= url('/conta/registrar') ?>" class="font-bold" style="color:var(--terracota)">Criar agora</a>

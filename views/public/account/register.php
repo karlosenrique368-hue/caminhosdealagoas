@@ -55,7 +55,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color:var(--text-secondary)">CPF</span>
-                        <input type="text" name="document" class="input-field w-full cpf-mask" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off">
+                        <input type="text" name="document" class="input-field w-full" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off" data-mask="cpf">
                     </label>
                 </div>
                 <label class="block">
