@@ -31,6 +31,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <section class="pt-32 pb-16">
     <div class="max-w-4xl mx-auto px-6">
         <div class="text-center mb-10">
+            <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-14 sm:h-16 mx-auto mb-6">
             <span class="text-xs font-bold uppercase tracking-[0.24em]" style="color:var(--mk-terracota,#DA4A34)">Macaiok · Vivências Pedagógicas</span>
             <h1 class="font-display text-3xl sm:text-5xl font-bold mt-2" style="color:var(--mk-sepia,#2F1607)">
                 <?php if ($escola): ?>Caro responsável da <?= e($escola['name']) ?><?php else: ?>Olá, responsável!<?php endif; ?>

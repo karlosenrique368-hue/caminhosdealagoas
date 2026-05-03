@@ -12,7 +12,7 @@ $pagRefunds = paginate(
     LEFT JOIN bookings b ON rr.booking_id=b.id
     WHERE rr.customer_id=?
     ORDER BY rr.created_at DESC',
-    [$cid, $cid],
+    [$cid],
     ['allowed' => [5, 10, 20], 'default' => 10]
 );
 $refunds = $pagRefunds['rows'];

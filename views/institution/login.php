@@ -53,9 +53,13 @@ $pageTitle = 'Entrar · ' . $portalTitle;
 <body class="<?= $isMacaiokLogin ? 'theme-macaiok ' : '' ?>min-h-screen flex items-center justify-center p-4" style="background:linear-gradient(135deg,var(--horizonte),var(--sepia))">
 <div class="w-full max-w-md">
     <div class="text-center mb-8">
+        <?php if ($isMacaiokLogin): ?>
+            <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-14 mx-auto mb-4" style="filter:brightness(0) invert(1)">
+        <?php else: ?>
         <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.15)">
             <i data-lucide="<?= e($portalIcon) ?>" class="w-8 h-8 text-white"></i>
         </div>
+        <?php endif; ?>
         <h1 class="font-display text-3xl font-bold text-white"><?= e($portalTitle) ?></h1>
         <p class="text-white/70 text-sm mt-2"><?= e($portalSubtitle) ?></p>
     </div>

@@ -1,8 +1,9 @@
 <?php
 $pageTitle = 'Macaiok Vivências Pedagógicas';
 $solidNav = true;
+$macaiokMode = true;
 $hero = dbOne("SELECT cover_image FROM roteiros WHERE status='published' AND cover_image IS NOT NULL ORDER BY featured DESC, views DESC LIMIT 1");
-$heroImage = !empty($hero['cover_image']) ? storageUrl($hero['cover_image']) : asset('brand/logo-azul.png');
+$heroImage = !empty($hero['cover_image']) ? storageUrl($hero['cover_image']) : asset('img/macaiok/VerdeEscuro_Horizontal.png');
 $stats = dbOne("SELECT COUNT(*) AS escolas FROM institutions WHERE program='macaiok' AND active=1");
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
@@ -11,6 +12,7 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
         <div class="relative overflow-hidden rounded-[28px] min-h-[520px] flex items-end" style="background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.72)),url('<?= e($heroImage) ?>') center/cover no-repeat">
             <div class="p-6 sm:p-10 lg:p-12 max-w-3xl text-white">
+                <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-12 sm:h-14 mb-5" style="filter:brightness(0) invert(1)">
                 <span class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] px-3 py-1.5 rounded-full" style="background:rgba(255,255,255,.16);backdrop-filter:blur(10px)"><i data-lucide="graduation-cap" class="w-4 h-4"></i>Macaiok Vivências Pedagógicas</span>
                 <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold mt-5 leading-tight">Educação ao ar livre com controle de pagamentos por escola</h1>
                 <p class="text-base sm:text-lg mt-4 text-white/88 max-w-2xl">Vivências, estudos do meio e saídas pedagógicas para conectar alunos ao território, com operação Caminhos de Alagoas, acesso exclusivo para colégios e links de pagamento para responsáveis.</p>

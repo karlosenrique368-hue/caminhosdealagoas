@@ -398,7 +398,13 @@ function userInitials(?string $name): string {
 
 function avatarUrl(?string $avatarPath): ?string {
     if (!$avatarPath) return null;
-    return storageUrl($avatarPath);
+    $url = storageUrl($avatarPath);
+    $rel = ltrim(preg_replace('#^uploads/#', '', $avatarPath), '/');
+    $abs = defined('UPLOADS_DIR') ? (UPLOADS_DIR . '/' . $rel) : '';
+    if ($abs && is_file($abs)) {
+        $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . filemtime($abs);
+    }
+    return $url;
 }
 
 // ============== Password reset (cliente / parceiro / admin) ==============

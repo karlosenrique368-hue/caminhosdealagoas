@@ -59,6 +59,9 @@ $avatarUrl = function_exists('avatarUrl') ? avatarUrl($cust['avatar'] ?? null) :
                     <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank" class="account-sidebar-link" style="color:#10B981">
                         <i data-lucide="message-circle" class="w-4 h-4"></i> Suporte
                     </a>
+                    <a href="<?= url('/conta/sair') ?>" class="account-sidebar-link" style="color:#DA4A34">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Sair da conta
+                    </a>
                 </div>
             </aside>
 

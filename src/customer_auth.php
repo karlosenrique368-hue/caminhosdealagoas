@@ -50,7 +50,7 @@ function isCustomerLoggedIn(): bool {
 
 function currentCustomer(): ?array {
     if (!isCustomerLoggedIn()) return null;
-    return dbOne('SELECT id,name,email,phone,document,country,city,state,postal_code,address,birthdate,created_at FROM customers WHERE id=?', [$_SESSION['customer_id']]);
+    return dbOne('SELECT id,name,email,phone,document,country,city,state,postal_code,address,address_number,address_complement,neighborhood,birthdate,avatar,created_at FROM customers WHERE id=?', [$_SESSION['customer_id']]);
 }
 
 function currentCustomerId(): ?int {

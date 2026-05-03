@@ -20,7 +20,7 @@ $pag = paginate(
     WHERE w.customer_id=?
     ORDER BY w.created_at DESC
     ",
-    [$cid, $cid],
+    [$cid],
     ['allowed' => [5, 10, 20], 'default' => 10]
 );
 $items = $pag['rows'];

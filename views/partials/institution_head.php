@@ -37,11 +37,19 @@ tailwind.config = { theme: { extend: { colors: {
     <aside class="admin-sidebar fixed lg:sticky lg:top-0 inset-y-0 lg:inset-y-auto left-0 z-40 flex-shrink-0 transition-transform lg:h-screen lg:self-start"
            :class="sidebarOpen?'translate-x-0':'-translate-x-full lg:translate-x-0'" style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="<?= e($portalIcon) ?>" class="w-5 h-5"></i></div>
-            <div class="min-w-0">
-                <div class="font-display text-base font-bold text-white truncate"><?= e($i['name']) ?></div>
-                <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60"><?= e($portalLabel) ?></div>
-            </div>
+            <?php if ($isMacaiok): ?>
+                <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-10 w-auto" style="filter:brightness(0) invert(1)">
+                <div class="min-w-0">
+                    <div class="font-display text-sm font-bold text-white truncate"><?= e($i['name']) ?></div>
+                    <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60"><?= e($portalLabel) ?></div>
+                </div>
+            <?php else: ?>
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="<?= e($portalIcon) ?>" class="w-5 h-5"></i></div>
+                <div class="min-w-0">
+                    <div class="font-display text-base font-bold text-white truncate"><?= e($i['name']) ?></div>
+                    <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60"><?= e($portalLabel) ?></div>
+                </div>
+            <?php endif; ?>
         </div>
         <nav class="p-4 space-y-1">
             <?php

@@ -6,12 +6,13 @@ $pageTitle = $isMacaiok ? 'Links para responsáveis' : 'Meu link de indicação'
 
 $partner = dbOne('SELECT * FROM institutions WHERE id=?', [$i['id']]);
 $code = $partner['referral_code'] ?? '';
+$escolaSlug = (string)($partner['slug'] ?? '');
 $shareHome = referralShareUrl($code, $isMacaiok ? '/macaiok' : '/');
 $sharePassis = referralShareUrl($code, '/passeios');
 $sharePacotes = referralShareUrl($code, '/pacotes');
 
-// Passeios populares para gerar link direto
-$roteiros = dbAll("SELECT id, title, slug, cover_image, price, price_pix FROM roteiros WHERE status='published' ORDER BY views DESC LIMIT 6");
+// Passeios populares para gerar link direto (Macaiok mostra só os curados)
+$roteiros = dbAll("SELECT id, title, slug, cover_image, price, price_pix FROM roteiros WHERE status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "") . " ORDER BY featured DESC, views DESC LIMIT 6");
 
 include VIEWS_DIR . '/partials/institution_head.php';
 ?>
@@ -56,7 +57,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
     <h2 class="font-display text-lg font-bold mb-4 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="sparkles" class="w-5 h-5" style="color:var(--terracota)"></i> <?= $isMacaiok ? 'Links de pagamento por vivência' : 'Links de passeios populares' ?></h2>
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" x-data="{c:null}">
         <?php foreach ($roteiros as $idx => $r):
-            $url = referralShareUrl($code, $isMacaiok ? '/checkout?roteiro='.$r['id'] : '/passeios/'.$r['slug']);
+            $url = referralShareUrl($code, $isMacaiok ? ('/macaiok/responsaveis?escola=' . urlencode($escolaSlug) . '&vivencia=' . $r['id'] . '&tipo=roteiro') : '/passeios/'.$r['slug']);
         ?>
         <div class="rounded-xl overflow-hidden" style="background:var(--bg-surface);border:1px solid var(--border-default)">
             <div class="aspect-video bg-center bg-cover" style="background-image:url('<?= $r['cover_image']?e(storageUrl($r['cover_image'])):'' ?>')"></div>
