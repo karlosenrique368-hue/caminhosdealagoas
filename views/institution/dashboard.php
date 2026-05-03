@@ -10,7 +10,7 @@ $portalBase = institutionPortalBasePath($i);
 $recent = dbAll("SELECT b.*, c.name AS customer_name FROM bookings b LEFT JOIN customers c ON c.id=b.customer_id WHERE b.institution_id=? OR b.referral_code=? ORDER BY b.created_at DESC LIMIT 8", [$i['id'], $partner['referral_code'] ?? '']);
 $peopleTraveled = (int) (dbOne("SELECT COALESCE(SUM(adults+children+infants),0) AS p FROM bookings WHERE (institution_id=? OR referral_code=?) AND payment_status='paid'", [$i['id'], $partner['referral_code'] ?? ''])['p'] ?? 0);
 $macaiokStats = $isMacaiok ? dbOne("SELECT COALESCE(SUM(CASE WHEN payment_status='paid' THEN total ELSE 0 END),0) AS revenue, SUM(payment_status='pending') AS pending FROM bookings WHERE institution_id=? OR referral_code=?", [$i['id'], $partner['referral_code'] ?? '']) : ['revenue' => 0, 'pending' => 0];
-$shareUrl = referralShareUrl($partner['referral_code'] ?? '', '/');
+$shareUrl = referralShareUrl($partner['referral_code'] ?? '', $isMacaiok ? '/macaiok' : '/');
 
 // Atividade dos últimos 6 meses — conta indicações por mês
 $monthly = [];

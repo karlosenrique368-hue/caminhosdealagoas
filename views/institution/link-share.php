@@ -8,8 +8,8 @@ $partner = dbOne('SELECT * FROM institutions WHERE id=?', [$i['id']]);
 $code = $partner['referral_code'] ?? '';
 $escolaSlug = (string)($partner['slug'] ?? '');
 $shareHome = referralShareUrl($code, $isMacaiok ? '/macaiok' : '/');
-$sharePassis = referralShareUrl($code, '/passeios');
-$sharePacotes = referralShareUrl($code, '/pacotes');
+$sharePassis = referralShareUrl($code, $isMacaiok ? '/macaiok' : '/passeios');
+$sharePacotes = referralShareUrl($code, $isMacaiok ? '/macaiok' : '/pacotes');
 
 // Passeios populares para gerar link direto (Macaiok mostra só os curados)
 $roteiros = dbAll("SELECT id, title, slug, cover_image, price, price_pix FROM roteiros WHERE status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "") . " ORDER BY featured DESC, views DESC LIMIT 6");

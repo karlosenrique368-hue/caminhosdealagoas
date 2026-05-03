@@ -6,7 +6,14 @@ if (!$booking) { http_response_code(404); echo 'Reserva nao encontrada'; return;
 $customer = dbOne('SELECT * FROM customers WHERE id = ?', [$booking['customer_id']]);
 $mpPublicKey = mercadoPagoActivePublicKey();
 $sandbox = integrationEnabled('payment_sandbox', true);
-$macaiokMode = !empty($booking['institution_id']) ? (bool) dbOne("SELECT id FROM institutions WHERE id=? AND program='macaiok' LIMIT 1", [(int)$booking['institution_id']]) : false;
+$macaiokMode = false;
+if (!empty($booking['institution_id'])) {
+    $macaiokMode = (bool) dbOne("SELECT id FROM institutions WHERE id=? AND program='macaiok' LIMIT 1", [(int)$booking['institution_id']]);
+}
+if (!$macaiokMode && !empty($booking['referral_code'])) {
+    $macaiokMode = (bool) dbOne("SELECT id FROM institutions WHERE referral_code=? AND program='macaiok' LIMIT 1", [$booking['referral_code']]);
+}
+if ($macaiokMode) $GLOBALS['macaiokMode'] = true;
 $pageTitle = ($macaiokMode ? 'Macaiok - Pagamento' : 'Pagamento') . ' - ' . $bookingCode;
 $solidNav = true;
 
@@ -18,7 +25,7 @@ if ((string)$booking['payment_status'] === 'paid') {
             <div class="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,.12);color:#15803D"><i data-lucide="check-circle-2" class="w-10 h-10"></i></div>
             <h1 class="font-display text-3xl font-bold mb-3" style="color:var(--sepia)">Pagamento confirmado</h1>
             <p class="text-sm mb-6" style="color:var(--text-secondary)">Sua reserva <strong><?= e($bookingCode) ?></strong> esta confirmada. Enviamos os detalhes por email.</p>
-            <a href="<?= url('/conta/reservas') ?>" class="btn-primary inline-flex"><i data-lucide="ticket" class="w-4 h-4"></i>Ver minhas reservas</a>
+            <a href="<?= url($macaiokMode ? '/macaiok/conta/reservas' : '/conta/reservas') ?>" class="btn-primary inline-flex"><i data-lucide="ticket" class="w-4 h-4"></i>Ver minhas reservas</a>
         </div>
     </section>
     <?php
@@ -148,6 +155,9 @@ function paymentPage() {
         async renderCardBrick() {
             const total = <?= json_encode((float)$booking['total']) ?>;
             const self = this;
+            const container = document.getElementById('cardPaymentBrick_container');
+            if (container && container.dataset.mounted === '1') return;
+            if (container) { container.dataset.mounted = '1'; container.innerHTML = ''; }
             await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', {
                 initialization: {
                     amount: total,
@@ -159,7 +169,7 @@ function paymentPage() {
                 },
                 callbacks: {
                     onReady: () => {},
-                    onError: (e) => { console.error(e); self.cardError = 'Erro ao carregar formulario do cartao.'; },
+                    onError: (e) => { console.error('[mp.cardBrick]', e); self.cardError = 'Erro ao carregar formulario do cartao. Confirme se a public key TESTE pertence ao mesmo vendedor do access token.'; },
                     onSubmit: async (cardData) => {
                         self.cardError = '';
                         self.cardLoading = true;

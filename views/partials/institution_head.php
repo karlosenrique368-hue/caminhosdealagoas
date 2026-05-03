@@ -64,7 +64,7 @@ tailwind.config = { theme: { extend: { colors: {
             try {
                 $_partnerRow = dbOne('SELECT allow_group_checkout FROM institutions WHERE id=?', [$i['id']]);
                 if (!empty($_partnerRow['allow_group_checkout'])) {
-                    array_splice($menu, 2, 0, [['path'=>'/checkout/grupo','icon'=>'users','label'=>$isMacaiok ? 'Reserva em grupo' : 'Reservar grupo']]);
+                    array_splice($menu, 2, 0, [['path'=>$isMacaiok ? '/macaiok/checkout/grupo' : '/checkout/grupo','icon'=>'users','label'=>$isMacaiok ? 'Reserva em grupo' : 'Reservar grupo']]);
                 }
             } catch (\Throwable $e) {}
             $cur = currentPath();

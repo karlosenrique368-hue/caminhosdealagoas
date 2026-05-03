@@ -98,14 +98,46 @@ function applyProductionRuntimeSettings(): void {
         ini_set('display_errors', '0');
         ini_set('log_errors', '1');
     }
-    if (!integrationEnabled('security_headers_enabled') || headers_sent()) return;
+    applyCorsPolicy();
+    if (!integrationEnabled('security_headers_enabled', true) || headers_sent()) return;
 
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=(self)');
+    header('X-Permitted-Cross-Domain-Policies: none');
+    header('X-Download-Options: noopen');
+    header('Cross-Origin-Opener-Policy: same-origin-allow-popups');
+    header('Origin-Agent-Cluster: ?1');
     if (integrationEnabled('hsts_enabled') && !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
+}
+
+function applyCorsPolicy(): void {
+    if (headers_sent()) return;
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    if (!str_starts_with($path, rtrim(BASE_PATH, '/') . '/api') && !str_starts_with($path, '/api')) return;
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $allowed = array_filter(array_map('trim', explode(',', integrationSetting('cors_allowed_origins', ''))));
+    $appUrl = integrationAppUrl();
+    if ($appUrl !== '') $allowed[] = $appUrl;
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    if ($host !== '') {
+        $allowed[] = 'https://' . $host;
+        $allowed[] = 'http://' . $host;
+    }
+    if ($origin !== '' && in_array(rtrim($origin, '/'), array_map(fn($o) => rtrim((string)$o, '/'), $allowed), true)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Access-Control-Allow-Credentials: true');
+        header('Vary: Origin');
+    }
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Requested-With, X-Caminhos-Signature, X-Signature, X-Request-Id');
+    header('Access-Control-Max-Age: 600');
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+        http_response_code(204);
+        exit;
     }
 }
 
@@ -234,6 +266,22 @@ function mercadoPagoApiHeaders(): array {
     return $token !== '' ? ['Authorization: Bearer ' . $token] : [];
 }
 
+function mercadoPagoGatewayMessage(?array $body, string $fallback): string {
+    if (!$body) return $fallback;
+    $parts = [];
+    foreach (['message', 'error', 'status_detail'] as $key) {
+        if (!empty($body[$key]) && is_scalar($body[$key])) $parts[] = trim((string)$body[$key]);
+    }
+    if (!empty($body['cause']) && is_array($body['cause'])) {
+        foreach ($body['cause'] as $cause) {
+            if (is_array($cause) && !empty($cause['description'])) $parts[] = trim((string)$cause['description']);
+        }
+    }
+    $msg = trim(implode(' | ', array_unique(array_filter($parts))));
+    return $msg !== '' ? 'Mercado Pago: ' . mb_substr($msg, 0, 220) : $fallback;
+}
+
+
 function mercadoPagoChargeCard(array $booking, array $cardData): array {
     $headers = mercadoPagoApiHeaders();
     if (!$headers) return ['ok' => false, 'msg' => 'Access Token Mercado Pago nao configurado.'];
@@ -273,7 +321,7 @@ function mercadoPagoChargeCard(array $booking, array $cardData): array {
     $resp = integrationPostJson('https://api.mercadopago.com/v1/payments', $payload, $headers, 25);
     $body = json_decode($resp['body'] ?? '', true);
     if (!$resp['ok'] || !is_array($body) || empty($body['id'])) {
-        $msg = is_array($body) && !empty($body['message']) ? $body['message'] : 'Pagamento recusado pelo gateway.';
+        $msg = mercadoPagoGatewayMessage(is_array($body) ? $body : null, 'Pagamento recusado pelo gateway.');
         error_log('[mp.card] booking=' . $bookingCode . ' status=' . (int)($resp['status'] ?? 0) . ' body=' . mb_substr((string)($resp['body'] ?? ''), 0, 500));
         return ['ok' => false, 'msg' => $msg, 'mp_status' => is_array($body) ? ($body['status'] ?? null) : null];
     }
@@ -310,7 +358,7 @@ function mercadoPagoCreatePix(array $booking): array {
     $body = json_decode($resp['body'] ?? '', true);
     if (!$resp['ok'] || !is_array($body) || empty($body['id'])) {
         error_log('[mp.pix] booking=' . $bookingCode . ' status=' . (int)($resp['status'] ?? 0) . ' body=' . mb_substr((string)($resp['body'] ?? ''), 0, 500));
-        return ['ok' => false, 'msg' => 'Nao foi possivel gerar o PIX agora.'];
+        return ['ok' => false, 'msg' => mercadoPagoGatewayMessage(is_array($body) ? $body : null, 'Nao foi possivel gerar o PIX agora.')];
     }
     $tx = $body['point_of_interaction']['transaction_data'] ?? [];
     dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = ?, payment_status = ? WHERE id = ?', ['mercadopago', (string)$body['id'], 'pending', (int)$booking['id']]);

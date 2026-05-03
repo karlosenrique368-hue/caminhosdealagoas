@@ -14,6 +14,9 @@ header('Content-Type: application/json; charset=utf-8');
 if (!isset($_SESSION['cart'])) $_SESSION['cart'] = [];
 
 function cartResponse(): void {
+    $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?: '';
+    $macaiokCart = str_starts_with($refererPath, rtrim(BASE_PATH, '/') . '/macaiok') || str_starts_with($refererPath, '/macaiok');
+    $checkoutBase = $macaiokCart ? '/macaiok/checkout' : '/checkout';
     $items = [];
     $total = 0.0;
     $count = 0;
@@ -36,7 +39,7 @@ function cartResponse(): void {
         $count += $qty;
         $query = ['cart_key' => $key, $it['type'] => (int)$row['id']];
         if ($travelDates) $query['dates'] = implode(',', $travelDates);
-        $checkoutUrl = url('/checkout?' . http_build_query($query));
+        $checkoutUrl = url($checkoutBase . '?' . http_build_query($query));
         $items[] = [
             'key'        => $key,
             'type'       => $it['type'],
@@ -56,11 +59,11 @@ function cartResponse(): void {
             'checkout_url'=> $checkoutUrl,
         ];
     }
-    $checkoutUrl = url('/checkout');
+    $checkoutUrl = url($checkoutBase);
     if (count($items) === 1) {
         $checkoutUrl = $items[0]['checkout_url'];
     } elseif (count($items) > 1) {
-        $checkoutUrl = url('/checkout?cart=1');
+        $checkoutUrl = url($checkoutBase . '?cart=1');
     }
     echo json_encode([
         'ok'    => true,

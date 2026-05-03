@@ -162,9 +162,9 @@
             <i data-lucide="shopping-bag" class="w-10 h-10" style="color:var(--horizonte-light)"></i>
         </div>
         <h3 class="font-display text-xl font-bold mb-1" style="color:var(--sepia)">Carrinho vazio</h3>
-        <p class="text-sm mb-6 max-w-xs" style="color:var(--text-muted)">Escolha um passeio ou pacote para começar sua próxima aventura.</p>
-        <a href="<?= url('/passeios') ?>" class="btn-primary" style="padding:12px 24px">
-            <i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios
+        <p class="text-sm mb-6 max-w-xs" style="color:var(--text-muted)"><?= $isMacaiokPublic ? 'Escolha uma vivência para começar sua reserva.' : 'Escolha um passeio ou pacote para começar sua próxima aventura.' ?></p>
+        <a href="<?= url($isMacaiokPublic ? '/macaiok' : '/passeios') ?>" class="btn-primary" style="padding:12px 24px">
+            <i data-lucide="compass" class="w-4 h-4"></i> <?= $isMacaiokPublic ? 'Ver vivências' : 'Explorar passeios' ?>
         </a>
     </div>
 
@@ -173,7 +173,7 @@
             <div class="text-xs uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Total</div>
             <div class="font-display text-2xl font-bold" id="cart-total" style="color:var(--terracota)">R$ 0,00</div>
         </div>
-        <a href="<?= url('/checkout') ?>" id="cart-checkout-link" class="btn-primary w-full">
+        <a href="<?= url($isMacaiokPublic ? '/macaiok/checkout' : '/checkout') ?>" id="cart-checkout-link" class="btn-primary w-full">
             <i data-lucide="lock" class="w-4 h-4"></i> Finalizar Reserva
         </a>
         <button onclick="window.cart && window.cart.clear()" class="w-full text-xs font-semibold py-2 hover:underline" style="color:var(--text-muted)">

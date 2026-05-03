@@ -73,7 +73,8 @@ if ($bookingMode === 'grupo_instituicao' && $participantsRaw) {
 $respName  = trim($_POST['responsible_name'] ?? '');
 $respCpf   = preg_replace('/\D/', '', $_POST['responsible_cpf'] ?? '');
 $respPhone = trim($_POST['responsible_phone'] ?? '');
-$instPartnerId = (int)($_POST['institution_partner_id'] ?? 0) ?: null;
+$postedInstitutionId = (int)($_POST['institution_partner_id'] ?? 0);
+$instPartnerId = null;
 
 $pmMap = ['pix' => 'pix', 'pix_installments' => 'pix', 'card' => 'credit_card', 'credit_card' => 'credit_card', 'boleto' => 'boleto'];
 $paymentMethod = $pmMap[$pm] ?? null;
@@ -230,6 +231,13 @@ if (!$refCode) {
     if ($tracked) {
         $rp = partnerByCode($tracked);
         if ($rp) { $refCode = $rp['referral_code']; $partnerId = (int)$rp['id']; }
+    }
+}
+
+if ($postedInstitutionId) {
+    $postedInstitution = dbOne('SELECT id, referral_code FROM institutions WHERE id=? AND active=1 LIMIT 1', [$postedInstitutionId]);
+    if ($postedInstitution && $refCode !== '' && hash_equals((string)$postedInstitution['referral_code'], (string)$refCode)) {
+        $instPartnerId = (int)$postedInstitution['id'];
     }
 }
 

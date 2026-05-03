@@ -6,9 +6,12 @@
 requireInstitution();
 $i = currentInstitution();
 $partner = dbOne('SELECT * FROM institutions WHERE id = ?', [$i['id']]);
+$isMacaiokGroup = institutionPortalProgram($i) === 'macaiok' || !empty($macaiokMode) || str_starts_with(currentPath(), '/macaiok');
+if ($isMacaiokGroup) { $macaiokMode = true; $GLOBALS['macaiokMode'] = true; }
+$groupCheckoutBase = $isMacaiokGroup ? '/macaiok/checkout/grupo' : '/checkout/grupo';
 if (!$partner || (int)$partner['allow_group_checkout'] !== 1) {
     flash('error', 'Seu perfil de parceiro não tem o modo grupo habilitado. Fale com o administrador.');
-    redirect('/parceiro/dashboard');
+    redirect($isMacaiokGroup ? '/macaiok/dashboard' : '/parceiro/dashboard');
 }
 
 $pageTitle = 'Reserva em grupo';
@@ -22,8 +25,9 @@ elseif ($pacoteId) { $item = dbOne("SELECT * FROM pacotes WHERE id=? AND status=
 
 if (!$item) {
     // mostra catalogo basico para escolher
-    $roteiros = dbAll("SELECT id,title,price,price_pix,cover_image FROM roteiros WHERE status='published' ORDER BY featured DESC, title ASC LIMIT 24");
-    $pacotes  = dbAll("SELECT id,title,price,price_pix,cover_image FROM pacotes  WHERE status='published' ORDER BY featured DESC, title ASC LIMIT 24");
+    $macaiokFeaturedSql = $isMacaiokGroup ? " AND macaiok_featured=1" : "";
+    $roteiros = dbAll("SELECT id,title,price,price_pix,cover_image FROM roteiros WHERE status='published'" . $macaiokFeaturedSql . " ORDER BY featured DESC, title ASC LIMIT 24");
+    $pacotes  = dbAll("SELECT id,title,price,price_pix,cover_image FROM pacotes  WHERE status='published'" . $macaiokFeaturedSql . " ORDER BY featured DESC, title ASC LIMIT 24");
     include VIEWS_DIR . '/partials/public_head.php';
     ?>
     <section class="pt-32 pb-16 min-h-screen" style="background:var(--bg-surface)">
@@ -36,7 +40,7 @@ if (!$item) {
             <h2 class="font-display text-lg font-bold mb-3" style="color:var(--sepia)">Passeios</h2>
             <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 <?php foreach ($roteiros as $r): ?>
-                    <a href="<?= url('/checkout/grupo?roteiro='.$r['id']) ?>" class="admin-card p-3 hover:shadow-lg transition block">
+                    <a href="<?= url($groupCheckoutBase . '?roteiro='.$r['id']) ?>" class="admin-card p-3 hover:shadow-lg transition block">
                         <?php if ($r['cover_image']): ?><img src="<?= storageUrl($r['cover_image']) ?>" class="w-full aspect-[4/3] rounded-lg object-cover mb-3"><?php endif; ?>
                         <div class="font-semibold text-sm" style="color:var(--sepia)"><?= e($r['title']) ?></div>
                         <div class="text-xs mt-1" style="color:var(--terracota)"><?= formatBRL($r['price_pix'] ?: $r['price']) ?> PIX</div>
@@ -46,7 +50,7 @@ if (!$item) {
             <h2 class="font-display text-lg font-bold mb-3" style="color:var(--sepia)">Pacotes</h2>
             <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <?php foreach ($pacotes as $p): ?>
-                    <a href="<?= url('/checkout/grupo?pacote='.$p['id']) ?>" class="admin-card p-3 hover:shadow-lg transition block">
+                    <a href="<?= url($groupCheckoutBase . '?pacote='.$p['id']) ?>" class="admin-card p-3 hover:shadow-lg transition block">
                         <?php if ($p['cover_image']): ?><img src="<?= storageUrl($p['cover_image']) ?>" class="w-full aspect-[4/3] rounded-lg object-cover mb-3"><?php endif; ?>
                         <div class="font-semibold text-sm" style="color:var(--sepia)"><?= e($p['title']) ?></div>
                         <div class="text-xs mt-1" style="color:var(--terracota)"><?= formatBRL($p['price_pix'] ?: $p['price']) ?> PIX</div>
@@ -74,7 +78,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <section class="pt-28 pb-16 min-h-screen" style="background:linear-gradient(180deg,var(--bg-surface) 0%,var(--bg-page) 100%)">
 <div class="max-w-6xl mx-auto px-4 sm:px-6" x-data="grupoCheckout()" x-init="init()">
 
-    <a href="<?= url('/checkout/grupo') ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)"><i data-lucide="arrow-left" class="w-4 h-4"></i> Trocar produto</a>
+    <a href="<?= url($groupCheckoutBase) ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)"><i data-lucide="arrow-left" class="w-4 h-4"></i> Trocar produto</a>
 
     <div class="mb-6">
         <span class="inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" style="background:var(--horizonte);color:#fff">Reserva em grupo • <?= e($partner['name']) ?></span>

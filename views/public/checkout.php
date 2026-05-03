@@ -1,6 +1,9 @@
 <?php
 $pageTitle = 'Reserva segura · Caminhos de Alagoas';
 $solidNav  = true;
+$macaiokMode = !empty($macaiokMode) || !empty($GLOBALS['macaiokMode']) || str_starts_with(currentPath(), '/macaiok');
+if ($macaiokMode) $GLOBALS['macaiokMode'] = true;
+$cartCheckoutBase = $macaiokMode ? '/macaiok/checkout' : '/checkout';
 
 $roteiroId  = (int)($_GET['roteiro'] ?? 0);
 $pacoteId   = (int)($_GET['pacote'] ?? 0);
@@ -31,7 +34,7 @@ if (!$roteiroId && !$pacoteId && !$transferId && ($_GET['cart'] ?? '') === '1' &
         $subtotal = $unitPrice * $qty * $dateCount;
         $query = ['cart_key' => $key, $ci['type'] => (int)$row['id']];
         if ($dates) $query['dates'] = implode(',', $dates);
-        $cartRows[] = ['key'=>$key, 'type'=>$ci['type'], 'row'=>$row, 'dates'=>$dates, 'qty'=>$qty, 'date_count'=>$dateCount, 'subtotal'=>$subtotal, 'checkout'=>url('/checkout?' . http_build_query($query))];
+        $cartRows[] = ['key'=>$key, 'type'=>$ci['type'], 'row'=>$row, 'dates'=>$dates, 'qty'=>$qty, 'date_count'=>$dateCount, 'subtotal'=>$subtotal, 'checkout'=>url($cartCheckoutBase . '?' . http_build_query($query))];
     }
     ?>
     <section class="pt-32 pb-16" style="background:var(--bg-surface)">
@@ -78,11 +81,23 @@ if (!$roteiroId && !$pacoteId && !$transferId && !empty($_SESSION['cart'])) {
 if ($roteiroId)       { $item = dbOne("SELECT * FROM roteiros  WHERE id=? AND status='published'", [$roteiroId]);  $type = 'roteiro';  }
 elseif ($pacoteId)    { $item = dbOne("SELECT * FROM pacotes   WHERE id=? AND status='published'", [$pacoteId]);   $type = 'pacote';   }
 elseif ($transferId)  { $item = dbOne("SELECT * FROM transfers WHERE id=? AND status='published'", [$transferId]); $type = 'transfer'; }
-if (!$item) { redirect('/passeios'); }
+if (!$item) { redirect($macaiokMode ? '/macaiok' : '/passeios'); }
 $typeLabel = $type === 'roteiro' ? 'Passeio' : ($type === 'pacote' ? 'Pacote' : 'Transfer');
 
+$incomingPartner = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string)($_GET['parceiro'] ?? '')));
 $refCode    = currentReferralCode();
 $refPartner = $refCode ? partnerByCode($refCode) : null;
+if ($incomingPartner !== '') {
+    $incoming = partnerByCode($incomingPartner);
+    if (!$incoming && ctype_digit($incomingPartner)) {
+        $incoming = dbOne('SELECT * FROM institutions WHERE id=? AND active=1 LIMIT 1', [(int)$incomingPartner]);
+    }
+    if ($incoming && (!$macaiokMode || ($incoming['program'] ?? '') === 'macaiok')) {
+        $refPartner = $incoming;
+        $refCode = (string)$incoming['referral_code'];
+        if ($refCode !== '') trackReferral($refCode);
+    }
+}
 
 // Pré-seleção (vem do calendário ou do carrinho)
 $preDate     = $_GET['date']     ?? '';
@@ -208,7 +223,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <section class="pt-28 pb-16" style="background:linear-gradient(180deg,var(--bg-surface) 0%,var(--bg-page) 100%);min-height:100vh">
 <div class="max-w-6xl mx-auto px-4 sm:px-6" x-data="checkoutWizard()" x-init="init()">
 
-    <a href="<?= url($type==='roteiro' ? '/passeios' : ($type==='pacote' ? '/pacotes' : '/transfers')) ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)">
+    <a href="<?= url($macaiokMode ? '/macaiok' : ($type==='roteiro' ? '/passeios' : ($type==='pacote' ? '/pacotes' : '/transfers'))) ?>" class="inline-flex items-center gap-1 text-sm mb-4" style="color:var(--horizonte)">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao catálogo
     </a>
 
@@ -618,6 +633,7 @@ function checkoutWizard() {
             payment_method:'pix', price_option:'promo', installments: 0,
             accept_terms:false,
             ref_code:    <?= json_encode($refCode ?? '') ?>,
+            institution_partner_id: <?= (int)($refPartner['id'] ?? 0) ?>,
             entity_type: <?= json_encode($type) ?>,
             entity_id:   <?= (int)$item['id'] ?>,
             currency:    <?= json_encode($currencyCode) ?>,

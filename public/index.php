@@ -139,6 +139,12 @@ switch (true) {
         require VIEWS_DIR . '/public/checkout.php';
         break;
 
+    case $path === '/macaiok/checkout/grupo':
+        $macaiokMode = true;
+        $GLOBALS['macaiokMode'] = true;
+        require VIEWS_DIR . '/public/checkout-grupo.php';
+        break;
+
     case (bool) preg_match('#^/pagamento/([A-Z0-9-]+)$#i', $path, $mPay):
         $_GET['code'] = $mPay[1];
         require VIEWS_DIR . '/public/pagamento.php';
