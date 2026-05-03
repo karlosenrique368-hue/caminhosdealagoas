@@ -234,6 +234,96 @@ function mercadoPagoApiHeaders(): array {
     return $token !== '' ? ['Authorization: Bearer ' . $token] : [];
 }
 
+function mercadoPagoChargeCard(array $booking, array $cardData): array {
+    $headers = mercadoPagoApiHeaders();
+    if (!$headers) return ['ok' => false, 'msg' => 'Access Token Mercado Pago nao configurado.'];
+    $bookingCode = (string)$booking['code'];
+    $amount = round(max(0.01, (float)$booking['total']), 2);
+    $token = trim((string)($cardData['token'] ?? ''));
+    $paymentMethodId = trim((string)($cardData['payment_method_id'] ?? ''));
+    $issuerId = (string)($cardData['issuer_id'] ?? '');
+    $installments = max(1, (int)($cardData['installments'] ?? 1));
+    $payerEmail = trim((string)($cardData['payer_email'] ?? $booking['customer_email'] ?? ''));
+    $payerDocType = strtoupper((string)($cardData['payer_doc_type'] ?? 'CPF'));
+    $payerDocNumber = preg_replace('/\D/', '', (string)($cardData['payer_doc_number'] ?? $booking['customer_document'] ?? ''));
+    if ($token === '' || $paymentMethodId === '') {
+        return ['ok' => false, 'msg' => 'Dados do cartao incompletos.'];
+    }
+    $payload = [
+        'transaction_amount' => $amount,
+        'token' => $token,
+        'description' => mb_substr((string)($booking['entity_title'] ?: 'Reserva ' . $bookingCode), 0, 250),
+        'installments' => $installments,
+        'payment_method_id' => $paymentMethodId,
+        'external_reference' => $bookingCode,
+        'notification_url' => paymentWebhookUrlWithSecret(),
+        'statement_descriptor' => 'CAMINHOSALAGOAS',
+        'payer' => [
+            'email' => $payerEmail !== '' ? $payerEmail : 'sem-email@caminhosdealagoas.com.br',
+            'first_name' => (string)($booking['customer_name'] ?? ''),
+            'identification' => ['type' => $payerDocType, 'number' => $payerDocNumber],
+        ],
+        'metadata' => [
+            'booking_code' => $bookingCode,
+            'booking_id' => (int)$booking['id'],
+        ],
+    ];
+    if ($issuerId !== '') $payload['issuer_id'] = $issuerId;
+    $headers[] = 'X-Idempotency-Key: mp-card-' . $bookingCode . '-' . substr(md5($token), 0, 10);
+    $resp = integrationPostJson('https://api.mercadopago.com/v1/payments', $payload, $headers, 25);
+    $body = json_decode($resp['body'] ?? '', true);
+    if (!$resp['ok'] || !is_array($body) || empty($body['id'])) {
+        $msg = is_array($body) && !empty($body['message']) ? $body['message'] : 'Pagamento recusado pelo gateway.';
+        error_log('[mp.card] booking=' . $bookingCode . ' status=' . (int)($resp['status'] ?? 0) . ' body=' . mb_substr((string)($resp['body'] ?? ''), 0, 500));
+        return ['ok' => false, 'msg' => $msg, 'mp_status' => is_array($body) ? ($body['status'] ?? null) : null];
+    }
+    $status = (string)($body['status'] ?? 'pending');
+    $statusDetail = (string)($body['status_detail'] ?? '');
+    $newBookingStatus = $status === 'approved' ? 'paid' : ($status === 'rejected' ? 'failed' : 'pending');
+    dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = ?, payment_status = ? WHERE id = ?', ['mercadopago', (string)$body['id'], $newBookingStatus, (int)$booking['id']]);
+    return ['ok' => true, 'mp_id' => $body['id'], 'status' => $status, 'status_detail' => $statusDetail, 'booking_status' => $newBookingStatus];
+}
+
+function mercadoPagoCreatePix(array $booking): array {
+    $headers = mercadoPagoApiHeaders();
+    if (!$headers) return ['ok' => false, 'msg' => 'Access Token Mercado Pago nao configurado.'];
+    $bookingCode = (string)$booking['code'];
+    $amount = round(max(0.01, (float)$booking['total']), 2);
+    $payerEmail = trim((string)($booking['customer_email'] ?? '')) ?: 'sem-email@caminhosdealagoas.com.br';
+    $payerDoc = preg_replace('/\D/', '', (string)($booking['customer_document'] ?? ''));
+    $payload = [
+        'transaction_amount' => $amount,
+        'description' => mb_substr((string)($booking['entity_title'] ?: 'Reserva ' . $bookingCode), 0, 250),
+        'payment_method_id' => 'pix',
+        'external_reference' => $bookingCode,
+        'notification_url' => paymentWebhookUrlWithSecret(),
+        'date_of_expiration' => date('c', time() + 3600 * 24),
+        'payer' => [
+            'email' => $payerEmail,
+            'first_name' => (string)($booking['customer_name'] ?? 'Cliente'),
+        ],
+        'metadata' => ['booking_code' => $bookingCode, 'booking_id' => (int)$booking['id']],
+    ];
+    if (strlen($payerDoc) === 11) $payload['payer']['identification'] = ['type' => 'CPF', 'number' => $payerDoc];
+    $headers[] = 'X-Idempotency-Key: mp-pix-' . $bookingCode;
+    $resp = integrationPostJson('https://api.mercadopago.com/v1/payments', $payload, $headers, 25);
+    $body = json_decode($resp['body'] ?? '', true);
+    if (!$resp['ok'] || !is_array($body) || empty($body['id'])) {
+        error_log('[mp.pix] booking=' . $bookingCode . ' status=' . (int)($resp['status'] ?? 0) . ' body=' . mb_substr((string)($resp['body'] ?? ''), 0, 500));
+        return ['ok' => false, 'msg' => 'Nao foi possivel gerar o PIX agora.'];
+    }
+    $tx = $body['point_of_interaction']['transaction_data'] ?? [];
+    dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = ?, payment_status = ? WHERE id = ?', ['mercadopago', (string)$body['id'], 'pending', (int)$booking['id']]);
+    return [
+        'ok' => true,
+        'mp_id' => $body['id'],
+        'qr_code' => (string)($tx['qr_code'] ?? ''),
+        'qr_code_base64' => (string)($tx['qr_code_base64'] ?? ''),
+        'ticket_url' => (string)($tx['ticket_url'] ?? ''),
+        'expires_at' => date('Y-m-d H:i:s', time() + 3600 * 24),
+    ];
+}
+
 function mercadoPagoCreatePreference(array $booking): array {
     $headers = mercadoPagoApiHeaders();
     if (!$headers) return ['ok' => false, 'mode' => 'missing_credentials', 'provider' => 'mercadopago', 'msg' => 'Access Token Mercado Pago não configurado.'];
@@ -354,7 +444,18 @@ function prepareBookingPayment(int $bookingId): array {
     }
 
     if ($provider === 'mercadopago') {
-        return mercadoPagoCreatePreference($booking);
+        // Checkout transparente: pagamento acontece na pagina /pagamento/CODE via Bricks
+        if (integrationEnabled('payment_use_redirect_checkout', false)) {
+            return mercadoPagoCreatePreference($booking);
+        }
+        dbExec('UPDATE bookings SET payment_gateway = ? WHERE id = ?', ['mercadopago', (int)$booking['id']]);
+        return [
+            'ok' => true,
+            'mode' => 'transparent_checkout',
+            'provider' => 'mercadopago',
+            'checkout_url' => url('/pagamento/' . rawurlencode($booking['code'])),
+            'webhook_url' => paymentWebhookUrl(),
+        ];
     }
 
     $transactionId = $booking['gateway_tx_id'] ?: strtoupper(substr($provider, 0, 4)) . '-' . $booking['code'] . '-' . strtoupper(substr(hash('sha256', $booking['code'] . microtime(true)), 0, 8));

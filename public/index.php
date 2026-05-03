@@ -139,7 +139,12 @@ switch (true) {
         require VIEWS_DIR . '/public/checkout.php';
         break;
 
-    case $path === '/macaiok/responsaveis':
+    case (bool) preg_match('#^/pagamento/([A-Z0-9-]+)$#i', $path, $mPay):
+        $_GET['code'] = $mPay[1];
+        require VIEWS_DIR . '/public/pagamento.php';
+        break;
+
+        case $path === '/macaiok/responsaveis':
         require VIEWS_DIR . '/public/macaiok-responsaveis.php';
         break;
 
