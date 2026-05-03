@@ -1,13 +1,13 @@
 <?php
-$code = strtoupper(preg_replace('/[^A-Z0-9-]/i', '', $_GET['code'] ?? ''));
-if ($code === '') { redirect('/'); }
-$booking = dbOne('SELECT * FROM bookings WHERE code = ? LIMIT 1', [$code]);
+$bookingCode = strtoupper(preg_replace('/[^A-Z0-9-]/i', '', $_GET['code'] ?? ''));
+if ($bookingCode === '') { redirect('/'); }
+$booking = dbOne('SELECT * FROM bookings WHERE code = ? LIMIT 1', [$bookingCode]);
 if (!$booking) { http_response_code(404); echo 'Reserva nao encontrada'; return; }
 $customer = dbOne('SELECT * FROM customers WHERE id = ?', [$booking['customer_id']]);
 $mpPublicKey = mercadoPagoActivePublicKey();
 $sandbox = integrationEnabled('payment_sandbox', true);
 $macaiokMode = !empty($booking['institution_id']) ? (bool) dbOne("SELECT id FROM institutions WHERE id=? AND program='macaiok' LIMIT 1", [(int)$booking['institution_id']]) : false;
-$pageTitle = ($macaiokMode ? 'Macaiok - Pagamento' : 'Pagamento') . ' - ' . $code;
+$pageTitle = ($macaiokMode ? 'Macaiok - Pagamento' : 'Pagamento') . ' - ' . $bookingCode;
 $solidNav = true;
 
 if ((string)$booking['payment_status'] === 'paid') {
@@ -17,7 +17,7 @@ if ((string)$booking['payment_status'] === 'paid') {
         <div class="max-w-xl mx-auto px-6 text-center">
             <div class="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,.12);color:#15803D"><i data-lucide="check-circle-2" class="w-10 h-10"></i></div>
             <h1 class="font-display text-3xl font-bold mb-3" style="color:var(--sepia)">Pagamento confirmado</h1>
-            <p class="text-sm mb-6" style="color:var(--text-secondary)">Sua reserva <strong><?= e($code) ?></strong> esta confirmada. Enviamos os detalhes por email.</p>
+            <p class="text-sm mb-6" style="color:var(--text-secondary)">Sua reserva <strong><?= e($bookingCode) ?></strong> esta confirmada. Enviamos os detalhes por email.</p>
             <a href="<?= url('/conta/reservas') ?>" class="btn-primary inline-flex"><i data-lucide="ticket" class="w-4 h-4"></i>Ver minhas reservas</a>
         </div>
     </section>
@@ -44,7 +44,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <div class="max-w-5xl mx-auto px-4 sm:px-6" x-data="paymentPage()" x-init="init()">
 
     <div class="mb-8">
-        <span class="text-[11px] font-bold uppercase tracking-[0.24em]" style="color:var(--terracota)">Reserva <?= e($code) ?></span>
+        <span class="text-[11px] font-bold uppercase tracking-[0.24em]" style="color:var(--terracota)">Reserva <?= e($bookingCode) ?></span>
         <h1 class="font-display text-3xl sm:text-4xl font-bold mt-2" style="color:var(--sepia)">Finalize seu pagamento</h1>
         <p class="text-sm mt-2" style="color:var(--text-secondary)"><?= e($booking['entity_title']) ?> - Total <strong style="color:var(--terracota)"><?= formatBRL($booking['total']) ?></strong></p>
         <?php if ($sandbox): ?>
@@ -93,7 +93,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                 <div class="text-[10px] uppercase font-bold tracking-widest mb-1" style="color:var(--terracota)"><?= e($booking['entity_type']) ?></div>
                 <div class="font-display font-semibold leading-snug mb-3" style="color:var(--sepia)"><?= e($booking['entity_title']) ?></div>
                 <div class="py-3 border-t border-b space-y-2 text-sm" style="border-color:var(--border-default)">
-                    <div class="flex justify-between"><span style="color:var(--text-secondary)">Reserva</span><span class="font-mono" style="color:var(--sepia)"><?= e($code) ?></span></div>
+                    <div class="flex justify-between"><span style="color:var(--text-secondary)">Reserva</span><span class="font-mono" style="color:var(--sepia)"><?= e($bookingCode) ?></span></div>
                     <div class="flex justify-between"><span style="color:var(--text-secondary)">Subtotal</span><span style="color:var(--sepia)"><?= formatBRL($booking['subtotal']) ?></span></div>
                     <?php if ((float)$booking['discount'] > 0): ?>
                     <div class="flex justify-between"><span style="color:var(--text-secondary)">Desconto</span><span style="color:#15803D">-<?= formatBRL($booking['discount']) ?></span></div>
@@ -112,6 +112,8 @@ include VIEWS_DIR . '/partials/public_head.php';
 
 <script>
 function paymentPage() {
+    let mpInstance = null;
+    let bricksBuilder = null;
     return {
         tab: 'card',
         cardError: '',
@@ -120,8 +122,6 @@ function paymentPage() {
         pixError: '',
         pixData: null,
         copied: false,
-        mp: null,
-        bricksBuilder: null,
         async waitForMP() {
             for (let i=0;i<60;i++){
                 if (window.MercadoPago) return true;
@@ -136,8 +136,8 @@ function paymentPage() {
             const ok = await this.waitForMP();
             if (!ok) { this.cardError = 'Falha ao carregar SDK do Mercado Pago. Verifique sua conexao e recarregue.'; return; }
             try {
-                this.mp = new MercadoPago(pk, { locale: 'pt-BR' });
-                this.bricksBuilder = this.mp.bricks();
+                mpInstance = new MercadoPago(pk, { locale: 'pt-BR' });
+                bricksBuilder = mpInstance.bricks();
                 await this.renderCardBrick();
                 this.pollStatus();
             } catch (err) {
@@ -148,7 +148,7 @@ function paymentPage() {
         async renderCardBrick() {
             const total = <?= json_encode((float)$booking['total']) ?>;
             const self = this;
-            await this.bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', {
+            await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', {
                 initialization: {
                     amount: total,
                     payer: { email: <?= json_encode($customer['email'] ?? '') ?> }
@@ -167,7 +167,7 @@ function paymentPage() {
                             const res = await caminhosApi('<?= url('/api/payment-process') ?>?action=card', {
                                 method: 'POST',
                                 data: {
-                                    booking_code: <?= json_encode($code) ?>,
+                                    booking_code: <?= json_encode($bookingCode) ?>,
                                     token: cardData.formData.token,
                                     payment_method_id: cardData.formData.payment_method_id,
                                     issuer_id: cardData.formData.issuer_id || '',
@@ -202,7 +202,7 @@ function paymentPage() {
             try {
                 const res = await caminhosApi('<?= url('/api/payment-process') ?>?action=pix', {
                     method: 'POST',
-                    data: { booking_code: <?= json_encode($code) ?> }
+                    data: { booking_code: <?= json_encode($bookingCode) ?> }
                 });
                 if (res.ok) {
                     this.pixData = res;
@@ -227,7 +227,7 @@ function paymentPage() {
             // verifica a cada 5s se webhook ja confirmou
             setInterval(async () => {
                 try {
-                    const res = await caminhosApi('<?= url('/api/payment-process') ?>?action=status&booking_code=' + encodeURIComponent(<?= json_encode($code) ?>), { method: 'GET' });
+                    const res = await caminhosApi('<?= url('/api/payment-process') ?>?action=status&booking_code=' + encodeURIComponent(<?= json_encode($bookingCode) ?>), { method: 'GET' });
                     if (res.ok && res.payment_status === 'paid') window.location.reload();
                 } catch (e) {}
             }, 5000);
