@@ -207,7 +207,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 <script>
 function grupoCheckout() {
     return {
-        participants: [ this.blankParticipant() ],
+        participants: [],
         responsible: { name:<?= json_encode($i['user_name'] ?? '') ?>, cpf:'', phone:<?= json_encode($partner['contact_phone'] ?? '') ?>, email:<?= json_encode($i['user_email'] ?? '') ?> },
         payment: 'pix',
         accept: false,
@@ -216,7 +216,7 @@ function grupoCheckout() {
         priceCard: <?= (float)$item['price'] ?>,
         blankParticipant() { return { name:'', cpf:'', birth_date:'', class:'', has_special:'nao', special_desc:'' }; },
         addParticipant() { this.participants.push(this.blankParticipant()); this.$nextTick(()=>window.lucide && window.lucide.createIcons()); },
-        init() { if (window.lucide) window.lucide.createIcons(); },
+        init() { if (!this.participants.length) this.participants.push(this.blankParticipant()); if (window.lucide) window.lucide.createIcons(); },
         unit() { return this.payment==='pix' ? this.pricePix : this.priceCard; },
         total() { return this.unit() * this.participants.length; },
         formatBRL(v){ return 'R$ ' + (v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); },

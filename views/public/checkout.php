@@ -161,6 +161,16 @@ if (!in_array($availabilityMode, ['fixed','open','on_request'], true)) $availabi
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
 
+<?php if (!empty($macaiokMode)): ?>
+<div class="pt-24 pb-2" style="background:linear-gradient(180deg,#324500 0%, #2F1607 100%)">
+    <div class="max-w-6xl mx-auto px-6 flex items-center gap-3 flex-wrap">
+        <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-8" style="filter:brightness(0) invert(1)">
+        <span class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/90">Vivencias pedagogicas - Reserva pelo responsavel</span>
+        <span class="ml-auto text-[11px] text-white/70">Pagamento processado por <strong>Caminhos de Alagoas</strong></span>
+    </div>
+</div>
+<?php endif; ?>
+
 <style>
 .wiz-step-dot{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;transition:all .35s cubic-bezier(.4,0,.2,1);flex-shrink:0;border:2px solid var(--border-default);background:var(--bg-card);color:var(--text-muted)}
 .wiz-step-dot.done{background:var(--maresia);border-color:var(--maresia);color:#fff}

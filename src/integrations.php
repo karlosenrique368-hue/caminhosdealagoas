@@ -23,8 +23,24 @@ function paymentWebhookUrl(): string {
 }
 
 function paymentGatewaySecretForProvider(string $provider): string {
+    if ($provider === 'mercadopago') {
+        $sandbox = integrationEnabled('payment_sandbox', false);
+        if ($sandbox) {
+            $test = integrationSetting('payment_test_secret_key', '');
+            if ($test !== '') return $test;
+        }
+        return integrationSetting('payment_secret_key', '');
+    }
     if ($provider === 'pagseguro') return integrationSetting('payment_pagseguro_token', integrationSetting('payment_secret_key', ''));
     return integrationSetting('payment_secret_key', '');
+}
+
+function mercadoPagoActivePublicKey(): string {
+    if (integrationEnabled('payment_sandbox', false)) {
+        $test = integrationSetting('payment_test_public_key', '');
+        if ($test !== '') return $test;
+    }
+    return integrationSetting('payment_public_key', '');
 }
 
 function logActivity(?int $adminId, string $action, ?string $entity = null, ?int $entityId = null, ?string $description = null): void {
@@ -34,6 +50,46 @@ function logActivity(?int $adminId, string $action, ?string $entity = null, ?int
             [$adminId, mb_substr($action, 0, 80), $entity, $entityId, $description ? mb_substr($description, 0, 500) : null, $_SERVER['REMOTE_ADDR'] ?? null]
         );
     } catch (Throwable $error) {
+    }
+}
+
+function ensureMigrations(): void {
+    static $ran = false;
+    if ($ran) return;
+    $ran = true;
+    try {
+        $current = (int) (getSetting('db_migration_version', '0'));
+        if ($current >= 15) return;
+        $colExists = function(string $t, string $c): bool {
+            try {
+                $r = dbOne('SELECT COUNT(*) c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?', [$t, $c]);
+                return (int)($r['c'] ?? 0) > 0;
+            } catch (Throwable $e) { return false; }
+        };
+        $tabExists = function(string $t): bool {
+            try {
+                $r = dbOne('SELECT COUNT(*) c FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', [$t]);
+                return (int)($r['c'] ?? 0) > 0;
+            } catch (Throwable $e) { return false; }
+        };
+        $exec = function(string $sql) { try { db()->exec($sql); } catch (Throwable $e) { error_log('[ensureMigrations] '.$e->getMessage()); } };
+        // Migration 014: program/parent_share_note on institutions
+        if (!$colExists('institutions', 'program')) $exec("ALTER TABLE institutions ADD COLUMN program ENUM('parceiros','macaiok') NOT NULL DEFAULT 'parceiros' AFTER partner_type");
+        if (!$colExists('institutions', 'parent_share_note')) $exec('ALTER TABLE institutions ADD COLUMN parent_share_note TEXT NULL AFTER notes');
+        if (!$colExists('institutions', 'allow_group_checkout')) $exec('ALTER TABLE institutions ADD COLUMN allow_group_checkout TINYINT(1) NOT NULL DEFAULT 0');
+        // Migration 015: avatars + macaiok_featured + password_resets
+        if (!$colExists('customers', 'avatar')) $exec('ALTER TABLE customers ADD COLUMN avatar VARCHAR(255) NULL AFTER phone');
+        if (!$colExists('customers', 'address_number')) $exec('ALTER TABLE customers ADD COLUMN address_number VARCHAR(20) NULL');
+        if (!$colExists('customers', 'address_complement')) $exec('ALTER TABLE customers ADD COLUMN address_complement VARCHAR(120) NULL');
+        if (!$colExists('customers', 'neighborhood')) $exec('ALTER TABLE customers ADD COLUMN neighborhood VARCHAR(120) NULL');
+        if (!$colExists('institution_users', 'avatar')) $exec('ALTER TABLE institution_users ADD COLUMN avatar VARCHAR(255) NULL AFTER email');
+        if (!$colExists('roteiros', 'macaiok_featured')) $exec('ALTER TABLE roteiros ADD COLUMN macaiok_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER featured');
+        if (!$colExists('pacotes', 'macaiok_featured')) $exec('ALTER TABLE pacotes ADD COLUMN macaiok_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER featured');
+        if (!$colExists('transfers', 'macaiok_featured')) $exec('ALTER TABLE transfers ADD COLUMN macaiok_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER featured');
+        if (!$tabExists('password_resets')) $exec("CREATE TABLE password_resets (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, scope ENUM('customer','institution','admin') NOT NULL, user_id INT UNSIGNED NOT NULL, email VARCHAR(160) NOT NULL, token_hash CHAR(64) NOT NULL, expires_at DATETIME NOT NULL, used_at DATETIME NULL, ip VARCHAR(45) NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, INDEX idx_token (token_hash), INDEX idx_scope_user (scope, user_id), INDEX idx_expires (expires_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        setSetting('db_migration_version', '15');
+    } catch (Throwable $e) {
+        error_log('[ensureMigrations] fatal: ' . $e->getMessage());
     }
 }
 

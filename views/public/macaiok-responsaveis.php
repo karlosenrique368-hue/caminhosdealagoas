@@ -10,14 +10,16 @@ $vivenciaType = $_GET['tipo'] ?? 'roteiro';
 $escola = $escolaSlug ? dbOne("SELECT * FROM institutions WHERE slug=? AND program='macaiok' AND active=1 LIMIT 1", [$escolaSlug]) : null;
 $vivencia = null;
 if ($vivenciaId) {
-    if ($vivenciaType === 'pacote') {
-        $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, destination AS location, summary FROM pacotes WHERE id=? AND status='published' AND macaiok_featured=1", [$vivenciaId]);
-    } elseif ($vivenciaType === 'transfer') {
-        $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, location_to AS location, summary FROM transfers WHERE id=? AND status='published' AND macaiok_featured=1", [$vivenciaId]);
-    } else {
-        $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, location, summary FROM roteiros WHERE id=? AND status='published' AND macaiok_featured=1", [$vivenciaId]);
-        $vivenciaType = 'roteiro';
-    }
+    try {
+        if ($vivenciaType === 'pacote') {
+            $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, destination AS location, summary FROM pacotes WHERE id=? AND status='published'", [$vivenciaId]);
+        } elseif ($vivenciaType === 'transfer') {
+            $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, location_to AS location, summary FROM transfers WHERE id=? AND status='published'", [$vivenciaId]);
+        } else {
+            $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, location, summary FROM roteiros WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivenciaType = 'roteiro';
+        }
+    } catch (Throwable $e) { error_log('[macaiok-responsaveis] '.$e->getMessage()); $vivencia = null; }
 }
 
 $checkoutQuery = [];
