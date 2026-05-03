@@ -20,12 +20,18 @@ $vivencia = null;
 if ($vivenciaId) {
     try {
         if ($vivenciaType === 'pacote') {
-            $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, destination AS location, summary FROM pacotes WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivencia = dbOne("SELECT * FROM pacotes WHERE id=? AND status='published'", [$vivenciaId]);
+            if ($vivencia) $vivencia['location'] = $vivencia['destination'] ?? '';
         } elseif ($vivenciaType === 'transfer') {
-            $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, location_to AS location, summary FROM transfers WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivencia = dbOne("SELECT * FROM transfers WHERE id=? AND status='published'", [$vivenciaId]);
+            if ($vivencia) $vivencia['location'] = $vivencia['location_to'] ?? '';
         } else {
-            $vivencia = dbOne("SELECT id, title, slug, cover_image, price, price_pix, location, summary FROM roteiros WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivencia = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published'", [$vivenciaId]);
             $vivenciaType = 'roteiro';
+        }
+        if ($vivencia) {
+            $vivencia['summary'] = trim(strip_tags((string)($vivencia['summary'] ?? $vivencia['short_desc'] ?? $vivencia['description'] ?? '')));
+            if (mb_strlen($vivencia['summary']) > 220) $vivencia['summary'] = mb_substr($vivencia['summary'], 0, 220) . '...';
         }
     } catch (Throwable $e) { error_log('[macaiok-responsaveis] '.$e->getMessage()); $vivencia = null; }
 }
@@ -65,7 +71,7 @@ include VIEWS_DIR . '/partials/public_head.php';
                         <div class="flex items-end justify-between gap-3 flex-wrap">
                             <div>
                                 <div class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-muted)">Investimento</div>
-                                <strong class="font-display text-3xl" style="color:var(--mk-mangue,#324500)"><?= formatBRL($vivencia['price_pix'] ?: $vivencia['price']) ?></strong>
+                                <strong class="font-display text-3xl" style="color:var(--mk-mangue,#324500)"><?= formatBRL(($vivencia['price_pix'] ?? 0) ?: $vivencia['price']) ?></strong>
                             </div>
                             <a href="<?= e($checkoutUrl) ?>" class="btn-primary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold"><i data-lucide="credit-card" class="w-4 h-4"></i> Ir para o pagamento</a>
                         </div>
