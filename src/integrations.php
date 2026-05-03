@@ -297,7 +297,7 @@ function mercadoPagoCreatePix(array $booking): array {
         'payment_method_id' => 'pix',
         'external_reference' => $bookingCode,
         'notification_url' => paymentWebhookUrlWithSecret(),
-        'date_of_expiration' => date('c', time() + 3600 * 24),
+        'date_of_expiration' => date('Y-m-d\TH:i:s.000P', time() + 3600 * 24),
         'payer' => [
             'email' => $payerEmail,
             'first_name' => (string)($booking['customer_name'] ?? 'Cliente'),

@@ -48,7 +48,7 @@ function pp_get_booking(string $code): ?array {
 if ($action === 'status') {
     $b = pp_get_booking($_GET['booking_code'] ?? '');
     if (!$b) pp_json(['ok' => false, 'msg' => 'Reserva nao encontrada'], 404);
-    pp_json(['ok' => true, 'payment_status' => $b['payment_status'], 'status' => $b['status']]);
+    pp_json(['ok' => true, 'payment_status' => $b['payment_status'] ?? 'pending', 'status' => $b['status'] ?? 'pending']);
 }
 
 $in = pp_input();
