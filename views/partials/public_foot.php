@@ -182,6 +182,7 @@
     </footer>
 </aside>
 
+<script>window.CART_CONTEXT = <?= json_encode($isMacaiokPublic ? 'macaiok' : 'default') ?>;</script>
 <script src="<?= asset('js/app.js') ?>"></script>
 
 <?php $__pending = autotrPending(); if ($__pending): ?>

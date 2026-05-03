@@ -174,17 +174,25 @@ function paymentPage() {
                         self.cardError = '';
                         self.cardLoading = true;
                         try {
+                            const formData = cardData && (cardData.formData || cardData);
+                            if (!formData || !formData.token) {
+                                console.error('[mp.cardSubmit.invalidPayload]', cardData);
+                                self.cardError = 'O Mercado Pago nao retornou o token do cartao. Recarregue a pagina e tente novamente.';
+                                return;
+                            }
+                            const payer = formData.payer || {};
+                            const identification = payer.identification || {};
                             const res = await caminhosApi('<?= url('/api/payment-process') ?>?action=card', {
                                 method: 'POST',
                                 data: {
                                     booking_code: <?= json_encode($bookingCode) ?>,
-                                    token: cardData.formData.token,
-                                    payment_method_id: cardData.formData.payment_method_id,
-                                    issuer_id: cardData.formData.issuer_id || '',
-                                    installments: cardData.formData.installments || 1,
-                                    payer_email: cardData.formData.payer ? cardData.formData.payer.email : '',
-                                    payer_doc_type: cardData.formData.payer && cardData.formData.payer.identification ? cardData.formData.payer.identification.type : 'CPF',
-                                    payer_doc_number: cardData.formData.payer && cardData.formData.payer.identification ? cardData.formData.payer.identification.number : ''
+                                    token: formData.token,
+                                    payment_method_id: formData.payment_method_id,
+                                    issuer_id: formData.issuer_id || '',
+                                    installments: formData.installments || 1,
+                                    payer_email: payer.email || formData.payer_email || '',
+                                    payer_doc_type: identification.type || 'CPF',
+                                    payer_doc_number: identification.number || ''
                                 }
                             });
                             if (res.ok && res.status === 'approved') {
@@ -197,7 +205,8 @@ function paymentPage() {
                                 self.cardError = res.msg || 'Pagamento recusado. Tente outro cartao.';
                             }
                         } catch (e) {
-                            self.cardError = 'Erro de conexao. Tente novamente.';
+                            console.error('[mp.cardSubmit]', e);
+                            self.cardError = 'Erro ao enviar o pagamento. Recarregue a pagina e tente novamente.';
                         } finally {
                             self.cardLoading = false;
                         }

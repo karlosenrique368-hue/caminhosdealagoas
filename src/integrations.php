@@ -353,7 +353,7 @@ function mercadoPagoCreatePix(array $booking): array {
         'metadata' => ['booking_code' => $bookingCode, 'booking_id' => (int)$booking['id']],
     ];
     if (strlen($payerDoc) === 11) $payload['payer']['identification'] = ['type' => 'CPF', 'number' => $payerDoc];
-    $headers[] = 'X-Idempotency-Key: mp-pix-' . $bookingCode;
+    $headers[] = 'X-Idempotency-Key: mp-pix-' . $bookingCode . '-' . bin2hex(random_bytes(4));
     $resp = integrationPostJson('https://api.mercadopago.com/v1/payments', $payload, $headers, 25);
     $body = json_decode($resp['body'] ?? '', true);
     if (!$resp['ok'] || !is_array($body) || empty($body['id'])) {

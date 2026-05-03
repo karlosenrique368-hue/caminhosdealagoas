@@ -14,8 +14,8 @@ header('Content-Type: application/json; charset=utf-8');
 if (!isset($_SESSION['cart'])) $_SESSION['cart'] = [];
 
 function cartResponse(): void {
-    $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?: '';
-    $macaiokCart = str_starts_with($refererPath, rtrim(BASE_PATH, '/') . '/macaiok') || str_starts_with($refererPath, '/macaiok');
+    $cartContext = (string)($_GET['context'] ?? $_POST['context'] ?? '');
+    $macaiokCart = $cartContext === 'macaiok';
     $checkoutBase = $macaiokCart ? '/macaiok/checkout' : '/checkout';
     $items = [];
     $total = 0.0;

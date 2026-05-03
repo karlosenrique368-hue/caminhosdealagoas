@@ -755,14 +755,16 @@ window.cart = (function () {
 
     async function apiCall(action, body) {
         const opts = { method: body ? 'POST' : 'GET' };
+        const context = window.CART_CONTEXT === 'macaiok' ? 'macaiok' : 'default';
         if (body) {
             const fd = new FormData();
             Object.entries(body).forEach(([k, v]) => fd.append(k, v));
+            fd.append('context', context);
             const meta = document.querySelector('meta[name="csrf-token"]');
             if (meta) fd.append('csrf_token', meta.content);
             opts.body = fd;
         }
-        const res = await fetch(getEndpoint() + '?action=' + action, opts);
+        const res = await fetch(getEndpoint() + '?action=' + encodeURIComponent(action) + '&context=' + encodeURIComponent(context), opts);
         const json = await res.json();
         if (json.ok) {
             state = json;

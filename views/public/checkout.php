@@ -87,15 +87,22 @@ $typeLabel = $type === 'roteiro' ? 'Passeio' : ($type === 'pacote' ? 'Pacote' : 
 $incomingPartner = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string)($_GET['parceiro'] ?? '')));
 $refCode    = currentReferralCode();
 $refPartner = $refCode ? partnerByCode($refCode) : null;
+if (!$macaiokMode && $refPartner && ($refPartner['program'] ?? '') === 'macaiok') {
+    $refCode = '';
+    $refPartner = null;
+}
 if ($incomingPartner !== '') {
     $incoming = partnerByCode($incomingPartner);
     if (!$incoming && ctype_digit($incomingPartner)) {
         $incoming = dbOne('SELECT * FROM institutions WHERE id=? AND active=1 LIMIT 1', [(int)$incomingPartner]);
     }
-    if ($incoming && (!$macaiokMode || ($incoming['program'] ?? '') === 'macaiok')) {
-        $refPartner = $incoming;
-        $refCode = (string)$incoming['referral_code'];
-        if ($refCode !== '') trackReferral($refCode);
+    if ($incoming) {
+        $incomingProgram = (string)($incoming['program'] ?? 'parceiros');
+        if ($macaiokMode ? $incomingProgram === 'macaiok' : $incomingProgram !== 'macaiok') {
+            $refPartner = $incoming;
+            $refCode = (string)$incoming['referral_code'];
+            if ($refCode !== '') trackReferral($refCode);
+        }
     }
 }
 
