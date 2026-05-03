@@ -38,10 +38,12 @@ tailwind.config = { theme: { extend: { colors: {
            :class="sidebarOpen?'translate-x-0':'-translate-x-full lg:translate-x-0'" style="width:260px;min-width:260px">
         <div class="p-5 border-b border-white/10 flex items-center gap-3">
             <?php if ($isMacaiok): ?>
-                <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-10 w-auto" style="filter:brightness(0) invert(1)">
-                <div class="min-w-0">
-                    <div class="font-display text-sm font-bold text-white truncate"><?= e($i['name']) ?></div>
-                    <div class="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60"><?= e($portalLabel) ?></div>
+                <div class="w-full min-w-0">
+                    <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-9 w-auto max-w-[170px] mb-3" style="filter:brightness(0) invert(1)">
+                    <div class="rounded-2xl px-3 py-2" style="background:rgba(255,250,207,.1);border:1px solid rgba(255,250,207,.14)">
+                        <div class="font-display text-sm font-bold text-white truncate"><?= e($i['name']) ?></div>
+                        <div class="text-[10px] font-semibold tracking-[0.18em] uppercase text-white/60 truncate"><?= e($portalLabel) ?></div>
+                    </div>
                 </div>
             <?php else: ?>
                 <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,var(--terracota),var(--horizonte))"><i data-lucide="<?= e($portalIcon) ?>" class="w-5 h-5"></i></div>

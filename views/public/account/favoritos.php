@@ -4,8 +4,14 @@ $accountTab = 'favoritos';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
+$macaiokWishlistWhere = $macaiokAccount ? " AND ((w.entity_type='roteiro' AND r.macaiok_featured=1) OR (w.entity_type='pacote' AND p.macaiok_featured=1))" : '';
+$discoverUrl = $macaiokAccount ? '/macaiok#vivencias' : '/passeios';
 $pag = paginate(
-    'SELECT COUNT(*) c FROM wishlist WHERE customer_id=?',
+    "SELECT COUNT(*) c
+    FROM wishlist w
+    LEFT JOIN roteiros r ON w.entity_type='roteiro' AND w.entity_id=r.id
+    LEFT JOIN pacotes p ON w.entity_type='pacote' AND w.entity_id=p.id
+    WHERE w.customer_id=?" . $macaiokWishlistWhere,
     "
     SELECT w.id AS wid, w.entity_type, w.entity_id,
         COALESCE(r.title, p.title) AS title,
@@ -18,6 +24,7 @@ $pag = paginate(
     LEFT JOIN roteiros r ON w.entity_type='roteiro' AND w.entity_id=r.id
     LEFT JOIN pacotes p ON w.entity_type='pacote' AND w.entity_id=p.id
     WHERE w.customer_id=?
+    " . $macaiokWishlistWhere . "
     ORDER BY w.created_at DESC
     ",
     [$cid],
@@ -39,12 +46,14 @@ $items = $pag['rows'];
             <div class="empty-state-icon"><i data-lucide="heart-crack" class="w-7 h-7"></i></div>
             <div class="empty-state-title">Sua lista está vazia</div>
             <div class="empty-state-desc">Salve passeios e pacotes que te inspiram para voltar depois.</div>
-            <a href="<?= url('/passeios') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Descobrir passeios</a>
+            <a href="<?= url($discoverUrl) ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> <?= $macaiokAccount ? 'Descobrir vivencias' : 'Descobrir passeios' ?></a>
         </div>
     <?php else: ?>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" id="fav-grid">
             <?php foreach ($items as $it):
-                $link = ($it['entity_type']==='roteiro'?'/passeios/':'/pacotes/') . $it['slug'];
+                $link = $macaiokAccount
+                    ? '/macaiok/checkout?' . ($it['entity_type'] === 'roteiro' ? 'roteiro' : 'pacote') . '=' . (int)$it['entity_id']
+                    : (($it['entity_type']==='roteiro'?'/passeios/':'/pacotes/') . $it['slug']);
                 $cover = $it['cover'] ? storageUrl($it['cover']) : '';
             ?>
                 <div class="fav-card" data-wid="<?= (int)$it['wid'] ?>">

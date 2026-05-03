@@ -4,8 +4,11 @@ $accountTab = 'reservas';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
+$macaiokBookingExists = "EXISTS (SELECT 1 FROM institutions mi WHERE mi.program='macaiok' AND (mi.id=b.institution_id OR mi.referral_code=b.referral_code))";
+$bookingScopeWhere = "(b.customer_id=? OR b.customer_user_id=?) AND " . ($macaiokAccount ? $macaiokBookingExists : "NOT " . $macaiokBookingExists);
+$exploreUrl = $macaiokAccount ? '/macaiok#vivencias' : '/passeios';
 $pag = paginate(
-    'SELECT COUNT(*) c FROM bookings WHERE customer_id=? OR customer_user_id=?',
+    'SELECT COUNT(*) c FROM bookings b WHERE ' . $bookingScopeWhere,
     "
     SELECT b.*, r.slug AS roteiro_slug, p.slug AS pacote_slug, t.slug AS transfer_slug,
         COALESCE(r.cover_image, p.cover_image, t.cover_image) AS cover_image
@@ -13,7 +16,7 @@ $pag = paginate(
     LEFT JOIN roteiros r ON b.entity_type='roteiro' AND b.entity_id=r.id
     LEFT JOIN pacotes p ON b.entity_type='pacote' AND b.entity_id=p.id
     LEFT JOIN transfers t ON b.entity_type='transfer' AND b.entity_id=t.id
-    WHERE b.customer_id=? OR b.customer_user_id=?
+    WHERE " . $bookingScopeWhere . "
     ORDER BY b.created_at DESC",
     [$cid, $cid],
     ['allowed' => [5, 10, 20], 'default' => 10]
@@ -24,20 +27,20 @@ $bookings = $pag['rows'];
 <div class="glass-card p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Suas viagens</h2>
+            <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)"><?= $macaiokAccount ? 'Suas vivencias' : 'Suas viagens' ?></h2>
             <p class="text-xs" style="color:var(--text-muted)"><?= (int)$pag['total'] ?> reserva<?= (int)$pag['total']===1?'':'s' ?> no total</p>
         </div>
-        <a href="<?= url('/passeios') ?>" class="btn-primary" style="padding:10px 18px;font-size:13px">
-            <i data-lucide="plus" class="w-4 h-4"></i> Nova reserva
+        <a href="<?= url($exploreUrl) ?>" class="btn-primary" style="padding:10px 18px;font-size:13px">
+            <i data-lucide="plus" class="w-4 h-4"></i> <?= $macaiokAccount ? 'Nova vivencia' : 'Nova reserva' ?>
         </a>
     </div>
 
     <?php if (empty($bookings)): ?>
         <div class="empty-state">
             <div class="empty-state-icon"><i data-lucide="calendar-x" class="w-7 h-7"></i></div>
-            <div class="empty-state-title">Nenhuma reserva encontrada</div>
+            <div class="empty-state-title"><?= $macaiokAccount ? 'Nenhuma vivencia encontrada' : 'Nenhuma reserva encontrada' ?></div>
             <div class="empty-state-desc">Que tal começar uma aventura em Alagoas?</div>
-            <a href="<?= url('/passeios') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios</a>
+            <a href="<?= url($exploreUrl) ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> <?= $macaiokAccount ? 'Explorar vivencias' : 'Explorar passeios' ?></a>
         </div>
     <?php else: ?>
         <div class="space-y-4">
@@ -45,6 +48,8 @@ $bookings = $pag['rows'];
                 $title = $b['entity_title'];
                 $slug = $b['roteiro_slug'] ?: ($b['pacote_slug'] ?: $b['transfer_slug']);
                 $type = $b['entity_type']==='roteiro'?'passeios':($b['entity_type']==='pacote'?'pacotes':'transfers');
+                $detailUrl = $slug ? url('/' . $type . '/' . $slug) : null;
+                if ($macaiokAccount) $detailUrl = url('/macaiok/checkout?' . ($b['entity_type']==='roteiro' ? 'roteiro' : ($b['entity_type']==='pacote' ? 'pacote' : 'transfer')) . '=' . (int)$b['entity_id']);
                 $typeLabel = $b['entity_type']==='roteiro' ? 'Passeio' : ($b['entity_type']==='pacote' ? 'Pacote' : 'Transfer');
                 $iconName = $b['entity_type']==='roteiro' ? 'mountain' : ($b['entity_type']==='pacote' ? 'package' : 'car');
                 $statusPill = ['paid'=>'pill-success','pending'=>'pill-warning','failed'=>'pill-danger','refunded'=>'pill-info'][$b['payment_status']] ?? 'pill-info';
@@ -78,7 +83,7 @@ $bookings = $pag['rows'];
             ?>
                 <div class="booking-row">
                     <?php if (!empty($b['cover_image'])): ?>
-                        <a href="<?= $slug ? url('/' . $type . '/' . $slug) : '#' ?>" class="block flex-shrink-0">
+                        <a href="<?= e($detailUrl ?: '#') ?>" class="block flex-shrink-0">
                             <img src="<?= e(storageUrl($b['cover_image'])) ?>" alt="" style="width:88px;height:88px;border-radius:14px;object-fit:cover">
                         </a>
                     <?php else: ?>
@@ -93,8 +98,8 @@ $bookings = $pag['rows'];
                             <?php endif; ?>
                         </div>
                         <h3 class="font-display font-bold text-lg" style="color:var(--sepia)">
-                            <?php if ($slug): ?>
-                                <a href="<?= url('/' . $type . '/' . $slug) ?>" class="hover:underline" style="color:inherit"><?= e($title) ?></a>
+                            <?php if ($detailUrl): ?>
+                                <a href="<?= e($detailUrl) ?>" class="hover:underline" style="color:inherit"><?= e($title) ?></a>
                             <?php else: ?>
                                 <?= e($title) ?>
                             <?php endif; ?>
@@ -126,13 +131,13 @@ $bookings = $pag['rows'];
                     <div class="flex items-center gap-3 md:flex-col md:items-end">
                         <p class="font-display font-bold text-xl" style="color:var(--terracota)"><?= formatPrice((float)$b['total']) ?></p>
                         <div class="flex items-center gap-2">
-                            <?php if ($slug): ?>
-                                <a href="<?= url('/' . $type . '/' . $slug) ?>" class="btn-secondary" style="padding:8px 14px;font-size:12px">
+                            <?php if ($detailUrl): ?>
+                                <a href="<?= e($detailUrl) ?>" class="btn-secondary" style="padding:8px 14px;font-size:12px">
                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i> Ver
                                 </a>
                             <?php endif; ?>
                             <?php if ($b['payment_status'] === 'paid'): ?>
-                                <a href="<?= url('/conta/reembolso?booking=' . $b['id']) ?>" class="btn-refund">
+                                <a href="<?= url(($macaiokAccount ? '/macaiok/conta/reembolso' : '/conta/reembolso') . '?booking=' . $b['id']) ?>" class="btn-refund">
                                     <i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i> Reembolso
                                 </a>
                             <?php endif; ?>

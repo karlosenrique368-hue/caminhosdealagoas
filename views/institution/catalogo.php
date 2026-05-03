@@ -4,9 +4,22 @@ $i = currentInstitution();
 $isMacaiok = institutionPortalProgram($i) === 'macaiok';
 $pageTitle = $isMacaiok ? 'Vivências disponíveis' : 'Catálogo exclusivo';
 $partner = dbOne('SELECT referral_code FROM institutions WHERE id=?', [$i['id']]);
-
-$roteiros = dbAll("SELECT * FROM roteiros WHERE status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "") . " ORDER BY featured DESC, title");
-$pacotes  = dbAll("SELECT * FROM pacotes WHERE status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "") . " ORDER BY featured DESC, title");
+$roteiroWhere = "status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "");
+$pacoteWhere = "status='published'" . ($isMacaiok ? " AND macaiok_featured=1" : "");
+$roteiroPag = paginate(
+    "SELECT COUNT(*) c FROM roteiros WHERE " . $roteiroWhere,
+    "SELECT * FROM roteiros WHERE " . $roteiroWhere . " ORDER BY featured DESC, title",
+    [],
+    ['allowed' => [6, 12, 24], 'default' => 6, 'page_param' => 'page_roteiros', 'per_param' => 'per_roteiros']
+);
+$pacotePag = paginate(
+    "SELECT COUNT(*) c FROM pacotes WHERE " . $pacoteWhere,
+    "SELECT * FROM pacotes WHERE " . $pacoteWhere . " ORDER BY featured DESC, title",
+    [],
+    ['allowed' => [6, 12, 24], 'default' => 6, 'page_param' => 'page_pacotes', 'per_param' => 'per_pacotes']
+);
+$roteiros = $roteiroPag['rows'];
+$pacotes  = $pacotePag['rows'];
 
 include VIEWS_DIR . '/partials/institution_head.php';
 ?>
@@ -34,6 +47,7 @@ include VIEWS_DIR . '/partials/institution_head.php';
     </a>
     <?php endforeach; ?>
 </div>
+<?php $pag = $roteiroPag; include VIEWS_DIR . '/partials/pagination.php'; unset($pag); ?>
 
 <h2 class="font-display text-xl font-bold mb-4 flex items-center gap-2" style="color:var(--sepia)"><i data-lucide="package" class="w-5 h-5" style="color:var(--horizonte)"></i>Pacotes</h2>
 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -57,5 +71,6 @@ include VIEWS_DIR . '/partials/institution_head.php';
     </a>
     <?php endforeach; ?>
 </div>
+<?php $pag = $pacotePag; include VIEWS_DIR . '/partials/pagination.php'; unset($pag); ?>
 
 <?php include VIEWS_DIR . '/partials/institution_foot.php';

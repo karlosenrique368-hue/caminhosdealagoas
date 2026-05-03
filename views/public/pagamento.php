@@ -6,6 +6,10 @@ if (!$booking) { http_response_code(404); echo 'Reserva nao encontrada'; return;
 $customer = dbOne('SELECT * FROM customers WHERE id = ?', [$booking['customer_id']]);
 $mpPublicKey = mercadoPagoActivePublicKey();
 $sandbox = integrationEnabled('payment_sandbox', true);
+$methodToTab = ['pix' => 'pix', 'credit_card' => 'card', 'card' => 'card', 'boleto' => 'boleto'];
+$initialTab = $methodToTab[(string)($booking['payment_method'] ?? '')] ?? 'card';
+$requestedMethod = strtolower((string)($_GET['metodo'] ?? ''));
+if (isset($methodToTab[$requestedMethod])) $initialTab = $methodToTab[$requestedMethod];
 $macaiokMode = false;
 if (!empty($booking['institution_id'])) {
     $macaiokMode = (bool) dbOne("SELECT id FROM institutions WHERE id=? AND program='macaiok' LIMIT 1", [(int)$booking['institution_id']]);
@@ -39,10 +43,10 @@ include VIEWS_DIR . '/partials/public_head.php';
 
 <?php if ($macaiokMode): ?>
 <div class="pt-24 pb-2" style="background:linear-gradient(180deg,#324500 0%, #2F1607 100%)">
-    <div class="max-w-5xl mx-auto px-6 flex items-center gap-3 flex-wrap">
-        <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-8" style="filter:brightness(0) invert(1)">
-        <span class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/90">Vivencias pedagogicas - Pagamento da reserva</span>
-        <span class="ml-auto text-[11px] text-white/70">Processado por <strong>Caminhos de Alagoas</strong></span>
+    <div class="max-w-5xl mx-auto px-6 grid gap-2 sm:grid-cols-[auto_1fr_auto] items-center text-center">
+        <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-8 mx-auto sm:mx-0" style="filter:brightness(0) invert(1)">
+        <span class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/90 justify-self-center">Vivencias pedagogicas - Pagamento da reserva</span>
+        <span class="text-[11px] text-white/70 sm:justify-self-end">Processado por <strong>Caminhos de Alagoas</strong></span>
     </div>
 </div>
 <?php endif; ?>
@@ -62,9 +66,10 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="grid lg:grid-cols-[1fr_360px] gap-6">
         <div class="space-y-4">
             <!-- Tabs -->
-            <div class="flex gap-2">
-                <button @click="tab='card'" type="button" class="flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition border-2" :style="tab==='card' ? 'border-color:var(--terracota);background:rgba(218,74,52,.06);color:var(--terracota)' : 'border-color:var(--border-default);background:var(--bg-card);color:var(--text-secondary)'"><i data-lucide="credit-card" class="w-4 h-4 inline"></i> Cartao</button>
-                <button @click="tab='pix'; loadPix()" type="button" class="flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition border-2" :style="tab==='pix' ? 'border-color:var(--maresia-dark);background:rgba(122,157,110,.08);color:var(--maresia-dark)' : 'border-color:var(--border-default);background:var(--bg-card);color:var(--text-secondary)'"><i data-lucide="qr-code" class="w-4 h-4 inline"></i> PIX</button>
+            <div class="grid grid-cols-3 gap-2">
+                <button @click="tab='card'" type="button" class="py-3 px-3 rounded-xl font-semibold text-sm transition border-2" :style="tab==='card' ? 'border-color:var(--terracota);background:rgba(218,74,52,.06);color:var(--terracota)' : 'border-color:var(--border-default);background:var(--bg-card);color:var(--text-secondary)'"><i data-lucide="credit-card" class="w-4 h-4 inline"></i> Cartao</button>
+                <button @click="tab='pix'; loadPix()" type="button" class="py-3 px-3 rounded-xl font-semibold text-sm transition border-2" :style="tab==='pix' ? 'border-color:var(--maresia-dark);background:rgba(122,157,110,.08);color:var(--maresia-dark)' : 'border-color:var(--border-default);background:var(--bg-card);color:var(--text-secondary)'"><i data-lucide="qr-code" class="w-4 h-4 inline"></i> PIX</button>
+                <button @click="tab='boleto'; loadBoleto()" type="button" class="py-3 px-3 rounded-xl font-semibold text-sm transition border-2" :style="tab==='boleto' ? 'border-color:var(--horizonte);background:rgba(58,107,138,.08);color:var(--horizonte)' : 'border-color:var(--border-default);background:var(--bg-card);color:var(--text-secondary)'"><i data-lucide="file-text" class="w-4 h-4 inline"></i> Boleto</button>
             </div>
 
             <!-- Card Brick -->
@@ -89,6 +94,25 @@ include VIEWS_DIR . '/partials/public_head.php';
                             <button type="button" @click="copyPix()" class="btn-primary text-xs"><i data-lucide="copy" class="w-4 h-4"></i><span x-text="copied ? 'Copiado!' : 'Copiar'"></span></button>
                         </div>
                         <p class="text-xs mt-3" style="color:var(--text-muted)">Valido por 24h. Confirmaremos automaticamente quando o pagamento entrar.</p>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Boleto -->
+            <div x-show="tab==='boleto'" x-cloak class="admin-card p-6 text-center">
+                <h3 class="font-display font-bold mb-4 flex items-center justify-center gap-2" style="color:var(--sepia)"><i data-lucide="file-text" class="w-5 h-5" style="color:var(--horizonte)"></i>Pague com boleto</h3>
+                <div x-show="boletoLoading" class="py-8 flex items-center justify-center gap-2" style="color:var(--text-secondary)"><div class="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>Gerando boleto...</div>
+                <div x-show="boletoError" x-cloak class="p-3 rounded-lg text-sm" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#B91C1C" x-text="boletoError"></div>
+                <template x-if="boletoData">
+                    <div>
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style="background:rgba(58,107,138,.08);color:var(--horizonte)"><i data-lucide="file-check-2" class="w-8 h-8"></i></div>
+                        <p class="text-sm mb-4" style="color:var(--text-secondary)">Boleto gerado. Abra o link abaixo para visualizar, imprimir ou pagar pelo app do banco.</p>
+                        <a :href="boletoData.ticket_url" target="_blank" class="btn-primary inline-flex" x-show="boletoData.ticket_url"><i data-lucide="external-link" class="w-4 h-4"></i>Abrir boleto</a>
+                        <div class="mt-4" x-show="boletoData.barcode">
+                            <label class="block text-[10px] uppercase tracking-widest font-bold mb-2" style="color:var(--text-muted)">Linha digitavel</label>
+                            <input type="text" :value="boletoData.barcode" readonly class="admin-input font-mono text-xs text-center" id="boletoCode">
+                        </div>
+                        <p class="text-xs mt-3" style="color:var(--text-muted)">A reserva sera confirmada depois da baixa do Mercado Pago.</p>
                     </div>
                 </template>
             </div>
@@ -122,12 +146,15 @@ function paymentPage() {
     let mpInstance = null;
     let bricksBuilder = null;
     return {
-        tab: 'card',
+        tab: <?= json_encode($initialTab) ?>,
         cardError: '',
         cardLoading: false,
         pixLoading: false,
         pixError: '',
         pixData: null,
+        boletoLoading: false,
+        boletoError: '',
+        boletoData: null,
         copied: false,
         async waitForMP() {
             for (let i=0;i<60;i++){
@@ -139,13 +166,29 @@ function paymentPage() {
         async init() {
             if (window.lucide) window.lucide.createIcons();
             const pk = <?= json_encode($mpPublicKey) ?>;
-            if (!pk) { this.cardError = 'Mercado Pago nao configurado. Acesse Admin > Integracoes e cadastre as credenciais.'; return; }
+            const needsCard = this.tab === 'card';
+            const loadSelectedOffline = async () => {
+                if (this.tab === 'pix') await this.loadPix();
+                if (this.tab === 'boleto') await this.loadBoleto();
+                this.pollStatus();
+            };
+            if (!pk) {
+                if (needsCard) this.cardError = 'Mercado Pago nao configurado. Acesse Admin > Integracoes e cadastre as credenciais.';
+                else await loadSelectedOffline();
+                return;
+            }
             const ok = await this.waitForMP();
-            if (!ok) { this.cardError = 'Falha ao carregar SDK do Mercado Pago. Verifique sua conexao e recarregue.'; return; }
+            if (!ok) {
+                if (needsCard) this.cardError = 'Falha ao carregar SDK do Mercado Pago. Verifique sua conexao e recarregue.';
+                else await loadSelectedOffline();
+                return;
+            }
             try {
                 mpInstance = new MercadoPago(pk, { locale: 'pt-BR' });
                 bricksBuilder = mpInstance.bricks();
                 await this.renderCardBrick();
+                if (this.tab === 'pix') await this.loadPix();
+                if (this.tab === 'boleto') await this.loadBoleto();
                 this.pollStatus();
             } catch (err) {
                 console.error('[mp.init]', err);
@@ -241,6 +284,27 @@ function paymentPage() {
             document.execCommand('copy');
             this.copied = true;
             setTimeout(() => this.copied = false, 2000);
+        },
+        async loadBoleto() {
+            if (this.boletoData || this.boletoLoading) return;
+            this.boletoLoading = true;
+            this.boletoError = '';
+            try {
+                const res = await caminhosApi('<?= url('/api/payment-process') ?>?action=boleto', {
+                    method: 'POST',
+                    data: { booking_code: <?= json_encode($bookingCode) ?> }
+                });
+                if (res.ok) {
+                    this.boletoData = res;
+                    this.$nextTick(() => window.lucide && window.lucide.createIcons());
+                } else {
+                    this.boletoError = res.msg || 'Falha ao gerar boleto.';
+                }
+            } catch (e) {
+                this.boletoError = 'Erro de conexao.';
+            } finally {
+                this.boletoLoading = false;
+            }
         },
         async pollStatus() {
             // verifica a cada 5s se webhook ja confirmou

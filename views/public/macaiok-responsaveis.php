@@ -20,13 +20,13 @@ $vivencia = null;
 if ($vivenciaId) {
     try {
         if ($vivenciaType === 'pacote') {
-            $vivencia = dbOne("SELECT * FROM pacotes WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivencia = dbOne("SELECT * FROM pacotes WHERE id=? AND status='published' AND macaiok_featured=1", [$vivenciaId]);
             if ($vivencia) $vivencia['location'] = $vivencia['destination'] ?? '';
         } elseif ($vivenciaType === 'transfer') {
-            $vivencia = dbOne("SELECT * FROM transfers WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivencia = dbOne("SELECT * FROM transfers WHERE id=? AND status='published' AND macaiok_featured=1", [$vivenciaId]);
             if ($vivencia) $vivencia['location'] = $vivencia['location_to'] ?? '';
         } else {
-            $vivencia = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published'", [$vivenciaId]);
+            $vivencia = dbOne("SELECT * FROM roteiros WHERE id=? AND status='published' AND macaiok_featured=1", [$vivenciaId]);
             $vivenciaType = 'roteiro';
         }
         if ($vivencia) {

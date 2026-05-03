@@ -23,11 +23,11 @@ function cartResponse(): void {
     foreach ($_SESSION['cart'] as $key => $it) {
         $row = null;
         if ($it['type'] === 'roteiro') {
-            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,location,duration_hours FROM roteiros WHERE id=? AND status='published'", [$it['id']]);
+            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,location,duration_hours FROM roteiros WHERE id=? AND status='published'" . ($macaiokCart ? " AND macaiok_featured=1" : ""), [$it['id']]);
         } elseif ($it['type'] === 'pacote') {
-            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,destination AS location,duration_days FROM pacotes WHERE id=? AND status='published'", [$it['id']]);
+            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,destination AS location,duration_days FROM pacotes WHERE id=? AND status='published'" . ($macaiokCart ? " AND macaiok_featured=1" : ""), [$it['id']]);
         } elseif ($it['type'] === 'transfer') {
-            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,location_to AS location,duration_minutes FROM transfers WHERE id=? AND status='published'", [$it['id']]);
+            $row = dbOne("SELECT id,title,slug,short_desc,cover_image,price,price_pix,location_to AS location,duration_minutes FROM transfers WHERE id=? AND status='published'" . ($macaiokCart ? " AND macaiok_featured=1" : ""), [$it['id']]);
         }
         if (!$row) { unset($_SESSION['cart'][$key]); continue; }
         $qty   = max(1, (int)($it['qty'] ?? 1));
@@ -38,6 +38,7 @@ function cartResponse(): void {
         $total += $sub;
         $count += $qty;
         $query = ['cart_key' => $key, $it['type'] => (int)$row['id']];
+        if ($qty > 1) $query['qty'] = $qty;
         if ($travelDates) $query['dates'] = implode(',', $travelDates);
         $checkoutUrl = url($checkoutBase . '?' . http_build_query($query));
         $items[] = [

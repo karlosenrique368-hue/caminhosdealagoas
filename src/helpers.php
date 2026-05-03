@@ -387,6 +387,18 @@ function onlyDigits(?string $v): string {
     return preg_replace('/\D/', '', (string)$v);
 }
 
+function isValidCpf(?string $cpf): bool {
+    $digits = preg_replace('/\D/', '', (string)$cpf);
+    if (strlen($digits) !== 11 || preg_match('/^(\d)\1{10}$/', $digits)) return false;
+    for ($t = 9; $t < 11; $t++) {
+        $sum = 0;
+        for ($i = 0; $i < $t; $i++) $sum += (int)$digits[$i] * (($t + 1) - $i);
+        $check = ((10 * $sum) % 11) % 10;
+        if ((int)$digits[$t] !== $check) return false;
+    }
+    return true;
+}
+
 // ============== Avatar / Initials ==============
 function userInitials(?string $name): string {
     $n = trim((string)$name);

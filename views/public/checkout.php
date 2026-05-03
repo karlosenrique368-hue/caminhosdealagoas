@@ -23,9 +23,9 @@ if (!$roteiroId && !$pacoteId && !$transferId && ($_GET['cart'] ?? '') === '1' &
     $cartRows = [];
     foreach ($_SESSION['cart'] as $key => $ci) {
         $row = null;
-        if (($ci['type'] ?? '') === 'roteiro') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location FROM roteiros WHERE id=? AND status='published'", [(int)$ci['id']]);
-        elseif (($ci['type'] ?? '') === 'pacote') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,destination AS location FROM pacotes WHERE id=? AND status='published'", [(int)$ci['id']]);
-        elseif (($ci['type'] ?? '') === 'transfer') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location_to AS location FROM transfers WHERE id=? AND status='published'", [(int)$ci['id']]);
+        if (($ci['type'] ?? '') === 'roteiro') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location FROM roteiros WHERE id=? AND status='published'" . ($macaiokMode ? " AND macaiok_featured=1" : ""), [(int)$ci['id']]);
+        elseif (($ci['type'] ?? '') === 'pacote') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,destination AS location FROM pacotes WHERE id=? AND status='published'" . ($macaiokMode ? " AND macaiok_featured=1" : ""), [(int)$ci['id']]);
+        elseif (($ci['type'] ?? '') === 'transfer') $row = dbOne("SELECT id,title,slug,cover_image,price,price_pix,location_to AS location FROM transfers WHERE id=? AND status='published'" . ($macaiokMode ? " AND macaiok_featured=1" : ""), [(int)$ci['id']]);
         if (!$row) continue;
         $dates = !empty($ci['travel_dates']) && is_array($ci['travel_dates']) ? array_values($ci['travel_dates']) : (!empty($ci['travel_date']) ? [$ci['travel_date']] : []);
         $qty = max(1, (int)($ci['qty'] ?? 1));
@@ -33,6 +33,7 @@ if (!$roteiroId && !$pacoteId && !$transferId && ($_GET['cart'] ?? '') === '1' &
         $unitPrice = (float)($row['price_pix'] ?: $row['price']);
         $subtotal = $unitPrice * $qty * $dateCount;
         $query = ['cart_key' => $key, $ci['type'] => (int)$row['id']];
+        if ($qty > 1) $query['qty'] = $qty;
         if ($dates) $query['dates'] = implode(',', $dates);
         $cartRows[] = ['key'=>$key, 'type'=>$ci['type'], 'row'=>$row, 'dates'=>$dates, 'qty'=>$qty, 'date_count'=>$dateCount, 'subtotal'=>$subtotal, 'checkout'=>url($cartCheckoutBase . '?' . http_build_query($query))];
     }
@@ -78,9 +79,9 @@ if (!$roteiroId && !$pacoteId && !$transferId && !empty($_SESSION['cart'])) {
     elseif ($first['type'] === 'pacote') $pacoteId = (int)$first['id'];
     elseif ($first['type'] === 'transfer') $transferId = (int)$first['id'];
 }
-if ($roteiroId)       { $item = dbOne("SELECT * FROM roteiros  WHERE id=? AND status='published'", [$roteiroId]);  $type = 'roteiro';  }
-elseif ($pacoteId)    { $item = dbOne("SELECT * FROM pacotes   WHERE id=? AND status='published'", [$pacoteId]);   $type = 'pacote';   }
-elseif ($transferId)  { $item = dbOne("SELECT * FROM transfers WHERE id=? AND status='published'", [$transferId]); $type = 'transfer'; }
+if ($roteiroId)       { $item = dbOne("SELECT * FROM roteiros  WHERE id=? AND status='published'" . ($macaiokMode ? " AND macaiok_featured=1" : ""), [$roteiroId]);  $type = 'roteiro';  }
+elseif ($pacoteId)    { $item = dbOne("SELECT * FROM pacotes   WHERE id=? AND status='published'" . ($macaiokMode ? " AND macaiok_featured=1" : ""), [$pacoteId]);   $type = 'pacote';   }
+elseif ($transferId)  { $item = dbOne("SELECT * FROM transfers WHERE id=? AND status='published'" . ($macaiokMode ? " AND macaiok_featured=1" : ""), [$transferId]); $type = 'transfer'; }
 if (!$item) { redirect($macaiokMode ? '/macaiok' : '/passeios'); }
 $typeLabel = $type === 'roteiro' ? 'Passeio' : ($type === 'pacote' ? 'Pacote' : 'Transfer');
 
@@ -88,6 +89,7 @@ $incomingPartner = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string)($_GET['pa
 $refCode    = currentReferralCode();
 $refPartner = $refCode ? partnerByCode($refCode) : null;
 if (!$macaiokMode && $refPartner && ($refPartner['program'] ?? '') === 'macaiok') {
+    if (function_exists('clearReferral')) clearReferral();
     $refCode = '';
     $refPartner = null;
 }
@@ -119,12 +121,13 @@ if ($preDatesRaw) {
     }
 }
 if ($preDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $preDate)) $preDates[] = $preDate;
-$preAdults   = max(1, (int)($_GET['adults']   ?? 1));
+$preAdults   = max(1, (int)($_GET['adults']   ?? $_GET['qty'] ?? 1));
 $preChildren = max(0, (int)($_GET['children'] ?? 0));
 $preInfants  = max(0, (int)($_GET['infants']  ?? 0));
 
 // Se não veio data via GET, tenta puxar do item correto do carrinho
 if (!$preDates && $cartItem) {
+    $preAdults = max($preAdults, (int)($cartItem['qty'] ?? 1));
     if (!empty($cartItem['travel_dates']) && is_array($cartItem['travel_dates'])) $preDates = $cartItem['travel_dates'];
     elseif (!empty($cartItem['travel_date'])) $preDates = [$cartItem['travel_date']];
 }
@@ -185,10 +188,10 @@ include VIEWS_DIR . '/partials/public_head.php';
 
 <?php if (!empty($macaiokMode)): ?>
 <div class="pt-24 pb-2" style="background:linear-gradient(180deg,#324500 0%, #2F1607 100%)">
-    <div class="max-w-6xl mx-auto px-6 flex items-center gap-3 flex-wrap">
-        <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-8" style="filter:brightness(0) invert(1)">
-        <span class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/90">Vivencias pedagogicas - Reserva pelo responsavel</span>
-        <span class="ml-auto text-[11px] text-white/70">Pagamento processado por <strong>Caminhos de Alagoas</strong></span>
+    <div class="max-w-6xl mx-auto px-6 grid gap-2 sm:grid-cols-[auto_1fr_auto] items-center text-center">
+        <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-8 mx-auto sm:mx-0" style="filter:brightness(0) invert(1)">
+        <span class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/90 justify-self-center">Vivencias pedagogicas - Reserva pelo responsavel</span>
+        <span class="text-[11px] text-white/70 sm:justify-self-end">Pagamento processado por <strong>Caminhos de Alagoas</strong></span>
     </div>
 </div>
 <?php endif; ?>
@@ -641,6 +644,7 @@ function checkoutWizard() {
             accept_terms:false,
             ref_code:    <?= json_encode($refCode ?? '') ?>,
             institution_partner_id: <?= (int)($refPartner['id'] ?? 0) ?>,
+            checkout_context: <?= json_encode($macaiokMode ? 'macaiok' : 'default') ?>,
             entity_type: <?= json_encode($type) ?>,
             entity_id:   <?= (int)$item['id'] ?>,
             currency:    <?= json_encode($currencyCode) ?>,

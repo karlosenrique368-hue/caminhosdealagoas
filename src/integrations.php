@@ -282,6 +282,13 @@ function mercadoPagoGatewayMessage(?array $body, string $fallback): string {
 }
 
 
+function mercadoPagoPayerNameParts(string $name): array {
+    $parts = preg_split('/\s+/', trim($name));
+    $first = $parts[0] ?? 'Cliente';
+    $last = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : 'Caminhos de Alagoas';
+    return [$first, $last];
+}
+
 function mercadoPagoChargeCard(array $booking, array $cardData): array {
     $headers = mercadoPagoApiHeaders();
     if (!$headers) return ['ok' => false, 'msg' => 'Access Token Mercado Pago nao configurado.'];
@@ -294,6 +301,11 @@ function mercadoPagoChargeCard(array $booking, array $cardData): array {
     $payerEmail = trim((string)($cardData['payer_email'] ?? $booking['customer_email'] ?? ''));
     $payerDocType = strtoupper((string)($cardData['payer_doc_type'] ?? 'CPF'));
     $payerDocNumber = preg_replace('/\D/', '', (string)($cardData['payer_doc_number'] ?? $booking['customer_document'] ?? ''));
+    if ($payerDocNumber !== '' && !isValidCpf($payerDocNumber)) {
+        $bookingDoc = preg_replace('/\D/', '', (string)($booking['customer_document'] ?? ''));
+        if (isValidCpf($bookingDoc)) $payerDocNumber = $bookingDoc;
+        else return ['ok' => false, 'msg' => 'CPF do pagador invalido. Atualize os dados da reserva e tente novamente.'];
+    }
     if ($token === '' || $paymentMethodId === '') {
         return ['ok' => false, 'msg' => 'Dados do cartao incompletos.'];
     }
@@ -352,7 +364,8 @@ function mercadoPagoCreatePix(array $booking): array {
         ],
         'metadata' => ['booking_code' => $bookingCode, 'booking_id' => (int)$booking['id']],
     ];
-    if (strlen($payerDoc) === 11) $payload['payer']['identification'] = ['type' => 'CPF', 'number' => $payerDoc];
+    if (!isValidCpf($payerDoc)) return ['ok' => false, 'msg' => 'CPF da reserva invalido. Revise o CPF antes de gerar o PIX.'];
+    $payload['payer']['identification'] = ['type' => 'CPF', 'number' => $payerDoc];
     $headers[] = 'X-Idempotency-Key: mp-pix-' . $bookingCode . '-' . bin2hex(random_bytes(4));
     $resp = integrationPostJson('https://api.mercadopago.com/v1/payments', $payload, $headers, 25);
     $body = json_decode($resp['body'] ?? '', true);
@@ -372,6 +385,50 @@ function mercadoPagoCreatePix(array $booking): array {
     ];
 }
 
+function mercadoPagoCreateBoleto(array $booking): array {
+    $headers = mercadoPagoApiHeaders();
+    if (!$headers) return ['ok' => false, 'msg' => 'Access Token Mercado Pago nao configurado.'];
+    $bookingCode = (string)$booking['code'];
+    $amount = round(max(0.01, (float)$booking['total']), 2);
+    $payerEmail = trim((string)($booking['customer_email'] ?? '')) ?: 'sem-email@caminhosdealagoas.com.br';
+    $payerDoc = preg_replace('/\D/', '', (string)($booking['customer_document'] ?? ''));
+    if (!isValidCpf($payerDoc)) return ['ok' => false, 'msg' => 'CPF da reserva invalido. Revise o CPF antes de gerar o boleto.'];
+    [$firstName, $lastName] = mercadoPagoPayerNameParts((string)($booking['customer_name'] ?? 'Cliente'));
+    $payload = [
+        'transaction_amount' => $amount,
+        'description' => mb_substr((string)($booking['entity_title'] ?: 'Reserva ' . $bookingCode), 0, 250),
+        'payment_method_id' => 'bolbradesco',
+        'external_reference' => $bookingCode,
+        'notification_url' => paymentWebhookUrlWithSecret(),
+        'date_of_expiration' => date('Y-m-d\TH:i:s.000P', time() + 86400 * 3),
+        'payer' => [
+            'email' => $payerEmail,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'identification' => ['type' => 'CPF', 'number' => $payerDoc],
+        ],
+        'metadata' => ['booking_code' => $bookingCode, 'booking_id' => (int)$booking['id']],
+    ];
+    $headers[] = 'X-Idempotency-Key: mp-boleto-' . $bookingCode . '-' . bin2hex(random_bytes(4));
+    $resp = integrationPostJson('https://api.mercadopago.com/v1/payments', $payload, $headers, 25);
+    $body = json_decode($resp['body'] ?? '', true);
+    if (!$resp['ok'] || !is_array($body) || empty($body['id'])) {
+        error_log('[mp.boleto] booking=' . $bookingCode . ' status=' . (int)($resp['status'] ?? 0) . ' body=' . mb_substr((string)($resp['body'] ?? ''), 0, 500));
+        return ['ok' => false, 'msg' => mercadoPagoGatewayMessage(is_array($body) ? $body : null, 'Nao foi possivel gerar o boleto agora.')];
+    }
+    $tx = $body['transaction_details'] ?? [];
+    $barcode = (string)($tx['digitable_line'] ?? '');
+    if ($barcode === '' && !empty($tx['barcode']) && is_array($tx['barcode'])) $barcode = (string)($tx['barcode']['content'] ?? '');
+    dbExec('UPDATE bookings SET payment_gateway = ?, gateway_tx_id = ?, payment_status = ? WHERE id = ?', ['mercadopago', (string)$body['id'], 'pending', (int)$booking['id']]);
+    return [
+        'ok' => true,
+        'mp_id' => $body['id'],
+        'ticket_url' => (string)($tx['external_resource_url'] ?? $tx['ticket_url'] ?? ''),
+        'barcode' => $barcode,
+        'expires_at' => date('Y-m-d H:i:s', time() + 86400 * 3),
+    ];
+}
+
 function mercadoPagoCreatePreference(array $booking): array {
     $headers = mercadoPagoApiHeaders();
     if (!$headers) return ['ok' => false, 'mode' => 'missing_credentials', 'provider' => 'mercadopago', 'msg' => 'Access Token Mercado Pago não configurado.'];
@@ -385,7 +442,7 @@ function mercadoPagoCreatePreference(array $booking): array {
         'email' => (string)($booking['customer_email'] ?? ''),
     ];
     $document = preg_replace('/\D/', '', (string)($booking['customer_document'] ?? ''));
-    if (strlen($document) === 11) $payer['identification'] = ['type' => 'CPF', 'number' => $document];
+    if (isValidCpf($document)) $payer['identification'] = ['type' => 'CPF', 'number' => $document];
 
     $payload = [
         'items' => [[
@@ -501,7 +558,7 @@ function prepareBookingPayment(int $bookingId): array {
             'ok' => true,
             'mode' => 'transparent_checkout',
             'provider' => 'mercadopago',
-            'checkout_url' => url('/pagamento/' . rawurlencode($booking['code'])),
+            'checkout_url' => url('/pagamento/' . rawurlencode($booking['code']) . '?metodo=' . rawurlencode((string)($booking['payment_method'] ?? 'pix'))),
             'webhook_url' => paymentWebhookUrl(),
         ];
     }

@@ -76,4 +76,11 @@ if ($action === 'pix') {
     pp_json(['ok' => true, 'qr_code' => $r['qr_code'], 'qr_code_base64' => $r['qr_code_base64'], 'ticket_url' => $r['ticket_url'], 'expires_at' => $r['expires_at']]);
 }
 
+if ($action === 'boleto') {
+    $r = mercadoPagoCreateBoleto($booking);
+    if (!$r['ok']) pp_json(['ok' => false, 'msg' => $r['msg'] ?? 'Falha ao gerar boleto.'], 200);
+    logActivity(null, 'payment_boleto_created', 'booking', (int)$booking['id'], 'Boleto gerado MP id=' . ($r['mp_id'] ?? '?'));
+    pp_json(['ok' => true, 'ticket_url' => $r['ticket_url'], 'barcode' => $r['barcode'], 'expires_at' => $r['expires_at']]);
+}
+
 pp_json(['ok' => false, 'msg' => 'Acao invalida.'], 400);

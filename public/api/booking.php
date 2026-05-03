@@ -56,6 +56,8 @@ $sourceDetail  = trim($_POST['source_detail'] ?? '');
 $acceptTerms   = !empty($_POST['accept_terms']);
 $priceOption   = $_POST['price_option'] ?? null;
 $cartKey       = trim($_POST['cart_key'] ?? '');
+$checkoutContext = (string)($_POST['checkout_context'] ?? $_POST['context'] ?? 'default');
+$isMacaiokCheckout = $checkoutContext === 'macaiok';
 
 // Modo grupo (checkout institucional)
 $bookingMode   = $_POST['booking_mode'] ?? 'individual';
@@ -80,6 +82,8 @@ $pmMap = ['pix' => 'pix', 'pix_installments' => 'pix', 'card' => 'credit_card', 
 $paymentMethod = $pmMap[$pm] ?? null;
 
 if (!$name || !$email || !$phone) jsonResponse(['ok' => false, 'msg' => 'Preencha nome, email e telefone.']);
+if (!isValidCpf($doc)) jsonResponse(['ok' => false, 'msg' => 'Informe um CPF valido para concluir o pagamento.']);
+if ($respCpf !== '' && !isValidCpf($respCpf)) jsonResponse(['ok' => false, 'msg' => 'Informe um CPF valido para o responsavel.']);
 if (!in_array($entityType, ['roteiro','pacote','transfer'], true)) jsonResponse(['ok' => false, 'msg' => 'Produto inválido.']);
 if (!$entityId) jsonResponse(['ok' => false, 'msg' => 'Produto não informado.']);
 if (!$paymentMethod) jsonResponse(['ok' => false, 'msg' => 'Método de pagamento inválido.']);
@@ -87,7 +91,8 @@ if (!$acceptTerms) jsonResponse(['ok' => false, 'msg' => 'É preciso concordar c
 if (!$travelDates) jsonResponse(['ok' => false, 'msg' => 'Escolha pelo menos uma data disponível.']);
 
 $table = $entityType === 'roteiro' ? 'roteiros' : ($entityType === 'pacote' ? 'pacotes' : 'transfers');
-$entity = dbOne("SELECT * FROM {$table} WHERE id = ? AND status = 'published'", [$entityId]);
+$macaiokFeaturedSql = $isMacaiokCheckout ? ' AND macaiok_featured=1' : '';
+$entity = dbOne("SELECT * FROM {$table} WHERE id = ? AND status = 'published'" . $macaiokFeaturedSql, [$entityId]);
 if (!$entity) jsonResponse(['ok' => false, 'msg' => 'Produto indisponível.']);
 
 $availabilityMode = $entityType === 'transfer' ? 'open' : ($entity['availability_mode'] ?? 'fixed');
@@ -221,22 +226,28 @@ if ($customer) {
 
 // Codigo de indicacao: parametro explicito (source=indicacao + source_detail=codigo) OU cookie/session
 $refCode = null; $partnerId = null;
+$acceptPartnerForContext = function (?array $partner) use ($isMacaiokCheckout): bool {
+    if (!$partner) return false;
+    $program = (string)($partner['program'] ?? 'parceiros');
+    return $isMacaiokCheckout ? $program === 'macaiok' : $program !== 'macaiok';
+};
 $refFromForm = strtoupper(preg_replace('/[^A-Z0-9]/', '', $_POST['ref_code'] ?? ''));
 if ($refFromForm) {
     $refPartner = partnerByCode($refFromForm);
-    if ($refPartner) { $refCode = $refPartner['referral_code']; $partnerId = (int)$refPartner['id']; }
+    if ($acceptPartnerForContext($refPartner)) { $refCode = $refPartner['referral_code']; $partnerId = (int)$refPartner['id']; }
 }
 if (!$refCode) {
     $tracked = currentReferralCode();
     if ($tracked) {
         $rp = partnerByCode($tracked);
-        if ($rp) { $refCode = $rp['referral_code']; $partnerId = (int)$rp['id']; }
+        if ($acceptPartnerForContext($rp)) { $refCode = $rp['referral_code']; $partnerId = (int)$rp['id']; }
+        elseif (!$isMacaiokCheckout && $rp && ($rp['program'] ?? '') === 'macaiok' && function_exists('clearReferral')) { clearReferral(); }
     }
 }
 
 if ($postedInstitutionId) {
-    $postedInstitution = dbOne('SELECT id, referral_code FROM institutions WHERE id=? AND active=1 LIMIT 1', [$postedInstitutionId]);
-    if ($postedInstitution && $refCode !== '' && hash_equals((string)$postedInstitution['referral_code'], (string)$refCode)) {
+    $postedInstitution = dbOne('SELECT id, referral_code, program FROM institutions WHERE id=? AND active=1 LIMIT 1', [$postedInstitutionId]);
+    if ($acceptPartnerForContext($postedInstitution) && $refCode !== '' && hash_equals((string)$postedInstitution['referral_code'], (string)$refCode)) {
         $instPartnerId = (int)$postedInstitution['id'];
     }
 }

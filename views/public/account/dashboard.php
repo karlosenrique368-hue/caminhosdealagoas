@@ -4,11 +4,15 @@ $accountTab = 'dashboard';
 include VIEWS_DIR . '/partials/account_layout.php';
 
 $cid = currentCustomerId();
-$totalBookings = (int)(dbOne('SELECT COUNT(*) c FROM bookings WHERE customer_id=? OR customer_user_id=?', [$cid, $cid])['c'] ?? 0);
-$totalWishlist = (int)(dbOne('SELECT COUNT(*) c FROM wishlist WHERE customer_id=?', [$cid])['c'] ?? 0);
-$totalSpent = (float)(dbOne("SELECT COALESCE(SUM(total),0) s FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='paid'", [$cid, $cid])['s'] ?? 0);
-$paidCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='paid'", [$cid, $cid])['c'] ?? 0);
-$pendingCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings WHERE (customer_id=? OR customer_user_id=?) AND payment_status='pending'", [$cid, $cid])['c'] ?? 0);
+$macaiokBookingExists = "EXISTS (SELECT 1 FROM institutions mi WHERE mi.program='macaiok' AND (mi.id=b.institution_id OR mi.referral_code=b.referral_code))";
+$bookingScopeWhere = "(b.customer_id=? OR b.customer_user_id=?) AND " . ($macaiokAccount ? $macaiokBookingExists : "NOT " . $macaiokBookingExists);
+$wishlistScopeSql = $macaiokAccount ? " AND ((w.entity_type='roteiro' AND r.macaiok_featured=1) OR (w.entity_type='pacote' AND p.macaiok_featured=1))" : '';
+$exploreUrl = $macaiokAccount ? '/macaiok#vivencias' : '/passeios';
+$totalBookings = (int)(dbOne('SELECT COUNT(*) c FROM bookings b WHERE ' . $bookingScopeWhere, [$cid, $cid])['c'] ?? 0);
+$totalWishlist = (int)(dbOne("SELECT COUNT(*) c FROM wishlist w LEFT JOIN roteiros r ON w.entity_type='roteiro' AND w.entity_id=r.id LEFT JOIN pacotes p ON w.entity_type='pacote' AND w.entity_id=p.id WHERE w.customer_id=?" . $wishlistScopeSql, [$cid])['c'] ?? 0);
+$totalSpent = (float)(dbOne("SELECT COALESCE(SUM(b.total),0) s FROM bookings b WHERE " . $bookingScopeWhere . " AND b.payment_status='paid'", [$cid, $cid])['s'] ?? 0);
+$paidCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings b WHERE " . $bookingScopeWhere . " AND b.payment_status='paid'", [$cid, $cid])['c'] ?? 0);
+$pendingCount = (int)(dbOne("SELECT COUNT(*) c FROM bookings b WHERE " . $bookingScopeWhere . " AND b.payment_status='pending'", [$cid, $cid])['c'] ?? 0);
 $recent = dbAll("
     SELECT b.*, b.entity_title AS title,
         COALESCE(r.cover_image, p.cover_image, t.cover_image) AS cover_image,
@@ -17,7 +21,7 @@ $recent = dbAll("
     LEFT JOIN roteiros  r ON b.entity_type='roteiro'  AND b.entity_id=r.id
     LEFT JOIN pacotes   p ON b.entity_type='pacote'   AND b.entity_id=p.id
     LEFT JOIN transfers t ON b.entity_type='transfer' AND b.entity_id=t.id
-    WHERE b.customer_id=? OR b.customer_user_id=?
+    WHERE " . $bookingScopeWhere . "
     ORDER BY b.created_at DESC LIMIT 5", [$cid, $cid]);
 ?>
 
@@ -28,7 +32,7 @@ $recent = dbAll("
         <img src="<?= asset('brand/selo-terracota.png') ?>" class="stat-seal" alt="">
         <div class="stat-head">
             <div class="stat-icon-box"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
-            <span class="stat-label">Reservas</span>
+            <span class="stat-label"><?= $macaiokAccount ? 'Vivencias' : 'Reservas' ?></span>
         </div>
         <div class="stat-value" data-counter="<?= $totalBookings ?>"><?= $totalBookings ?></div>
         <div class="stat-sub"><?= $paidCount ?> paga<?= $paidCount===1?'':'s' ?> · <?= $pendingCount ?> pendente<?= $pendingCount===1?'':'s' ?></div>
@@ -61,19 +65,19 @@ $recent = dbAll("
 <div class="glass-card p-6" data-reveal>
     <div class="flex items-center justify-between mb-5">
         <div>
-            <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)">Reservas recentes</h2>
+            <h2 class="font-display text-2xl font-bold" style="color:var(--sepia)"><?= $macaiokAccount ? 'Vivencias recentes' : 'Reservas recentes' ?></h2>
             <p class="text-xs" style="color:var(--text-muted)">Últimas 5 atividades da sua conta</p>
         </div>
-        <a href="<?= url('/conta/reservas') ?>" class="text-sm font-bold flex items-center gap-1" style="color:var(--terracota)">
+        <a href="<?= url($accountBase . '/reservas') ?>" class="text-sm font-bold flex items-center gap-1" style="color:var(--terracota)">
             Ver todas <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </a>
     </div>
     <?php if (empty($recent)): ?>
         <div class="empty-state">
             <div class="empty-state-icon"><i data-lucide="map" class="w-7 h-7"></i></div>
-            <div class="empty-state-title">Nenhuma viagem ainda</div>
+            <div class="empty-state-title"><?= $macaiokAccount ? 'Nenhuma vivencia ainda' : 'Nenhuma viagem ainda' ?></div>
             <div class="empty-state-desc">Comece explorando nossos passeios curados em Alagoas.</div>
-            <a href="<?= url('/passeios') ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> Explorar passeios</a>
+            <a href="<?= url($exploreUrl) ?>" class="btn-primary inline-flex"><i data-lucide="compass" class="w-4 h-4"></i> <?= $macaiokAccount ? 'Explorar vivencias' : 'Explorar passeios' ?></a>
         </div>
     <?php else: ?>
         <div class="space-y-3">
@@ -82,6 +86,7 @@ $recent = dbAll("
                 $statusPill = ['paid'=>'pill-success','pending'=>'pill-warning','failed'=>'pill-danger','refunded'=>'pill-info'][$b['payment_status']] ?? 'pill-info';
                 $detailType = $b['entity_type']==='roteiro' ? 'passeios' : ($b['entity_type']==='pacote' ? 'pacotes' : 'transfers');
                 $detailUrl = !empty($b['slug']) ? url('/' . $detailType . '/' . $b['slug']) : null;
+                if ($macaiokAccount) $detailUrl = url('/macaiok/checkout?' . ($b['entity_type']==='roteiro' ? 'roteiro' : ($b['entity_type']==='pacote' ? 'pacote' : 'transfer')) . '=' . (int)$b['entity_id']);
                 $cover = !empty($b['cover_image']) ? storageUrl($b['cover_image']) : null;
             ?>
                 <a href="<?= e($detailUrl ?? '#') ?>" class="booking-row<?= $detailUrl ? ' booking-row-link' : '' ?>" style="<?= $detailUrl ? 'cursor:pointer' : '' ?>">
