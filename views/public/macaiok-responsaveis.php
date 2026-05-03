@@ -7,7 +7,15 @@ $escolaSlug   = trim($_GET['escola'] ?? '');
 $vivenciaId   = (int)($_GET['vivencia'] ?? 0);
 $vivenciaType = $_GET['tipo'] ?? 'roteiro';
 
-$escola = $escolaSlug ? dbOne("SELECT * FROM institutions WHERE slug=? AND program='macaiok' AND active=1 LIMIT 1", [$escolaSlug]) : null;
+$escola = null;
+if ($escolaSlug) {
+    try {
+        $escola = dbOne("SELECT * FROM institutions WHERE slug=? AND program='macaiok' AND active=1 LIMIT 1", [$escolaSlug]);
+    } catch (Throwable $e) {
+        try { $escola = dbOne('SELECT * FROM institutions WHERE slug=? AND active=1 LIMIT 1', [$escolaSlug]); }
+        catch (Throwable $e2) { error_log('[macaiok-resp.escola] ' . $e2->getMessage()); }
+    }
+}
 $vivencia = null;
 if ($vivenciaId) {
     try {

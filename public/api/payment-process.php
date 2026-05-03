@@ -26,7 +26,23 @@ function pp_input(): array {
 function pp_get_booking(string $code): ?array {
     $code = strtoupper(preg_replace('/[^A-Z0-9-]/i', '', $code));
     if ($code === '') return null;
-    return dbOne('SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone, c.document AS customer_document FROM bookings b JOIN customers c ON c.id = b.customer_id WHERE b.code = ? LIMIT 1', [$code]);
+    try {
+        $b = dbOne('SELECT * FROM bookings WHERE code = ? LIMIT 1', [$code]);
+        if (!$b) return null;
+        $c = null;
+        if (!empty($b['customer_id'])) {
+            try { $c = dbOne('SELECT * FROM customers WHERE id = ? LIMIT 1', [(int)$b['customer_id']]); }
+            catch (Throwable $e) { error_log('[pp.customer] ' . $e->getMessage()); }
+        }
+        $b['customer_name'] = $c['name'] ?? '';
+        $b['customer_email'] = $c['email'] ?? '';
+        $b['customer_phone'] = $c['phone'] ?? '';
+        $b['customer_document'] = $c['document'] ?? '';
+        return $b;
+    } catch (Throwable $e) {
+        error_log('[pp.booking] ' . $e->getMessage());
+        return null;
+    }
 }
 
 if ($action === 'status') {

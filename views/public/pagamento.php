@@ -28,6 +28,7 @@ if ((string)$booking['payment_status'] === 'paid') {
 
 include VIEWS_DIR . '/partials/public_head.php';
 ?>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 
 <?php if ($macaiokMode): ?>
 <div class="pt-24 pb-2" style="background:linear-gradient(180deg,#324500 0%, #2F1607 100%)">
@@ -109,7 +110,6 @@ include VIEWS_DIR . '/partials/public_head.php';
 </div>
 </section>
 
-<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
 function paymentPage() {
     return {
@@ -122,12 +122,28 @@ function paymentPage() {
         copied: false,
         mp: null,
         bricksBuilder: null,
+        async waitForMP() {
+            for (let i=0;i<60;i++){
+                if (window.MercadoPago) return true;
+                await new Promise(r=>setTimeout(r,200));
+            }
+            return !!window.MercadoPago;
+        },
         async init() {
             if (window.lucide) window.lucide.createIcons();
-            this.mp = new MercadoPago(<?= json_encode($mpPublicKey) ?>, { locale: 'pt-BR' });
-            this.bricksBuilder = this.mp.bricks();
-            await this.renderCardBrick();
-            this.pollStatus();
+            const pk = <?= json_encode($mpPublicKey) ?>;
+            if (!pk) { this.cardError = 'Mercado Pago nao configurado. Acesse Admin > Integracoes e cadastre as credenciais.'; return; }
+            const ok = await this.waitForMP();
+            if (!ok) { this.cardError = 'Falha ao carregar SDK do Mercado Pago. Verifique sua conexao e recarregue.'; return; }
+            try {
+                this.mp = new MercadoPago(pk, { locale: 'pt-BR' });
+                this.bricksBuilder = this.mp.bricks();
+                await this.renderCardBrick();
+                this.pollStatus();
+            } catch (err) {
+                console.error('[mp.init]', err);
+                this.cardError = 'Erro ao iniciar checkout: ' + (err && err.message || err);
+            }
         },
         async renderCardBrick() {
             const total = <?= json_encode((float)$booking['total']) ?>;
