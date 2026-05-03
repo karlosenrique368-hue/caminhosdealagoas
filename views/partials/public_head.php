@@ -6,6 +6,7 @@ $pageSchema = $pageSchema ?? null; // optional JSON-LD injected by child page
 $currentUrl = 'http' . (!empty($_SERVER['HTTPS'])?'s':'') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ($_SERVER['REQUEST_URI'] ?? '/');
 $currentLang = currentLang();
 $currentCurrency = currentCurrency();
+$isMacaiokPublic = !empty($GLOBALS['macaiokMode']) || !empty($macaiokMode);
 ?><!DOCTYPE html>
 <html lang="<?= e($currentLang) ?>">
 <head>
@@ -123,25 +124,40 @@ tailwind.config = {
 <nav data-navbar class="fixed top-0 inset-x-0 z-50 transition-all duration-300<?= !empty($solidNav) ? ' nav-scrolled' : '' ?>">
     <div class="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
         <!-- Logo -->
-        <a href="<?= url('/') ?>" class="flex items-center gap-3 group">
+        <a href="<?= url($isMacaiokPublic ? '/macaiok' : '/') ?>" class="flex items-center gap-3 group">
             <div class="nav-logo-wrap">
-                <img src="<?= asset('brand/logo-branco.png') ?>" alt="Caminhos de Alagoas" class="logo-light">
-                <img src="<?= asset('brand/logo-azul.png') ?>" alt="Caminhos de Alagoas" class="logo-dark">
+                <?php if ($isMacaiokPublic): ?>
+                    <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" style="height:42px;width:auto;display:block">
+                <?php else: ?>
+                    <img src="<?= asset('brand/logo-branco.png') ?>" alt="Caminhos de Alagoas" class="logo-light">
+                    <img src="<?= asset('brand/logo-azul.png') ?>" alt="Caminhos de Alagoas" class="logo-dark">
+                <?php endif; ?>
             </div>
         </a>
 
         <!-- Desktop menu -->
         <div class="hidden lg:flex items-center gap-8">
-            <a href="<?= url('/') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.home')) ?></a>
-            <a href="<?= url('/passeios') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.tours')) ?></a>
-            <a href="<?= url('/pacotes') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.packages')) ?></a>
-            <a href="<?= url('/transfers') ?>" class="nav-link nav-link-tr text-sm">Transfers</a>
-            <a href="<?= url('/sobre') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.about')) ?></a>
-            <a href="<?= url('/contato') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.contact')) ?></a>
-            <?php if (isCustomerLoggedIn()): ?>
-                <a href="<?= url('/conta') ?>" class="nav-link nav-link-tr text-sm font-bold" style="color:var(--terracota)"><i data-lucide="user-circle" class="w-4 h-4 inline"></i> <?= e(t('nav.account')) ?></a>
+            <?php if ($isMacaiokPublic): ?>
+                <a href="<?= url('/macaiok') ?>" class="nav-link nav-link-tr text-sm">Início Macaiok</a>
+                <a href="<?= url('/macaiok/responsaveis') ?>" class="nav-link nav-link-tr text-sm">Responsáveis</a>
+                <a href="<?= url('/macaiok/login') ?>" class="nav-link nav-link-tr text-sm">Portal da escola</a>
+                <?php if (isCustomerLoggedIn()): ?>
+                    <a href="<?= url('/macaiok/conta') ?>" class="nav-link nav-link-tr text-sm font-bold" style="color:var(--mk-terracota)"><i data-lucide="user-circle" class="w-4 h-4 inline"></i> Conta do responsável</a>
+                <?php else: ?>
+                    <a href="<?= url('/conta/login?redirect=' . urlencode('/macaiok/conta')) ?>" class="nav-link nav-link-tr text-sm">Entrar responsável</a>
+                <?php endif; ?>
             <?php else: ?>
-                <a href="<?= url('/conta/login') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.login')) ?></a>
+                <a href="<?= url('/') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.home')) ?></a>
+                <a href="<?= url('/passeios') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.tours')) ?></a>
+                <a href="<?= url('/pacotes') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.packages')) ?></a>
+                <a href="<?= url('/transfers') ?>" class="nav-link nav-link-tr text-sm">Transfers</a>
+                <a href="<?= url('/sobre') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.about')) ?></a>
+                <a href="<?= url('/contato') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.contact')) ?></a>
+                <?php if (isCustomerLoggedIn()): ?>
+                    <a href="<?= url('/conta') ?>" class="nav-link nav-link-tr text-sm font-bold" style="color:var(--terracota)"><i data-lucide="user-circle" class="w-4 h-4 inline"></i> <?= e(t('nav.account')) ?></a>
+                <?php else: ?>
+                    <a href="<?= url('/conta/login') ?>" class="nav-link nav-link-tr text-sm"><?= e(t('nav.login')) ?></a>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 
@@ -222,7 +238,11 @@ tailwind.config = {
     <div class="menu-drawer-inner">
         <!-- Header -->
         <div class="menu-drawer-header">
-            <img src="<?= asset('brand/logo-azul.png') ?>" alt="Caminhos de Alagoas" class="h-10">
+            <?php if ($isMacaiokPublic): ?>
+                <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" class="h-10">
+            <?php else: ?>
+                <img src="<?= asset('brand/logo-azul.png') ?>" alt="Caminhos de Alagoas" class="h-10">
+            <?php endif; ?>
             <button type="button" class="menu-drawer-close" onclick="window.closeMenuDrawer && window.closeMenuDrawer()" aria-label="Fechar">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
@@ -231,22 +251,29 @@ tailwind.config = {
         <!-- Navigation -->
         <nav class="menu-drawer-nav">
             <div class="menu-drawer-section-title">Navegação</div>
-            <a href="<?= url('/') ?>" class="menu-drawer-link"><i data-lucide="home" class="w-4 h-4"></i>Home</a>
-            <a href="<?= url('/passeios') ?>" class="menu-drawer-link"><i data-lucide="compass" class="w-4 h-4"></i>Passeios</a>
-            <a href="<?= url('/pacotes') ?>" class="menu-drawer-link"><i data-lucide="package" class="w-4 h-4"></i>Pacotes</a>
-            <a href="<?= url('/transfers') ?>" class="menu-drawer-link"><i data-lucide="car" class="w-4 h-4"></i>Transfers</a>
-            <a href="<?= url('/sobre') ?>" class="menu-drawer-link"><i data-lucide="book-open" class="w-4 h-4"></i>Sobre nós</a>
-            <a href="<?= url('/contato') ?>" class="menu-drawer-link"><i data-lucide="mail" class="w-4 h-4"></i>Contato</a>
+            <?php if ($isMacaiokPublic): ?>
+                <a href="<?= url('/macaiok') ?>" class="menu-drawer-link"><i data-lucide="home" class="w-4 h-4"></i>Início Macaiok</a>
+                <a href="<?= url('/macaiok/responsaveis') ?>" class="menu-drawer-link"><i data-lucide="users" class="w-4 h-4"></i>Responsáveis</a>
+                <a href="<?= url('/macaiok/login') ?>" class="menu-drawer-link"><i data-lucide="school" class="w-4 h-4"></i>Portal da escola</a>
+                <a href="<?= url('/macaiok/conta') ?>" class="menu-drawer-link"><i data-lucide="user-circle" class="w-4 h-4"></i>Conta do responsável</a>
+            <?php else: ?>
+                <a href="<?= url('/') ?>" class="menu-drawer-link"><i data-lucide="home" class="w-4 h-4"></i>Home</a>
+                <a href="<?= url('/passeios') ?>" class="menu-drawer-link"><i data-lucide="compass" class="w-4 h-4"></i>Passeios</a>
+                <a href="<?= url('/pacotes') ?>" class="menu-drawer-link"><i data-lucide="package" class="w-4 h-4"></i>Pacotes</a>
+                <a href="<?= url('/transfers') ?>" class="menu-drawer-link"><i data-lucide="car" class="w-4 h-4"></i>Transfers</a>
+                <a href="<?= url('/sobre') ?>" class="menu-drawer-link"><i data-lucide="book-open" class="w-4 h-4"></i>Sobre nós</a>
+                <a href="<?= url('/contato') ?>" class="menu-drawer-link"><i data-lucide="mail" class="w-4 h-4"></i>Contato</a>
+            <?php endif; ?>
 
             <div class="menu-drawer-section-title">Conta</div>
             <?php if (isCustomerLoggedIn()): ?>
-                <a href="<?= url('/conta') ?>" class="menu-drawer-link"><i data-lucide="user-circle" class="w-4 h-4"></i>Minha conta</a>
-                <a href="<?= url('/conta/reservas') ?>" class="menu-drawer-link"><i data-lucide="calendar-check" class="w-4 h-4"></i>Minhas reservas</a>
-                <a href="<?= url('/conta/favoritos') ?>" class="menu-drawer-link"><i data-lucide="heart" class="w-4 h-4"></i>Favoritos</a>
-                <a href="<?= url('/conta/sair') ?>" class="menu-drawer-link"><i data-lucide="log-out" class="w-4 h-4"></i>Sair</a>
+                <a href="<?= url($isMacaiokPublic ? '/macaiok/conta' : '/conta') ?>" class="menu-drawer-link"><i data-lucide="user-circle" class="w-4 h-4"></i><?= $isMacaiokPublic ? 'Conta do responsável' : 'Minha conta' ?></a>
+                <a href="<?= url($isMacaiokPublic ? '/macaiok/conta/reservas' : '/conta/reservas') ?>" class="menu-drawer-link"><i data-lucide="calendar-check" class="w-4 h-4"></i><?= $isMacaiokPublic ? 'Vivências' : 'Minhas reservas' ?></a>
+                <a href="<?= url($isMacaiokPublic ? '/macaiok/conta/favoritos' : '/conta/favoritos') ?>" class="menu-drawer-link"><i data-lucide="heart" class="w-4 h-4"></i>Favoritos</a>
+                <a href="<?= url($isMacaiokPublic ? '/macaiok/conta/sair' : '/conta/sair') ?>" class="menu-drawer-link"><i data-lucide="log-out" class="w-4 h-4"></i>Sair</a>
             <?php else: ?>
-                <a href="<?= url('/conta/login') ?>" class="menu-drawer-link"><i data-lucide="log-in" class="w-4 h-4"></i>Entrar</a>
-                <a href="<?= url('/conta/cadastro') ?>" class="menu-drawer-link"><i data-lucide="user-plus" class="w-4 h-4"></i>Criar conta</a>
+                <a href="<?= url($isMacaiokPublic ? '/conta/login?redirect=' . urlencode('/macaiok/conta') : '/conta/login') ?>" class="menu-drawer-link"><i data-lucide="log-in" class="w-4 h-4"></i>Entrar</a>
+                <a href="<?= url($isMacaiokPublic ? '/conta/registrar?redirect=' . urlencode('/macaiok/conta') : '/conta/registrar') ?>" class="menu-drawer-link"><i data-lucide="user-plus" class="w-4 h-4"></i>Criar conta</a>
             <?php endif; ?>
 
             <div class="menu-drawer-section-title">Preferências</div>
@@ -298,7 +325,7 @@ tailwind.config = {
                     <i data-lucide="mail" class="w-4 h-4"></i>
                 </a>
             </div>
-            <div class="menu-drawer-copy">© <?= date('Y') ?> Caminhos de Alagoas</div>
+            <div class="menu-drawer-copy">© <?= date('Y') ?> <?= $isMacaiokPublic ? 'Macaiok' : 'Caminhos de Alagoas' ?></div>
         </div>
     </div>
 </aside>

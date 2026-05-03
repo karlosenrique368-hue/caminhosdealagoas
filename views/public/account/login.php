@@ -1,5 +1,8 @@
 <?php
-$pageTitle = 'Entrar';
+$accountRedirect = safeRedirectPath($_GET['redirect'] ?? '/conta', '/conta');
+$isMacaiokAccountLogin = str_starts_with($accountRedirect, '/macaiok/conta');
+if ($isMacaiokAccountLogin) { $macaiokMode = true; $GLOBALS['macaiokMode'] = true; }
+$pageTitle = $isMacaiokAccountLogin ? 'Entrar responsável' : 'Entrar';
 $solidNav = true;
 $err = '';
 if (isPost()) {
@@ -12,8 +15,7 @@ if (isPost()) {
             $err = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
         } elseif (customerLogin($email, $pass)) {
             loginThrottleClear($throttleKey);
-            $redirect = safeRedirectPath($_GET['redirect'] ?? '/conta', '/conta');
-            redirect($redirect);
+            redirect($accountRedirect);
         } else {
             loginThrottleFail($throttleKey);
             $err = 'E-mail ou senha incorretos.';
@@ -31,9 +33,13 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="max-w-md w-full mx-auto px-6 relative z-10">
         <div class="glass-card p-8 md:p-10 rounded-3xl border shadow-2xl" style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-color:var(--border-default)">
             <div class="text-center mb-8">
-                <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-rotate mx-auto mb-4" style="width:72px;height:72px" alt="">
-                <h1 class="font-display text-3xl font-bold mb-2" style="color:var(--sepia)">Bem-vindo de volta</h1>
-                <p class="text-sm" style="color:var(--text-muted)">Entre para gerenciar suas viagens</p>
+                <?php if ($isMacaiokAccountLogin): ?>
+                    <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" class="mx-auto mb-5" style="height:54px;width:auto" alt="Macaiok">
+                <?php else: ?>
+                    <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-rotate mx-auto mb-4" style="width:72px;height:72px" alt="">
+                <?php endif; ?>
+                <h1 class="font-display text-3xl font-bold mb-2" style="color:var(--sepia)"><?= $isMacaiokAccountLogin ? 'Conta do responsável' : 'Bem-vindo de volta' ?></h1>
+                <p class="text-sm" style="color:var(--text-muted)"><?= $isMacaiokAccountLogin ? 'Entre para acompanhar vivências e pagamentos escolares' : 'Entre para gerenciar suas viagens' ?></p>
             </div>
 
             <?php if ($err): ?>
@@ -63,7 +69,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 
             <div class="mt-6 pt-6 border-t text-center text-sm" style="border-color:var(--border-default);color:var(--text-secondary)">
                 Não tem uma conta?
-                <a href="<?= url('/conta/registrar') ?>" class="font-bold" style="color:var(--terracota)">Criar agora</a>
+                <a href="<?= url($isMacaiokAccountLogin ? '/conta/registrar?redirect=' . urlencode('/macaiok/conta') : '/conta/registrar') ?>" class="font-bold" style="color:var(--terracota)">Criar agora</a>
             </div>
         </div>
     </div>

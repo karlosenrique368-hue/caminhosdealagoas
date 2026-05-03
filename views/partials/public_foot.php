@@ -1,3 +1,36 @@
+<?php $isMacaiokPublic = !empty($GLOBALS['macaiokMode']) || !empty($macaiokMode); ?>
+<?php if ($isMacaiokPublic): ?>
+<footer class="macaiok-footer pt-16 pb-8 relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-1" style="background:linear-gradient(90deg,var(--mk-mangue),var(--mk-origem),var(--mk-terracota))"></div>
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="grid md:grid-cols-[1.2fr_.8fr_.8fr] gap-10 mb-10">
+            <div>
+                <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" alt="Macaiok" style="height:54px;width:auto" class="mb-5">
+                <p class="text-sm leading-relaxed max-w-md" style="color:rgba(255,250,207,.78)">Vivências pedagógicas com curadoria, pagamento seguro e acompanhamento para escolas, responsáveis e estudantes.</p>
+            </div>
+            <div>
+                <h4 class="font-display text-lg font-semibold mb-4" style="color:#FFFACF">Macaiok</h4>
+                <ul class="space-y-2 text-sm" style="color:rgba(255,250,207,.72)">
+                    <li><a href="<?= url('/macaiok') ?>">Início</a></li>
+                    <li><a href="<?= url('/macaiok/login') ?>">Portal da escola</a></li>
+                    <li><a href="<?= url('/macaiok/conta') ?>">Conta do responsável</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-display text-lg font-semibold mb-4" style="color:#FFFACF">Atendimento</h4>
+                <ul class="space-y-3 text-sm" style="color:rgba(255,250,207,.72)">
+                    <li class="flex items-center gap-2"><i data-lucide="mail" class="w-4 h-4"></i><a href="mailto:<?= e(getSetting('contact_email', APP_EMAIL)) ?>"><?= e(getSetting('contact_email', APP_EMAIL)) ?></a></li>
+                    <li class="flex items-center gap-2"><i data-lucide="message-circle" class="w-4 h-4"></i><a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>"><?= e(getSetting('contact_phone', APP_PHONE)) ?></a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="pt-6 border-t flex flex-col md:flex-row items-center justify-between gap-4 text-xs" style="border-color:rgba(255,250,207,.15);color:rgba(255,250,207,.55)">
+            <p>© <?= date('Y') ?> Macaiok · Operação Caminhos de Alagoas</p>
+            <p>Pagamentos processados em ambiente seguro.</p>
+        </div>
+    </div>
+</footer>
+<?php else: ?>
 <!-- ============== FOOTER ============== -->
 <footer class="footer-dark pt-20 pb-8 relative overflow-hidden">
     <!-- Decorative wave top -->
@@ -93,6 +126,7 @@
         </div>
     </div>
 </footer>
+<?php endif; ?>
 
 <!-- Floating WhatsApp -->
 <a href="https://wa.me/<?= e(getSetting('contact_whatsapp','5582988220546')) ?>" target="_blank"

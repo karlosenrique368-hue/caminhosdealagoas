@@ -132,3 +132,43 @@ body.theme-macaiok .macaiok-login-logo {
     height: 64px;
     margin: 0 auto;
 }
+
+
+/* Header, footer e conta pública Macaiok */
+body.theme-macaiok nav[data-navbar] {
+    background: rgba(255, 253, 232, 0.94);
+    border-bottom: 1px solid rgba(50, 69, 0, 0.12);
+    backdrop-filter: blur(18px);
+}
+body.theme-macaiok nav[data-navbar] .nav-link {
+    color: var(--mk-mangue);
+}
+body.theme-macaiok nav[data-navbar] .nav-link:hover {
+    color: var(--mk-terracota);
+}
+body.theme-macaiok .macaiok-footer {
+    background: radial-gradient(circle at 10% 0%, rgba(169, 215, 80, 0.16), transparent 32%), linear-gradient(135deg, var(--mk-sepia) 0%, var(--mk-mangue) 100%);
+    color: var(--mk-areia);
+}
+body.theme-macaiok .macaiok-footer a {
+    color: rgba(255, 250, 207, 0.78);
+    transition: color .2s ease;
+}
+body.theme-macaiok .macaiok-footer a:hover {
+    color: #fff;
+}
+body.theme-macaiok .account-shell {
+    background: linear-gradient(180deg, #FFFDE8 0%, #FAF6E8 52%, #fff 100%);
+}
+body.theme-macaiok .account-sidebar {
+    border-color: rgba(50, 69, 0, 0.14);
+    box-shadow: 0 18px 45px rgba(47, 22, 7, 0.08);
+}
+body.theme-macaiok .account-sidebar-link.active {
+    background: rgba(169, 215, 80, 0.2);
+    color: var(--mk-mangue);
+}
+body.theme-macaiok .admin-sidebar,
+body.theme-macaiok .institution-sidebar {
+    background: linear-gradient(180deg, var(--mk-mangue) 0%, var(--mk-sepia) 100%);
+}

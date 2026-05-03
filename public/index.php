@@ -148,6 +148,32 @@ switch (true) {
         require VIEWS_DIR . '/public/macaiok-responsaveis.php';
         break;
 
+    // ============== MACAIOK RESPONSÁVEL (conta front) ==============
+    case $path === '/macaiok/conta/sair':
+        customerLogout();
+        redirect('/macaiok');
+
+    case $path === '/macaiok/conta' || $path === '/macaiok/conta/dashboard':
+        $macaiokMode = true; $GLOBALS['macaiokMode'] = true; $accountBase = '/macaiok/conta'; $accountContext = 'macaiok';
+        require VIEWS_DIR . '/public/account/dashboard.php';
+        break;
+    case $path === '/macaiok/conta/reservas':
+        $macaiokMode = true; $GLOBALS['macaiokMode'] = true; $accountBase = '/macaiok/conta'; $accountContext = 'macaiok';
+        require VIEWS_DIR . '/public/account/reservas.php';
+        break;
+    case $path === '/macaiok/conta/favoritos':
+        $macaiokMode = true; $GLOBALS['macaiokMode'] = true; $accountBase = '/macaiok/conta'; $accountContext = 'macaiok';
+        require VIEWS_DIR . '/public/account/favoritos.php';
+        break;
+    case $path === '/macaiok/conta/reembolso':
+        $macaiokMode = true; $GLOBALS['macaiokMode'] = true; $accountBase = '/macaiok/conta'; $accountContext = 'macaiok';
+        require VIEWS_DIR . '/public/account/reembolso.php';
+        break;
+    case $path === '/macaiok/conta/configuracoes' || $path === '/macaiok/conta/perfil':
+        $macaiokMode = true; $GLOBALS['macaiokMode'] = true; $accountBase = '/macaiok/conta'; $accountContext = 'macaiok';
+        require VIEWS_DIR . '/public/account/perfil.php';
+        break;
+
     // ============== CUSTOMER ACCOUNT ==============
     case $path === '/conta/login':
         require VIEWS_DIR . '/public/account/login.php';

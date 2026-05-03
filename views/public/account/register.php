@@ -1,5 +1,8 @@
 <?php
-$pageTitle = 'Criar conta';
+$accountRedirect = safeRedirectPath($_GET['redirect'] ?? '/conta', '/conta');
+$isMacaiokAccountRegister = str_starts_with($accountRedirect, '/macaiok/conta');
+if ($isMacaiokAccountRegister) { $macaiokMode = true; $GLOBALS['macaiokMode'] = true; }
+$pageTitle = $isMacaiokAccountRegister ? 'Criar conta responsável' : 'Criar conta';
 $solidNav = true;
 $err = '';
 if (isPost()) {
@@ -12,7 +15,7 @@ if (isPost()) {
             trim($_POST['phone'] ?? ''),
             trim($_POST['document'] ?? '')
         );
-        if ($r['ok']) redirect('/conta');
+        if ($r['ok']) redirect($accountRedirect);
         $err = $r['msg'];
     }
 }
@@ -27,9 +30,13 @@ include VIEWS_DIR . '/partials/public_head.php';
     <div class="max-w-md w-full mx-auto px-6 relative z-10">
         <div class="glass-card p-8 md:p-10 rounded-3xl border shadow-2xl" style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-color:var(--border-default)">
             <div class="text-center mb-8">
-                <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-rotate mx-auto mb-4" style="width:72px;height:72px" alt="">
-                <h1 class="font-display text-3xl font-bold mb-2" style="color:var(--sepia)">Criar conta</h1>
-                <p class="text-sm" style="color:var(--text-muted)">Comece sua jornada pelos caminhos de Alagoas</p>
+                <?php if ($isMacaiokAccountRegister): ?>
+                    <img src="<?= asset('img/macaiok/VerdeEscuro_Horizontal.png') ?>" class="mx-auto mb-5" style="height:54px;width:auto" alt="Macaiok">
+                <?php else: ?>
+                    <img src="<?= asset('brand/selo-azul.png') ?>" class="seal-rotate mx-auto mb-4" style="width:72px;height:72px" alt="">
+                <?php endif; ?>
+                <h1 class="font-display text-3xl font-bold mb-2" style="color:var(--sepia)"><?= $isMacaiokAccountRegister ? 'Conta do responsável' : 'Criar conta' ?></h1>
+                <p class="text-sm" style="color:var(--text-muted)"><?= $isMacaiokAccountRegister ? 'Crie seu acesso para acompanhar vivências escolares' : 'Comece sua jornada pelos caminhos de Alagoas' ?></p>
             </div>
 
             <?php if ($err): ?>
@@ -69,7 +76,7 @@ include VIEWS_DIR . '/partials/public_head.php';
 
             <div class="mt-6 pt-6 border-t text-center text-sm" style="border-color:var(--border-default);color:var(--text-secondary)">
                 Já tem uma conta?
-                <a href="<?= url('/conta/login') ?>" class="font-bold" style="color:var(--terracota)">Entrar</a>
+                <a href="<?= url($isMacaiokAccountRegister ? '/conta/login?redirect=' . urlencode('/macaiok/conta') : '/conta/login') ?>" class="font-bold" style="color:var(--terracota)">Entrar</a>
             </div>
         </div>
     </div>

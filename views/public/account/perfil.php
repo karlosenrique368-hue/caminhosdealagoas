@@ -1,5 +1,5 @@
 <?php
-$accountTitle = 'Perfil';
+$accountTitle = (!empty($accountContext) && $accountContext === 'macaiok') ? 'Configurações' : 'Perfil';
 $accountTab = 'perfil';
 include VIEWS_DIR . '/partials/account_layout.php';
 $cust = currentCustomer();
